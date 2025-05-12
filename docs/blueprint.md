@@ -4,7 +4,7 @@
 
 - Multilingual UI: Displays a multilingual user interface for searching medicines, supporting English, Hindi, and Bengali. (UI should reflect the selected language, but searches will be performed in English only)
 - AI-Enhanced Search: Integrates Gemini AI to provide intelligent search results for medicines, even with partial or misspelled queries. Uses a Gemini tool to extract meaning from the query.
-- Medicine Details Display: Displays medicine details including name and composition when found.  If available, show the barcode.
+- Medicine Details Display: Displays medicine details including Composition,Usage,Manufacturer,Dosage,Side Effects when found.  If available, show the barcode.
 - Search by name: Enables searching for medicine details by name. Searching by Barcode or composition will not be implemented in this version of the application
 
 ## Style Guidelines:

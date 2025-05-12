@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -9,7 +10,8 @@ import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { Button } from "@/components/ui/button"; // Added Button import
+import { Loader2, AlertCircle, CheckCircle, Info, RotateCcw } from "lucide-react"; // Added RotateCcw
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -21,6 +23,7 @@ export default function MediSearchApp() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
+  const [searchAttempted, setSearchAttempted] = useState<boolean>(false); // Added state to track if search was performed
 
   const { toast } = useToast();
 
@@ -33,13 +36,26 @@ export default function MediSearchApp() {
     setSelectedLanguage(lang);
   }, []);
 
+  // Function to clear search results and reset state
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResult(null);
+    setError(null);
+    setSearchAttempted(false);
+  }, []);
+
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      // If search is triggered with empty query, reset everything
+       handleClearSearch();
+       return;
+    }
 
     setIsLoading(true);
     setError(null);
     setSearchResult(null);
+    setSearchAttempted(true); // Mark that a search has been attempted
     let finalSearchTerm = searchQuery.trim();
 
     try {
@@ -104,7 +120,7 @@ export default function MediSearchApp() {
         />
       </header>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-8">
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6"> {/* Adjusted space */}
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
@@ -116,6 +132,15 @@ export default function MediSearchApp() {
           />
         </section>
 
+        {/* Clear Search Button - Shown only after a search attempt and not loading */}
+        {searchAttempted && !isLoading && (
+          <Button variant="outline" onClick={handleClearSearch} className="self-center shadow-sm hover:shadow-md transition-shadow">
+            <RotateCcw className="mr-2 h-4 w-4" />
+            {t.clearSearchButton}
+          </Button>
+        )}
+
+        {/* Loading Indicator */}
         {isLoading && (
           <div className="flex flex-col items-center space-y-2 p-4 text-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -123,6 +148,7 @@ export default function MediSearchApp() {
           </div>
         )}
 
+        {/* Error Message */}
         {error && !isLoading && (
           <Alert variant="destructive" className="w-full max-w-lg shadow-md">
             <AlertCircle className="h-5 w-5" />
@@ -131,21 +157,22 @@ export default function MediSearchApp() {
           </Alert>
         )}
 
+        {/* Search Result Card */}
         {!isLoading && !error && searchResult && (
-          <section className="w-full mt-4 animate-fadeIn">
+          <section className="w-full mt-0 animate-fadeIn"> {/* Removed mt-4 */}
             <MedicineCard medicine={searchResult} t={t} />
           </section>
         )}
-        
-        {!isLoading && !error && !searchResult && searchQuery && !error && (
-            // This condition is a bit tricky, basically means search was done, no error, no result
-            // This is handled by `setError(t.noResults)` now, so this block might not be needed
-            // or can be refined if specific UI for "search attempted, nothing found" is needed beyond the error alert.
-            // For now, the error alert for t.noResults covers this.
-            <></>
+
+        {/* Placeholder for initial state or after clearing - No specific message needed now */}
+        {!isLoading && !searchAttempted && (
+            <div className="text-center p-4 text-muted-foreground">
+                Enter a medicine name above to begin your search.
+            </div>
         )}
+
       </main>
-      
+
       <footer className="mt-auto pt-8 text-center text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} {t.appName}. All rights reserved.</p>
       </footer>

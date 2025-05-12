@@ -20,6 +20,7 @@ export type TranslationKeys = {
   errorAi: string;
   errorData: string;
   searchWithAiResult: (correctedName: string) => string;
+  clearSearchButton: string; // Added key
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -43,6 +44,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'AI search enhancement failed.',
     errorData: 'Failed to fetch medicine data.',
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
+    clearSearchButton: 'Clear Search', // Added translation
   },
   hi: {
     appName: 'मेडि सर्च',
@@ -64,6 +66,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'एआई खोज वृद्धि विफल रही।',
     errorData: 'दवा डेटा लाने में विफल।',
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
+    clearSearchButton: 'खोज साफ़ करें', // Added translation
   },
   bn: {
     appName: 'মেডিসার্চ',
@@ -85,6 +88,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে।',
     errorData: 'ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
+    clearSearchButton: 'অনুসন্ধান সাফ করুন', // Added translation
   },
 };
 

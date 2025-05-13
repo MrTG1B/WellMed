@@ -23,7 +23,7 @@ import { Loader2 } from "lucide-react";
 
 const medicineFormSchema = z.object({
   medicineId: z.string().min(1, { message: "Medicine ID is required." })
-    .regex(/^[a-zA-Z0-9_-]+$/, { message: "Medicine ID can only contain letters, numbers, hyphens, and underscores." }),
+    .regex(/^[a-zA-Z0-9_.-]+$/, { message: "Medicine ID can only contain letters, numbers, hyphens, underscores, and periods." }),
   composition: z.string().min(1, { message: "Composition is required." }),
   barcode: z.string().optional(),
 });
@@ -48,16 +48,31 @@ export default function AdminUploadForm() {
     try {
       if (!db) {
         toast({
-          title: "Error",
-          description: "Firestore database is not available. Please check Firebase configuration and console logs.",
+          title: "Error: Firestore Not Initialized",
+          description: "Firestore database (db) is not available. This usually means there's an issue with the Firebase SDK initialization. Please check the browser console for detailed error messages from 'src/lib/firebase.ts'. Ensure all NEXT_PUBLIC_FIREBASE_... environment variables are correctly set in .env.local and the server was restarted.",
           variant: "destructive",
-          duration: 9000,
+          duration: 15000,
         });
         setIsSubmitting(false);
         return;
       }
 
-      const medicineDocRef = doc(db, "medicines", data.medicineId);
+      // Use the medicineId directly as the document ID.
+      // It's crucial that medicineId is a string that is valid for Firestore document IDs.
+      // Firestore document IDs must not be empty, must not be longer than 1,500 bytes, 
+      // must not contain / (forward slash), and must not be solely . or ...
+      const sanitizedMedicineId = data.medicineId.replace(/\//g, '_'); // Replace slashes just in case, though regex should prevent it.
+      if (!sanitizedMedicineId || sanitizedMedicineId === "." || sanitizedMedicineId === "..") {
+        toast({
+          title: "Invalid Medicine ID",
+          description: "Medicine ID cannot be empty or just '.' or '..'. Please provide a valid ID.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const medicineDocRef = doc(db, "medicines", sanitizedMedicineId);
       
       const dataToUpload: { composition: string; barcode?: string } = {
         composition: data.composition,
@@ -70,41 +85,41 @@ export default function AdminUploadForm() {
 
       toast({
         title: "Success",
-        description: `Medicine data for ID "${data.medicineId}" uploaded successfully.`,
+        description: `Medicine data for ID "${sanitizedMedicineId}" uploaded successfully.`,
       });
       form.reset(); 
-    } catch (error) {
-      console.error("Error uploading medicine data (full error object):", error);
-      let detailedMessage = "Failed to upload medicine data. Please try again.";
+    } catch (error: any) {
+      console.error("Error uploading medicine data to Firestore:", error);
       
-      if (error instanceof Error) {
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        detailedMessage = `Upload Error: ${error.message}.
-        \n\nCommon Fixes:
-        \n1. Ensure Firestore is enabled in your Firebase project console (Databases -> Create database).
-        \n2. Check Firestore Security Rules. For testing, you might use:
-        \n   rules_version = '2';
-        \n   service cloud.firestore {
-        \n     match /databases/{database}/documents {
-        \n       match /{document=**} {
-        \n         allow read, write: if true; // CAUTION: Open access
-        \n       }
-        \n     }
-        \n   }
-        \n3. Verify all NEXT_PUBLIC_FIREBASE_... environment variables in .env.local are correct & server restarted.
-        \n(Error Code: ${(error as any).code || 'N/A'})`;
-      } else {
-         detailedMessage = `An unknown error occurred. 
-         Please check the browser console. 
-         Ensure Firestore is enabled in Firebase and security rules allow writes.`;
+      let detailedMessage = `Failed to upload medicine data for ID "${data.medicineId}". `;
+      if (error.code) {
+        detailedMessage += `Error Code: ${error.code}. `;
       }
+      if (error.message) {
+        detailedMessage += `Message: ${error.message}. `;
+      }
+
+      detailedMessage += "\n\nCommon issues & checks:\n" +
+        "1. Firestore Security Rules: Ensure your rules allow 'write' operations on the 'medicines' collection. For testing, you might use:\n" +
+        "   rules_version = '2';\n" +
+        "   service cloud.firestore {\n" +
+        "     match /databases/{database}/documents {\n" +
+        "       match /medicines/{medicineId} {\n" +
+        "         allow read, write: if true; // CAUTION: Open access for testing\n" +
+        "       }\n" +
+        "     }\n" +
+        "   }\n" +
+        "2. Firebase Project Setup: Verify that Firestore is enabled in your Firebase project console (Databases -> Create database, ensure it's in Native mode).\n" +
+        "3. Environment Variables: Double-check that all NEXT_PUBLIC_FIREBASE_... variables in your .env.local file are correct and that you've restarted your Next.js development server after any changes.\n" +
+        "4. Network Issues: Check your internet connection and any browser console network errors related to Firestore.\n" +
+        "5. Valid Document ID: Ensure the Medicine ID ('${data.medicineId}') is a valid Firestore document ID (not empty, no slashes, not just '.' or '..').";
+
 
       toast({
         title: "Firestore Upload Failed",
         description: detailedMessage,
         variant: "destructive",
-        duration: 15000, // Increased duration to allow reading the detailed message
+        duration: 20000, 
       });
     } finally {
       setIsSubmitting(false);
@@ -121,11 +136,10 @@ export default function AdminUploadForm() {
             <FormItem>
               <FormLabel>Medicine ID</FormLabel>
               <FormControl>
-                <Input placeholder="Enter medicine ID (e.g., Crocin, Aspirin75)" {...field} disabled={isSubmitting} />
+                <Input placeholder="e.g., Paracetamol500, Amoxicillin_250mg, Crocin-Syrup" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
-                This ID will be used as the document ID in Firestore. It should be unique.
-                 Example: Paracetamol500, Amoxicillin250.
+                Unique ID for the medicine (used as Firestore document ID). Allowed: letters, numbers, hyphens, underscores, periods.
               </FormDescription>
               <FormMessage />
             </FormItem>

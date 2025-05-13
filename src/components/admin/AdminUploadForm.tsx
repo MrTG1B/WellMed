@@ -19,11 +19,18 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { ref, set } from "firebase/database";
+import { ref, set, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
+  medicineId: z.string().min(2, {
+    message: "Medicine ID must be at least 2 characters.",
+  }).max(50, {
+    message: "Medicine ID must be at most 50 characters."
+  }).regex(/^[a-zA-Z0-9-_]+$/, {
+    message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores."
+  }),
   medicineName: z.string().min(2, {
     message: "Medicine name must be at least 2 characters.",
   }),
@@ -48,14 +55,14 @@ export default function AdminUploadForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      medicineId: "",
       medicineName: "",
       composition: "",
       barcode: "",
     },
-    mode: "onChange", // Ensure validation and dirty state updates on change
+    mode: "onChange",
   });
 
-  // Correctly access form state properties
   const { isDirty, isValid } = form.formState;
 
 
@@ -69,20 +76,10 @@ export default function AdminUploadForm() {
     setIsSubmitting(true);
     console.log("[AdminUploadForm] isSubmitting set to true.");
 
-    const medicineId = data.medicineName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, '');
-    
-    if (!medicineId) {
-        console.error("[AdminUploadForm] Invalid Medicine ID generated from name:", data.medicineName);
-        toast({
-            title: "Invalid Input",
-            description: "Medicine name is invalid for ID generation. Please use alphanumeric characters.",
-            variant: "destructive",
-        });
-        setIsSubmitting(false);
-        console.log("[AdminUploadForm] isSubmitting set to false due to invalid medicineId.");
-        return;
-    }
-    console.log(`[AdminUploadForm] Generated medicineId: ${medicineId}`);
+    const newMedicineId = data.medicineId.trim();
+    const newMedicineName = data.medicineName.trim();
+    const newComposition = data.composition.trim().toLowerCase();
+    const newBarcode = data.barcode?.trim();
 
     try {
       if (!db) {
@@ -96,24 +93,69 @@ export default function AdminUploadForm() {
         console.log("[AdminUploadForm] isSubmitting set to false (no db instance).");
         return;
       }
+
+      // Check for existing data
+      const medicinesRef = ref(db, 'medicines');
+      const snapshot = await get(medicinesRef);
+      let idConflict = false;
+      let compositionConflict = false;
+      let barcodeConflict = false;
+
+      if (snapshot.exists()) {
+        const medicinesData = snapshot.val();
+        for (const existingKey in medicinesData) {
+          if (existingKey === newMedicineId) {
+            idConflict = true;
+          }
+          const existingMedicine = medicinesData[existingKey];
+          if (existingMedicine.composition && existingMedicine.composition.toLowerCase() === newComposition) {
+            compositionConflict = true;
+          }
+          if (newBarcode && existingMedicine.barcode && existingMedicine.barcode === newBarcode) {
+            barcodeConflict = true;
+          }
+        }
+      }
+
+      const warningMessages: string[] = [];
+      if (idConflict) {
+        warningMessages.push(`Medicine ID "${newMedicineId}" already exists.`);
+      }
+      if (compositionConflict) {
+        warningMessages.push(`A medicine with composition "${data.composition.trim()}" already exists.`);
+      }
+      if (barcodeConflict && newBarcode) {
+        warningMessages.push(`A medicine with barcode "${newBarcode}" already exists.`);
+      }
+
+      if (warningMessages.length > 0) {
+        toast({
+          title: "Data Conflict",
+          description: warningMessages.join(" "),
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        console.log("[AdminUploadForm] isSubmitting set to false due to data conflict.");
+        return;
+      }
       
       const medicineDataToSave = {
-        name: data.medicineName.trim(),
-        composition: data.composition.trim(),
-        barcode: data.barcode?.trim() || null, 
-        lastUpdated: currentTimestamp,
+        name: newMedicineName,
+        composition: data.composition.trim(), // Store original casing for composition
+        barcode: newBarcode || null, 
+        lastUpdated: new Date().toISOString(), // Update timestamp on each submission
       };
 
-      console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${medicineId}`, "Data:", medicineDataToSave);
-      const medicineRef = ref(db, `medicines/${medicineId}`);
+      console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${newMedicineId}`, "Data:", medicineDataToSave);
+      const medicineRef = ref(db, `medicines/${newMedicineId}`);
       
       await set(medicineRef, medicineDataToSave);
       
-      console.log("[AdminUploadForm] Realtime Database write successful for ID:", medicineId);
+      console.log("[AdminUploadForm] Realtime Database write successful for ID:", newMedicineId);
 
       toast({
         title: "Upload Successful",
-        description: `Medicine "${data.medicineName.trim()}" data saved to Realtime Database.`,
+        description: `Medicine "${newMedicineName}" (ID: ${newMedicineId}) data saved to Realtime Database.`,
       });
       form.reset(); 
       setCurrentTimestamp(new Date().toISOString());
@@ -147,15 +189,31 @@ export default function AdminUploadForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
+          name="medicineId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Medicine ID</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., paracetamol-500" {...field} />
+              </FormControl>
+              <FormDescription>
+                Enter a unique ID for the medicine (e.g., lowercase, hyphens). This will be its key in the database.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="medicineName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Medicine Name</FormLabel>
+              <FormLabel>Medicine Display Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Paracetamol 500" {...field} />
+                <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
               </FormControl>
               <FormDescription>
-                The official name of the medicine. This will be used to generate its ID.
+                The user-friendly name of the medicine.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -211,3 +269,4 @@ export default function AdminUploadForm() {
     </Form>
   );
 }
+

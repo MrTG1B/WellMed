@@ -226,10 +226,27 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$dotenv$2f$li
 ;
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$dotenv$2f$lib$2f$main$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["config"])(); // Ensures .env variables are loaded
 const plugins = [];
-if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== "") {
-    plugins.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$genkit$2d$ai$2f$googleai$2f$lib$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["googleAI"])());
+let apiKeyFound = false;
+let apiKeyEnvVarName = '';
+const googleApiKey = process.env.GOOGLE_API_KEY;
+const geminiApiKey = process.env.GEMINI_API_KEY;
+let apiKeyToUse = undefined;
+if (googleApiKey && googleApiKey.trim() !== "") {
+    apiKeyToUse = googleApiKey;
+    apiKeyEnvVarName = 'GOOGLE_API_KEY';
+    apiKeyFound = true;
+} else if (geminiApiKey && geminiApiKey.trim() !== "") {
+    apiKeyToUse = geminiApiKey;
+    apiKeyEnvVarName = 'GEMINI_API_KEY';
+    apiKeyFound = true;
+}
+if (apiKeyFound && apiKeyToUse) {
+    plugins.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$genkit$2d$ai$2f$googleai$2f$lib$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["googleAI"])({
+        apiKey: apiKeyToUse
+    }));
+    console.log(`Genkit: Initializing Google AI plugin using ${apiKeyEnvVarName}.`);
 } else {
-    console.warn('⚠️ Genkit Initialization Warning: GOOGLE_API_KEY is not set or is empty in the environment variables.\n' + '   AI-powered features will use fallbacks or may not be fully functional.\n' + '   If you intend to use Google AI, please ensure GOOGLE_API_KEY is set in your .env file.\n' + '   You can obtain an API key from Google AI Studio (https://aistudio.google.com/app/apikey).');
+    console.warn('⚠️ Genkit Initialization Warning: Neither GOOGLE_API_KEY nor GEMINI_API_KEY is set or is empty in the environment variables.\n' + '   AI-powered features will use fallbacks or may not be fully functional.\n' + '   If you intend to use Google AI, please ensure GOOGLE_API_KEY (or GEMINI_API_KEY) is set in your .env file.\n' + '   You can obtain an API key from Google AI Studio (https://aistudio.google.com/app/apikey).');
 }
 const ai = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$genkit$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["genkit"])({
     plugins: plugins
@@ -238,7 +255,7 @@ const googleAiPluginAdded = plugins.some((p)=>p.name === 'google-ai');
 if (googleAiPluginAdded) {
     console.log("Genkit: Google AI plugin initialized. Prompts are configured to use 'googleai/gemini-pro'.");
 } else {
-    console.warn('⚠️ Genkit initialized without any AI plugins (likely due to missing GOOGLE_API_KEY). ' + 'AI-dependent flows will use fallbacks or may not function.');
+    console.warn('⚠️ Genkit initialized without any AI plugins (likely due to missing GOOGLE_API_KEY or GEMINI_API_KEY). ' + 'AI-dependent flows will use fallbacks or may not function.');
 }
 }}),
 "[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)": ((__turbopack_context__) => {

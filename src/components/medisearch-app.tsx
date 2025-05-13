@@ -14,7 +14,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, Info, RotateCcw, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-// Image import is removed as the placeholder image is no longer used.
 
 export default function MediSearchApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
@@ -71,7 +70,7 @@ export default function MediSearchApp() {
         toast({
           title: t.appName,
           description: t.searchWithAiResult(aiEnhancedSearchTerm),
-          action: <Info className="h-5 w-5 text-blue-500" />,
+          action: <Info className="h-5 w-5 text-primary" />,
         });
       } else {
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
@@ -125,7 +124,7 @@ export default function MediSearchApp() {
         setSearchResults(detailedMedicines);
       } else {
         setLoadingMessage(t.loadingAiDetails);
-        toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-blue-500" /> });
+        toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         const aiDetails = await generateMedicineDetails({
           searchTermOrName: aiEnhancedSearchTerm,
           language: selectedLanguage,
@@ -210,7 +209,6 @@ export default function MediSearchApp() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
-      {/* Language Selector - Positioned at the top-right with glassmorphism */}
       <div className="w-full p-4 flex justify-end sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
         <LanguageSelector
           selectedLanguage={selectedLanguage}
@@ -219,14 +217,12 @@ export default function MediSearchApp() {
         />
       </div>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-8 sm:pt-12"> {/* Added top padding */}
-        {/* Logo and App Name - Centered */}
-        <div className="flex flex-col items-center mb-10"> {/* Increased bottom margin */}
-          <Pill className="h-16 w-16 sm:h-20 sm:w-20 text-primary mb-3" /> {/* App Logo */}
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-8 sm:pt-12">
+        <div className="flex items-center justify-center mb-10 space-x-3">
+          <Pill className="h-12 w-12 sm:h-14 sm:w-14 text-primary" />
           <h1 className="text-4xl sm:text-5xl font-bold text-primary">{t.appName}</h1>
         </div>
         
-        {/* Search Section */}
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar

@@ -1,12 +1,11 @@
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch } from "@/ai/flows/enhance-medicine-search";
 import { generateMedicineDetails } from "@/ai/flows/generate-medicine-details";
-import { fetchMedicineByName } from "@/lib/mockApi"; 
+import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi"; 
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
@@ -20,11 +19,15 @@ export default function MediSearchApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
   const [t, setT] = useState<TranslationKeys>(getTranslations("en"));
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchResult, setSearchResult] = useState<Medicine | null>(null);
+  const [searchResults, setSearchResults] = useState<Medicine[] | null>(null); // Changed to array
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
   const [searchAttempted, setSearchAttempted] = useState<boolean>(false);
+  
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
 
@@ -39,27 +42,29 @@ export default function MediSearchApp() {
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
-    setSearchResult(null);
+    setSearchResults(null);
     setError(null);
     setSearchAttempted(false);
+    setSuggestions([]);
+    setShowSuggestions(false);
   }, []);
 
-  const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!searchQuery.trim()) {
+  const performSearchLogic = async (termToSearch: string) => {
+    if (!termToSearch.trim()) {
       handleClearSearch();
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    setSearchResult(null);
+    setSearchResults(null);
     setSearchAttempted(true);
-    let aiEnhancedSearchTerm = searchQuery.trim();
+    setShowSuggestions(false); // Hide suggestions once search starts
+    let aiEnhancedSearchTerm = termToSearch.trim();
 
     try {
       setLoadingMessage(t.loadingAi);
-      const aiEnhanceResponse = await enhanceMedicineSearch({ query: searchQuery });
+      const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName) {
         aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
         toast({
@@ -76,38 +81,55 @@ export default function MediSearchApp() {
     }
 
     setLoadingMessage(t.loadingData);
-    const dbData = await fetchMedicineByName(aiEnhancedSearchTerm);
+    const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
 
     try {
-      if (dbData.foundInDb) {
-        setLoadingMessage(t.loadingAiDetails); // New loading message
-        const aiDetails = await generateMedicineDetails({
-          searchTermOrName: dbData.name, // Use name from DB as primary term
-          language: selectedLanguage,
-          contextName: dbData.name,
-          contextComposition: dbData.composition,
-          contextBarcode: dbData.barcode,
-        });
-        setSearchResult({
-          id: dbData.id,
-          name: aiDetails.name, // AI might refine casing or provide full name
-          composition: aiDetails.composition, // AI might format or detail it
-          barcode: aiDetails.barcode, // Should be from context if present
-          usage: aiDetails.usage,
-          manufacturer: aiDetails.manufacturer,
-          dosage: aiDetails.dosage,
-          sideEffects: aiDetails.sideEffects,
-          source: 'database_ai_enhanced',
-        });
+      if (dbDataArray.length > 0) {
+        setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
+        const medicinePromises = dbDataArray.map(dbItem =>
+          generateMedicineDetails({
+            searchTermOrName: dbItem.name,
+            language: selectedLanguage,
+            contextName: dbItem.name,
+            contextComposition: dbItem.composition,
+            contextBarcode: dbItem.barcode,
+          }).then(aiDetails => ({
+            id: dbItem.id,
+            name: aiDetails.name,
+            composition: aiDetails.composition,
+            barcode: aiDetails.barcode,
+            usage: aiDetails.usage,
+            manufacturer: aiDetails.manufacturer,
+            dosage: aiDetails.dosage,
+            sideEffects: aiDetails.sideEffects,
+            source: 'database_ai_enhanced' as const,
+          }))
+          .catch(err => { // Handle individual AI generation failure
+            console.error(`AI details generation failed for ${dbItem.name}:`, err);
+            toast({ title: `AI Error for ${dbItem.name}`, description: t.errorAiDetailsShort, variant: "destructive" });
+            return { // Fallback to DB data only
+              id: dbItem.id,
+              name: dbItem.name,
+              composition: dbItem.composition,
+              barcode: dbItem.barcode,
+              usage: t.infoNotAvailable,
+              manufacturer: t.infoNotAvailable,
+              dosage: t.infoNotAvailable,
+              sideEffects: t.infoNotAvailable,
+              source: 'database_only' as const,
+            };
+          })
+        );
+        const detailedMedicines = await Promise.all(medicinePromises);
+        setSearchResults(detailedMedicines);
       } else {
-        setLoadingMessage(t.loadingAiDetails); // New loading message
+        setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-blue-500" /> });
         const aiDetails = await generateMedicineDetails({
           searchTermOrName: aiEnhancedSearchTerm,
           language: selectedLanguage,
         });
-        setSearchResult({
-          // Create a temporary ID for AI-only results
+        setSearchResults([{
           id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`, 
           name: aiDetails.name,
           composition: aiDetails.composition,
@@ -116,33 +138,77 @@ export default function MediSearchApp() {
           manufacturer: aiDetails.manufacturer,
           dosage: aiDetails.dosage,
           sideEffects: aiDetails.sideEffects,
-          source: 'ai_generated',
-        });
+          source: 'ai_generated' as const,
+        }]);
       }
     } catch (flowError) {
-      console.error("AI details generation failed:", flowError);
-      setError(t.errorAiDetails); // New error message
+      console.error("Main AI details generation failed:", flowError);
+      setError(t.errorAiDetails);
       toast({ title: t.appName, description: t.errorAiDetails, variant: "destructive" });
-       // Fallback: if we had DB data but AI enhancement failed, show DB data with 'database_only'
-      if (dbData.foundInDb) {
-        setSearchResult({
-            id: dbData.id,
-            name: dbData.name,
-            composition: dbData.composition,
-            barcode: dbData.barcode,
-            usage: t.infoNotAvailable, // Fallback text
+      // Fallback for general AI failure after DB search, might already be handled by individual catches
+      if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
+         // If all results are already db_only due to individual errors, no need to reset
+      } else if (dbDataArray.length > 0) {
+        setSearchResults(dbDataArray.map(dbItem => ({
+            id: dbItem.id,
+            name: dbItem.name,
+            composition: dbItem.composition,
+            barcode: dbItem.barcode,
+            usage: t.infoNotAvailable,
             manufacturer: t.infoNotAvailable,
             dosage: t.infoNotAvailable,
             sideEffects: t.infoNotAvailable,
-            source: 'database_only',
-        });
-        setError(null); // Clear major error, show data with note
+            source: 'database_only' as const,
+        })));
       }
+      setError(null); // Clear major error if showing partial data
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
     }
   };
+
+  const handleSearchSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await performSearchLogic(searchQuery);
+  };
+
+  const handleSuggestionClick = async (suggestion: string) => {
+    setSearchQuery(suggestion); 
+    setShowSuggestions(false);  
+    await performSearchLogic(suggestion); 
+  };
+
+  const handleSearchQueryChange = (query: string) => {
+    setSearchQuery(query);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    if (query.length > 1) {
+      debounceTimeoutRef.current = setTimeout(async () => {
+        const fetchedSuggestions = await fetchSuggestions(query);
+        setSuggestions(fetchedSuggestions);
+        setShowSuggestions(fetchedSuggestions.length > 0);
+      }, 300); // 300ms debounce
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+  
+  const handleInputFocus = () => {
+    if (searchQuery.length > 1 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Delay hiding suggestions to allow click event on suggestion items
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 150);
+  };
+
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4 pt-8 sm:p-6 md:p-8 bg-background">
@@ -163,10 +229,15 @@ export default function MediSearchApp() {
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
             searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            onSubmit={handleSearch}
+            onSearchQueryChange={handleSearchQueryChange}
+            onSubmit={handleSearchSubmit}
             isLoading={isLoading}
             t={t}
+            suggestions={suggestions}
+            showSuggestions={showSuggestions}
+            onSuggestionClick={handleSuggestionClick}
+            onInputFocus={handleInputFocus}
+            onInputBlur={handleInputBlur}
           />
         </section>
 
@@ -192,13 +263,15 @@ export default function MediSearchApp() {
           </Alert>
         )}
 
-        {!isLoading && !error && searchResult && (
-          <section className="w-full mt-0 animate-fadeIn">
-            <MedicineCard medicine={searchResult} t={t} />
+        {!isLoading && !error && searchResults && searchResults.length > 0 && (
+          <section className="w-full mt-0 animate-fadeIn space-y-6">
+            {searchResults.map(medicine => (
+              <MedicineCard key={medicine.id} medicine={medicine} t={t} />
+            ))}
           </section>
         )}
         
-        {!isLoading && !error && !searchResult && searchAttempted && (
+        {!isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && (
             <Alert className="w-full max-w-lg shadow-md">
                 <Info className="h-5 w-5" />
                 <AlertTitle>{t.noResultsTitle}</AlertTitle>
@@ -230,4 +303,3 @@ export default function MediSearchApp() {
     </div>
   );
 }
-

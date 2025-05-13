@@ -11,7 +11,7 @@ export type TranslationKeys = {
   bengali: string;
   resultsTitle: string;
   noResults: string;
-  noResultsTitle: string; // New for no results alert
+  noResultsTitle: string; 
   medicineNameLabel: string;
   compositionLabel: string;
   usageLabel: string;
@@ -21,21 +21,22 @@ export type TranslationKeys = {
   barcodeLabel: string;
   loadingAi: string;
   loadingData: string;
-  loadingAiDetails: string; // New
+  loadingAiDetails: string; 
   errorOccurred: string;
   errorAi: string;
   errorData: string;
-  errorAiDetails: string; // New
+  errorAiDetails: string; 
+  errorAiDetailsShort: string; // New
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
-  sourceDbAiMessage: string; // New
-  sourceAiOnlyMessage: string; // New
-  sourceDbOnlyMessage: string; // New for DB only fallback
-  notFoundInDbAiGenerating: string; // New
-  barcodeNotAvailable: string; // New
-  initialHelperText: string; // New
-  allRightsReserved: string; // New
-  infoNotAvailable: string; // New
+  sourceDbAiMessage: string; 
+  sourceAiOnlyMessage: string; 
+  sourceDbOnlyMessage: string; 
+  notFoundInDbAiGenerating: string; 
+  barcodeNotAvailable: string; 
+  initialHelperText: string; 
+  allRightsReserved: string; 
+  infoNotAvailable: string; 
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -65,6 +66,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'AI search enhancement failed. Using original query.',
     errorData: 'Failed to fetch medicine data from database.',
     errorAiDetails: 'AI failed to generate complete details.',
+    errorAiDetailsShort: 'AI details failed.',
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
     clearSearchButton: 'Clear Search',
     sourceDbAiMessage: 'Details from database, enhanced by AI.',
@@ -102,6 +104,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'एआई खोज वृद्धि विफल रही। मूल क्वेरी का उपयोग किया जा रहा है।',
     errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
     errorAiDetails: 'एआई पूर्ण विवरण उत्पन्न करने में विफल रहा।',
+    errorAiDetailsShort: 'एआई विवरण विफल।',
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
     clearSearchButton: 'खोज साफ़ करें',
     sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
@@ -139,6 +142,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
     errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
     errorAiDetails: 'এআই সম্পূর্ণ বিবরণ তৈরি করতে ব্যর্থ হয়েছে।',
+    errorAiDetailsShort: 'এআই বিস্তারিত ব্যর্থ হয়েছে।',
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
     clearSearchButton: 'অনুসন্ধান সাফ করুন',
     sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',

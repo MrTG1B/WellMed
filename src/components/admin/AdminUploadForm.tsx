@@ -48,10 +48,10 @@ export default function AdminUploadForm() {
     try {
       if (!db) {
         toast({
-          title: "Error: Firestore Not Initialized",
-          description: "Firestore database (db) is not available. This usually means there's an issue with the Firebase SDK initialization. Please check the browser console for detailed error messages from 'src/lib/firebase.ts'. Ensure all NEXT_PUBLIC_FIREBASE_... environment variables are correctly set in .env.local and the server was restarted.",
+          title: "Critical Error: Firestore Not Initialized",
+          description: "Firestore database (db) is not available. This means Firebase SDK failed to initialize properly. PLEASE VERIFY .env.local Firebase variables are correct and the server was RESTARTED. Also, check the browser console for 'Firebase Initialization Error' messages from 'src/lib/firebase.ts'.",
           variant: "destructive",
-          duration: 15000,
+          duration: 20000,
         });
         setIsSubmitting(false);
         return;
@@ -68,12 +68,13 @@ export default function AdminUploadForm() {
         return;
       }
       
+      // The document ID will be the sanitizedMedicineId
       const medicineDocRef = doc(db, "medicines", sanitizedMedicineId);
       
-      const dataToUpload: { composition: string; barcode?: string; name?: string } = {
+      const dataToUpload: { composition: string; barcode?: string; name: string } = {
         composition: data.composition,
-        // Storing the medicineId as 'name' for easier querying/consistency if needed,
-        // though the primary lookup is by ID. This matches the field used in mockApi for initial find.
+        // Store the medicineId as 'name' for consistency and potential direct lookups by name.
+        // The document ID itself is the primary unique identifier.
         name: sanitizedMedicineId, 
       };
       if (data.barcode && data.barcode.trim() !== "") {
@@ -83,63 +84,69 @@ export default function AdminUploadForm() {
       await setDoc(medicineDocRef, dataToUpload, { merge: true });
 
       toast({
-        title: "Success",
+        title: "Success!",
         description: `Medicine data for ID "${sanitizedMedicineId}" uploaded successfully.`,
       });
       form.reset(); 
     } catch (error: any) {
       console.error("Error uploading medicine data to Firestore:", error);
       
-      let detailedMessage = `Failed to upload medicine data for ID "${data.medicineId}". The error "transport errored" usually indicates a problem with Firebase project setup or security rules.\n\n`;
+      let detailedMessage = `Failed to upload medicine data for ID "${data.medicineId}". The error "${error.message || 'Unknown error'}" (often "transport errored", "Failed to fetch", or "Could not reach Firestore backend") usually indicates a problem with Firebase project setup, Firestore database creation, or security rules.\n\n`;
       
       if (error.code) {
         detailedMessage += `Firebase Error Code: ${error.code}. `;
       }
-      if (error.message) {
-        detailedMessage += `Message: ${error.message}. `;
-      }
 
-      detailedMessage += "\n\n🚨 CRITICAL CHECKS TO RESOLVE 'TRANSPORT ERRORED':\n\n" +
-        "1. VERIFY FIREBASE CONSOLE SETUP:\n" +
-        "   a. Go to your Firebase Project Console (console.firebase.google.com).\n" +
-        "   b. Navigate to 'Firestore Database' (under Build).\n" +
-        "   c. **IMPORTANT**: If you see a 'Create database' button, YOU MUST CLICK IT.\n" +
-        "      - Choose 'Start in **production mode**' (you'll adjust rules next) or 'Start in **test mode**' (rules are open for 30 days - good for initial testing).\n" +
+      detailedMessage += "\n\n🚨🚨🚨 TROUBLESHOOTING 'TRANSPORT ERRORED' / CONNECTION ISSUES: 🚨🚨🚨\n\n" +
+        "1. **FIREBASE CONSOLE: CREATE FIRESTORE DATABASE** (Most Common Issue):\n" +
+        "   a. Go to your Firebase Project: https://console.firebase.google.com/\n" +
+        "   b. Select your project.\n" +
+        "   c. In the left navigation, click 'Build' -> '**Firestore Database**'.\n" +
+        "   d. **IF YOU SEE A 'CREATE DATABASE' BUTTON, CLICK IT!** This is essential.\n" +
+        "      - Choose 'Start in **production mode**' (recommended, adjust rules next) or 'Start in **test mode**' (open for 30 days - for quick testing).\n" +
         "      - Select a Cloud Firestore location (e.g., us-central1). This cannot be changed later.\n" +
-        "   d. If Firestore is already created, ensure it's in 'Native Mode', NOT 'Datastore Mode'.\n\n" +
-        "2. CHECK FIRESTORE SECURITY RULES:\n" +
-        "   a. In Firebase Console -> Firestore Database -> 'Rules' tab.\n" +
-        "   b. **For testing, your rules MUST allow writes.** A common test setup is:\n" +
+        "   e. If Firestore is already created, ensure it's in **'Native Mode'**, NOT 'Datastore Mode'.\n\n" +
+        "2. **FIRESTORE SECURITY RULES (Allow Writes)**:\n" +
+        "   a. In Firebase Console -> Firestore Database -> '**Rules**' tab.\n" +
+        "   b. **For testing, your rules MUST allow writes to the 'medicines' collection.** Example for testing (replace with secure rules for production):\n" +
         "      ```\n" +
         "      rules_version = '2';\n" +
         "      service cloud.firestore {\n" +
         "        match /databases/{database}/documents {\n" +
-        "          // Allow read/write access to all documents for testing\n" +
-        "          //match /{document=**} { // Too broad for long term\n" +
-        "          match /medicines/{medicineId} {\n" + // Be specific to your collection
+        "          // Allow read/write to the 'medicines' collection by ANYONE (for testing only!)\n" +
+        "          match /medicines/{medicineId} {\n" +
         "            allow read, write: if true; \n" +
-        "            // For actual deployment, use: allow read, write: if request.auth != null; (if using auth)\n" +
         "          }\n" +
+        "          // To allow any user (even unauthenticated) to read any document:\n" +
+        "          // match /{document=**} {\n" +
+        "          //  allow read: if true;\n" +
+        "          // }\n" +
         "        }\n" +
         "      }\n" +
         "      ```\n" +
-        "   c. Click 'Publish'. **Wait a few minutes for rules to apply.**\n\n" +
-        "3. VERIFY `.env.local` ENVIRONMENT VARIABLES:\n" +
-        "   a. Ensure `NEXT_PUBLIC_FIREBASE_PROJECT_ID` in your `.env.local` file EXACTLY matches the Project ID shown in your Firebase Project settings (click the gear icon ⚙️ next to 'Project Overview').\n" +
-        "   b. Double-check ALL other `NEXT_PUBLIC_FIREBASE_...` variables (apiKey, authDomain, etc.) are correctly copied from your Firebase project's Web App configuration (Project settings -> General -> Your apps -> Web app -> SDK setup and configuration -> Config).\n" +
-        "   c. **CRITICAL: You MUST restart your Next.js development server (npm run dev) after any changes to `.env.local`.**\n\n" +
-        "4. CHECK NETWORK & BROWSER:\n" +
-        "   a. Ensure you have a stable internet connection.\n" +
-        "   b. Try disabling VPNs or strict browser privacy extensions temporarily to rule them out.\n" +
-        "   c. Check your browser's console for any other network-related errors (e.g., CORS issues, though less likely for 'transport errored').\n\n" +
-        "If the problem persists after checking all these, review your Firebase project's usage and billing status.";
-
+        "   c. Click '**Publish**'. **Wait a few minutes** for rules to apply server-side.\n\n" +
+        "3. **`.env.local` ENVIRONMENT VARIABLES ACCURACY**:\n" +
+        "   a. Open your project's `.env.local` file.\n" +
+        "   b. **VERY CAREFULLY CHECK** that `NEXT_PUBLIC_FIREBASE_PROJECT_ID` EXACTLY matches the Project ID in your Firebase Project settings (Gear icon ⚙️ -> Project settings -> General tab -> Project ID).\n" +
+        "   c. **VERIFY ALL OTHER** `NEXT_PUBLIC_FIREBASE_...` variables (apiKey, authDomain, etc.) against your Firebase project's Web App configuration (Project settings -> General -> Your apps -> Select your Web app -> SDK setup and configuration -> Config section).\n" +
+        "   d. **CRITICAL: YOU MUST RESTART your Next.js development server (`npm run dev`) AFTER ANY CHANGES to `.env.local`.**\n\n" +
+        "4. **NETWORK & BROWSER CHECKS**:\n" +
+        "   a. Ensure stable internet connection.\n" +
+        "   b. Temporarily disable VPNs or strict browser privacy extensions/firewalls that might block connections to Google Cloud services.\n" +
+        "   c. Check your browser's developer console (Network tab) for any failed requests to `firestore.googleapis.com`.\n\n" +
+        "5. **BILLING (Less Common for Firestore initial setup but possible for other Firebase services or high usage later)**:\n" +
+        "   a. Ensure your Firebase project is on a plan that supports Firestore (Spark plan is usually fine for development) and billing is active if on a paid plan and you've exceeded free quotas.\n\n" +
+        "If the problem persists after thoroughly checking ALL these steps, review the Firebase console for any specific project alerts or issues, and double check for typos in variable names or values.";
 
       toast({
-        title: "Firestore Upload Failed - TRANSPORT ERROR",
-        description: detailedMessage,
+        title: "Firestore Upload Failed - Connection Issue",
+        description: (
+          <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-slate-950 p-4 text-slate-50">
+            <code className="text-white">{detailedMessage}</code>
+          </pre>
+        ),
         variant: "destructive",
-        duration: 60000, // Increased duration for this critical message
+        duration: 120000, // Long duration for this critical, detailed message
       });
     } finally {
       setIsSubmitting(false);
@@ -159,7 +166,7 @@ export default function AdminUploadForm() {
                 <Input placeholder="e.g., Paracetamol500, Amoxicillin_250mg, Crocin-Syrup" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
-                Unique ID for the medicine (used as Firestore document ID). Allowed: letters, numbers, hyphens, underscores, periods. This will also be used as the 'name' field in Firestore.
+                Unique ID for the medicine (used as Firestore document ID). Allowed: letters, numbers, hyphens, underscores, periods. This will also be stored as the 'name' field in Firestore.
               </FormDescription>
               <FormMessage />
             </FormItem>

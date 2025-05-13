@@ -8,9 +8,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Barcode, Pill, Factory, AlertTriangle, ClipboardList, Stethoscope } from "lucide-react";
+import { Barcode, Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info } from "lucide-react";
 
 interface MedicineCardProps {
   medicine: Medicine;
@@ -20,6 +21,16 @@ interface MedicineCardProps {
 export function MedicineCard({ medicine, t }: MedicineCardProps) {
   const detailItemClass = "text-sm font-medium text-foreground/80";
   const detailValueClass = "text-base text-foreground";
+
+  let sourceMessage = "";
+  if (medicine.source === 'ai_generated') {
+    sourceMessage = t.sourceAiOnlyMessage;
+  } else if (medicine.source === 'database_ai_enhanced') {
+    sourceMessage = t.sourceDbAiMessage;
+  } else if (medicine.source === 'database_only') {
+    sourceMessage = t.sourceDbOnlyMessage;
+  }
+
 
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
@@ -81,10 +92,16 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
             <h3 className={detailItemClass + " flex items-center"}>
              <Barcode className="mr-2 h-4 w-4 text-primary" /> {t.barcodeLabel}
             </h3>
-             <p className="text-sm text-muted-foreground italic">Not available</p>
+             <p className="text-sm text-muted-foreground italic">{t.barcodeNotAvailable}</p>
            </div>
         )}
       </CardContent>
+      {sourceMessage && (
+        <CardFooter className="text-xs text-muted-foreground italic pt-4 border-t">
+          <Info className="mr-2 h-3 w-3" />
+          {sourceMessage}
+        </CardFooter>
+      )}
     </Card>
   );
 }

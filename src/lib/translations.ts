@@ -11,6 +11,7 @@ export type TranslationKeys = {
   bengali: string;
   resultsTitle: string;
   noResults: string;
+  noResultsTitle: string; // New for no results alert
   medicineNameLabel: string;
   compositionLabel: string;
   usageLabel: string;
@@ -20,25 +21,36 @@ export type TranslationKeys = {
   barcodeLabel: string;
   loadingAi: string;
   loadingData: string;
+  loadingAiDetails: string; // New
   errorOccurred: string;
   errorAi: string;
   errorData: string;
+  errorAiDetails: string; // New
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
+  sourceDbAiMessage: string; // New
+  sourceAiOnlyMessage: string; // New
+  sourceDbOnlyMessage: string; // New for DB only fallback
+  notFoundInDbAiGenerating: string; // New
+  barcodeNotAvailable: string; // New
+  initialHelperText: string; // New
+  allRightsReserved: string; // New
+  infoNotAvailable: string; // New
 };
 
 export const translations: Record<Language, TranslationKeys> = {
   en: {
     appName: 'MediSearch',
     searchTitle: 'Search for Medicines',
-    searchPlaceholder: 'Enter medicine name, barcode, or composition (e.g., Paracetamol, 123..., "Paracetamol 500mg")',
+    searchPlaceholder: 'Enter medicine name, barcode, or composition...',
     searchButton: 'Search',
     languageLabel: 'Language',
     english: 'English',
     hindi: 'Hindi',
     bengali: 'Bengali',
     resultsTitle: 'Search Result',
-    noResults: 'No medicine found matching your query.',
+    noResults: 'No medicine found matching your query. AI is attempting to provide general information if possible.',
+    noResultsTitle: 'No Specific Match Found',
     medicineNameLabel: 'Name',
     compositionLabel: 'Composition',
     usageLabel: 'Usage',
@@ -47,24 +59,35 @@ export const translations: Record<Language, TranslationKeys> = {
     sideEffectsLabel: 'Side Effects',
     barcodeLabel: 'Barcode',
     loadingAi: 'Enhancing search with AI...',
-    loadingData: 'Fetching medicine details...',
-    errorOccurred: 'An error occurred. Please try again.',
-    errorAi: 'AI search enhancement failed.',
-    errorData: 'Failed to fetch medicine data.',
+    loadingData: 'Searching database...',
+    loadingAiDetails: 'Generating details with AI...',
+    errorOccurred: 'An Error Occurred',
+    errorAi: 'AI search enhancement failed. Using original query.',
+    errorData: 'Failed to fetch medicine data from database.',
+    errorAiDetails: 'AI failed to generate complete details.',
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
     clearSearchButton: 'Clear Search',
+    sourceDbAiMessage: 'Details from database, enhanced by AI.',
+    sourceAiOnlyMessage: 'Medicine not in database. Details primarily AI-generated.',
+    sourceDbOnlyMessage: 'Details from database. AI enhancement for full details failed.',
+    notFoundInDbAiGenerating: 'Medicine not found in database. Attempting to generate details with AI.',
+    barcodeNotAvailable: 'Not available',
+    initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
+    allRightsReserved: 'All rights reserved.',
+    infoNotAvailable: "Information not available.",
   },
   hi: {
     appName: 'मेडि सर्च',
     searchTitle: 'दवाएं खोजें',
-    searchPlaceholder: 'दवा का नाम, बारकोड, या संरचना दर्ज करें (जैसे, पैरासिटामोल, 123..., "पैरासिटामोल 500mg")',
+    searchPlaceholder: 'दवा का नाम, बारकोड, या संरचना दर्ज करें...',
     searchButton: 'खोजें',
     languageLabel: 'भाषा',
     english: 'अंग्रेज़ी',
     hindi: 'हिंदी',
     bengali: 'बंगाली',
     resultsTitle: 'खोज परिणाम',
-    noResults: 'आपकी क्वेरी से मेल खाने वाली कोई दवा नहीं मिली।',
+    noResults: 'आपकी क्वेरी से मेल खाने वाली कोई दवा नहीं मिली। यदि संभव हो तो AI सामान्य जानकारी प्रदान करने का प्रयास कर रहा है।',
+    noResultsTitle: 'कोई विशिष्ट मिलान नहीं मिला',
     medicineNameLabel: 'नाम',
     compositionLabel: 'संरचना',
     usageLabel: 'उपयोग',
@@ -73,24 +96,35 @@ export const translations: Record<Language, TranslationKeys> = {
     sideEffectsLabel: 'दुष्प्रभाव',
     barcodeLabel: 'बारकोड',
     loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
-    loadingData: 'दवा का विवरण प्राप्त किया जा रहा है...',
-    errorOccurred: 'एक त्रुटि हुई। कृपया पुन: प्रयास करें।',
-    errorAi: 'एआई खोज वृद्धि विफल रही।',
-    errorData: 'दवा डेटा लाने में विफल।',
+    loadingData: 'डेटाबेस में खोजा जा रहा है...',
+    loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
+    errorOccurred: 'एक त्रुटि हुई',
+    errorAi: 'एआई खोज वृद्धि विफल रही। मूल क्वेरी का उपयोग किया जा रहा है।',
+    errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
+    errorAiDetails: 'एआई पूर्ण विवरण उत्पन्न करने में विफल रहा।',
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
     clearSearchButton: 'खोज साफ़ करें',
+    sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
+    sourceAiOnlyMessage: 'दवा डेटाबेस में नहीं है। विवरण मुख्य रूप से एआई-जनित।',
+    sourceDbOnlyMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई वृद्धि विफल रही।',
+    notFoundInDbAiGenerating: 'दवा डेटाबेस में नहीं मिली। एआई के साथ विवरण उत्पन्न करने का प्रयास किया जा रहा है।',
+    barcodeNotAvailable: 'उपलब्ध नहीं है',
+    initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
+    allRightsReserved: 'सभी अधिकार सुरक्षित।',
+    infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
   },
   bn: {
     appName: 'মেডিসার্চ',
     searchTitle: 'ওষুধ অনুসন্ধান করুন',
-    searchPlaceholder: 'ওষুধের নাম, বারকোড, বা গঠন লিখুন (যেমন, প্যারাসিটামল, 123..., "প্যারাসিটামল 500mg")',
+    searchPlaceholder: 'ওষুধের নাম, বারকোড, বা গঠন লিখুন...',
     searchButton: 'অনুসন্ধান',
     languageLabel: 'ভাষা',
     english: 'ইংরেজি',
     hindi: 'হিন্দি',
     bengali: 'বাংলা',
     resultsTitle: 'অনুসন্ধানের ফলাফল',
-    noResults: 'আপনার প্রশ্নের সাথে মেলে এমন কোন ওষুধ পাওয়া যায়নি।',
+    noResults: 'আপনার প্রশ্নের সাথে মেলে এমন কোন ওষুধ পাওয়া যায়নি। যদি সম্ভব হয় AI সাধারণ তথ্য প্রদান করার চেষ্টা করছে।',
+    noResultsTitle: 'কোন নির্দিষ্ট মিল পাওয়া যায়নি',
     medicineNameLabel: 'নাম',
     compositionLabel: 'গঠন',
     usageLabel: 'ব্যবহার',
@@ -99,12 +133,22 @@ export const translations: Record<Language, TranslationKeys> = {
     sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
     barcodeLabel: 'বারকোড',
     loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
-    loadingData: 'ওষুধের বিবরণ আনা হচ্ছে...',
-    errorOccurred: 'একটি ত্রুটি ঘটেছে। আবার চেষ্টা করুন.',
-    errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে।',
-    errorData: 'ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
+    loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
+    loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
+    errorOccurred: 'একটি ত্রুটি ঘটেছে',
+    errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
+    errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
+    errorAiDetails: 'এআই সম্পূর্ণ বিবরণ তৈরি করতে ব্যর্থ হয়েছে।',
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
     clearSearchButton: 'অনুসন্ধান সাফ করুন',
+    sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
+    sourceAiOnlyMessage: 'ওষুধ ডাটাবেসে নেই। বিস্তারিত প্রধানত এআই-উত্পন্ন।',
+    sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।',
+    notFoundInDbAiGenerating: 'ওষুধ ডাটাবেসে পাওয়া যায়নি। এআই দিয়ে বিস্তারিত তৈরি করার চেষ্টা করা হচ্ছে।',
+    barcodeNotAvailable: 'উপলব্ধ নয়',
+    initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',
+    allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
+    infoNotAvailable: "তথ্য উপলব্ধ নেই।",
   },
 };
 

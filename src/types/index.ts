@@ -1,12 +1,14 @@
 export type Medicine = {
-  id: string;
-  name: string; // English name, used for searching and display
-  composition: string; // English composition, used for display
-  usage: string; // New field: How and when to use the medicine
-  manufacturer: string; // New field: Who manufactured the medicine
-  dosage: string; // New field: Recommended dosage
-  sideEffects: string; // New field: Potential side effects
+  id: string; // If from DB, it's the DB key. If AI-generated, it's a derived/temporary ID.
+  name: string; 
+  composition: string; 
+  usage: string; 
+  manufacturer: string; 
+  dosage: string; 
+  sideEffects: string; 
   barcode?: string;
+  source: 'database_ai_enhanced' | 'ai_generated' | 'database_only'; // Indicates the origin of the data
 };
 
 export type Language = 'en' | 'hi' | 'bn';
+

@@ -5,13 +5,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch } from "@/ai/flows/enhance-medicine-search";
-import { fetchMedicineByName } from "@/lib/mockApi";
+import { generateMedicineDetails } from "@/ai/flows/generate-medicine-details";
+import { fetchMedicineByName } from "@/lib/mockApi"; 
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button"; // Added Button import
-import { Loader2, AlertCircle, CheckCircle, Info, RotateCcw } from "lucide-react"; // Added RotateCcw
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle, Info, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -23,7 +24,7 @@ export default function MediSearchApp() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
-  const [searchAttempted, setSearchAttempted] = useState<boolean>(false); // Added state to track if search was performed
+  const [searchAttempted, setSearchAttempted] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -36,7 +37,6 @@ export default function MediSearchApp() {
     setSelectedLanguage(lang);
   }, []);
 
-  // Function to clear search results and reset state
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
     setSearchResult(null);
@@ -47,59 +47,97 @@ export default function MediSearchApp() {
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!searchQuery.trim()) {
-      // If search is triggered with empty query, reset everything
-       handleClearSearch();
-       return;
+      handleClearSearch();
+      return;
     }
 
     setIsLoading(true);
     setError(null);
     setSearchResult(null);
-    setSearchAttempted(true); // Mark that a search has been attempted
-    let finalSearchTerm = searchQuery.trim();
+    setSearchAttempted(true);
+    let aiEnhancedSearchTerm = searchQuery.trim();
 
     try {
       setLoadingMessage(t.loadingAi);
-      const aiResponse = await enhanceMedicineSearch({ query: searchQuery });
-      if (aiResponse && aiResponse.correctedMedicineName) {
-        finalSearchTerm = aiResponse.correctedMedicineName;
+      const aiEnhanceResponse = await enhanceMedicineSearch({ query: searchQuery });
+      if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName) {
+        aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
         toast({
           title: t.appName,
-          description: t.searchWithAiResult(finalSearchTerm),
+          description: t.searchWithAiResult(aiEnhancedSearchTerm),
           action: <Info className="h-5 w-5 text-blue-500" />,
         });
       } else {
-         toast({
-          title: t.appName,
-          description: t.errorAi,
-          variant: "destructive",
-        });
+        toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
       }
     } catch (aiError) {
       console.error("AI enhancement failed:", aiError);
-      toast({
-        title: t.appName,
-        description: t.errorAi,
-        variant: "destructive",
-      });
-      // Proceed with original query if AI fails
+      toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
     }
 
+    setLoadingMessage(t.loadingData);
+    const dbData = await fetchMedicineByName(aiEnhancedSearchTerm);
+
     try {
-      setLoadingMessage(t.loadingData);
-      const medicine = await fetchMedicineByName(finalSearchTerm);
-      setSearchResult(medicine);
-      if (!medicine) {
-        setError(t.noResults);
+      if (dbData.foundInDb) {
+        setLoadingMessage(t.loadingAiDetails); // New loading message
+        const aiDetails = await generateMedicineDetails({
+          searchTermOrName: dbData.name, // Use name from DB as primary term
+          language: selectedLanguage,
+          contextName: dbData.name,
+          contextComposition: dbData.composition,
+          contextBarcode: dbData.barcode,
+        });
+        setSearchResult({
+          id: dbData.id,
+          name: aiDetails.name, // AI might refine casing or provide full name
+          composition: aiDetails.composition, // AI might format or detail it
+          barcode: aiDetails.barcode, // Should be from context if present
+          usage: aiDetails.usage,
+          manufacturer: aiDetails.manufacturer,
+          dosage: aiDetails.dosage,
+          sideEffects: aiDetails.sideEffects,
+          source: 'database_ai_enhanced',
+        });
+      } else {
+        setLoadingMessage(t.loadingAiDetails); // New loading message
+        toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-blue-500" /> });
+        const aiDetails = await generateMedicineDetails({
+          searchTermOrName: aiEnhancedSearchTerm,
+          language: selectedLanguage,
+        });
+        setSearchResult({
+          // Create a temporary ID for AI-only results
+          id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`, 
+          name: aiDetails.name,
+          composition: aiDetails.composition,
+          barcode: aiDetails.barcode,
+          usage: aiDetails.usage,
+          manufacturer: aiDetails.manufacturer,
+          dosage: aiDetails.dosage,
+          sideEffects: aiDetails.sideEffects,
+          source: 'ai_generated',
+        });
       }
-    } catch (dataError) {
-      console.error("Data fetching failed:", dataError);
-      setError(t.errorData);
-      toast({
-        title: t.appName,
-        description: t.errorData,
-        variant: "destructive",
-      });
+    } catch (flowError) {
+      console.error("AI details generation failed:", flowError);
+      setError(t.errorAiDetails); // New error message
+      toast({ title: t.appName, description: t.errorAiDetails, variant: "destructive" });
+       // Fallback: if we had DB data but AI enhancement failed, show DB data with 'database_only'
+      if (dbData.foundInDb) {
+        setSearchResult({
+            id: dbData.id,
+            name: dbData.name,
+            composition: dbData.composition,
+            barcode: dbData.barcode,
+            usage: t.infoNotAvailable, // Fallback text
+            manufacturer: t.infoNotAvailable,
+            dosage: t.infoNotAvailable,
+            sideEffects: t.infoNotAvailable,
+            source: 'database_only',
+        });
+        setError(null); // Clear major error, show data with note
+      }
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
@@ -120,7 +158,7 @@ export default function MediSearchApp() {
         />
       </header>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-6"> {/* Adjusted space */}
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6">
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
@@ -132,7 +170,6 @@ export default function MediSearchApp() {
           />
         </section>
 
-        {/* Clear Search Button - Shown only after a search attempt and not loading */}
         {searchAttempted && !isLoading && (
           <Button variant="outline" onClick={handleClearSearch} className="self-center shadow-sm hover:shadow-md transition-shadow">
             <RotateCcw className="mr-2 h-4 w-4" />
@@ -140,7 +177,6 @@ export default function MediSearchApp() {
           </Button>
         )}
 
-        {/* Loading Indicator */}
         {isLoading && (
           <div className="flex flex-col items-center space-y-2 p-4 text-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -148,33 +184,39 @@ export default function MediSearchApp() {
           </div>
         )}
 
-        {/* Error Message */}
         {error && !isLoading && (
           <Alert variant="destructive" className="w-full max-w-lg shadow-md">
             <AlertCircle className="h-5 w-5" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t.errorOccurred}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* Search Result Card */}
         {!isLoading && !error && searchResult && (
-          <section className="w-full mt-0 animate-fadeIn"> {/* Removed mt-4 */}
+          <section className="w-full mt-0 animate-fadeIn">
             <MedicineCard medicine={searchResult} t={t} />
           </section>
         )}
+        
+        {!isLoading && !error && !searchResult && searchAttempted && (
+            <Alert className="w-full max-w-lg shadow-md">
+                <Info className="h-5 w-5" />
+                <AlertTitle>{t.noResultsTitle}</AlertTitle>
+                <AlertDescription>{t.noResults}</AlertDescription>
+            </Alert>
+        )}
 
-        {/* Placeholder for initial state or after clearing - No specific message needed now */}
+
         {!isLoading && !searchAttempted && (
             <div className="text-center p-4 text-muted-foreground">
-                Enter a medicine name above to begin your search.
+                {t.initialHelperText}
             </div>
         )}
 
       </main>
 
       <footer className="mt-auto pt-8 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} {t.appName}. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} {t.appName}. {t.allRightsReserved}</p>
       </footer>
        <style jsx global>{`
         .animate-fadeIn {
@@ -188,3 +230,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
@@ -30,7 +29,6 @@ if (missingVars.length > 0) {
   console.error(
     '🔴 Firebase Initialization Error: The following required environment variables are missing or undefined:\n' +
     missingVars.map(key => {
-        // Construct the full env var name as it would appear in .env files
         const envVarName = `NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
         return `- ${envVarName}`;
     }).join('\n') +
@@ -42,28 +40,41 @@ if (missingVars.length > 0) {
 let app: FirebaseApp | undefined = undefined;
 let db: Firestore | undefined = undefined;
 
-// Initialize Firebase only if it hasn't been initialized yet
 try {
+  if (missingVars.length > 0) {
+    // Error already logged above about missing vars.
+    // Initialization might proceed but app/db could be non-functional.
+    console.warn("⚠️ Firebase initialization is being attempted with incomplete configuration. Errors are highly likely.");
+  }
+
   if (!getApps().length) {
-    if (missingVars.length > 0) {
-        console.warn("⚠️ Firebase initialization is being attempted with incomplete configuration. Errors are highly likely.");
-    }
     app = initializeApp(firebaseConfig);
+    console.log("Firebase App initialized.");
   } else {
     app = getApps()[0];
+    console.log("Firebase App already exists.");
   }
-  db = getFirestore(app);
+
+  // Only attempt to get Firestore if app is validly initialized or retrieved
+  if (app) {
+    db = getFirestore(app);
+  } else {
+    // This case suggests initializeApp might have failed silently if critical config was missing,
+    // or getApps() was unexpectedly empty.
+    console.error("🔴 Firebase App object is undefined. Firestore (db) cannot be initialized.");
+  }
+
 } catch (error) {
-    console.error("🔴 Firebase SDK Initialization Failed:", error);
-    // If initialization fails, app and db will remain undefined.
-    app = undefined; 
-    db = undefined; 
-    console.error("🔴 Firestore database (db) is not available due to an initialization error. All Firestore operations will fail.");
+    console.error("🔴 Firebase SDK Initialization Failed during app/db setup:", error);
+    // Ensure app and db are marked as undefined on error
+    app = undefined;
+    db = undefined;
+    console.error("🔴 Firestore database (db) is not available due to an SDK initialization error. Check Firebase config and ensure Firestore is enabled in your project console.");
 }
 
-// Export potentially undefined app and db. Code using them should be resilient or this should be a fatal error.
-// For this application's structure, components will attempt to use `db` directly.
-// If `db` is undefined here, those operations will fail, hopefully with clear errors
-// pointing back to the initialization problem highlighted by the console messages above.
+// Final check for db instance
+if (!db) {
+    console.warn("⚠️ Firestore database instance (db) is undefined after initialization attempts. Operations requiring Firestore will fail. Please check your Firebase configuration, ensure Firestore is enabled in your Firebase project console, and review security rules.");
+}
 
 export { app, db };

@@ -46,6 +46,17 @@ export default function AdminUploadForm() {
   async function onSubmit(data: MedicineFormData) {
     setIsSubmitting(true);
     try {
+      if (!db) {
+        toast({
+          title: "Error",
+          description: "Firestore database is not available. Please check Firebase configuration and console logs.",
+          variant: "destructive",
+          duration: 9000,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const medicineDocRef = doc(db, "medicines", data.medicineId);
       
       const dataToUpload: { composition: string; barcode?: string } = {
@@ -65,22 +76,35 @@ export default function AdminUploadForm() {
     } catch (error) {
       console.error("Error uploading medicine data (full error object):", error);
       let detailedMessage = "Failed to upload medicine data. Please try again.";
+      
       if (error instanceof Error) {
         console.error("Error name:", error.name);
         console.error("Error message:", error.message);
-        detailedMessage = `Failed to upload medicine data: ${error.message}. Check console for more details and ensure Firestore security rules allow writes to the 'medicines' collection.`;
-        if ((error as any).code) {
-          console.error("Error code:", (error as any).code);
-          detailedMessage += ` (Code: ${(error as any).code})`;
-        }
+        detailedMessage = `Upload Error: ${error.message}.
+        \n\nCommon Fixes:
+        \n1. Ensure Firestore is enabled in your Firebase project console (Databases -> Create database).
+        \n2. Check Firestore Security Rules. For testing, you might use:
+        \n   rules_version = '2';
+        \n   service cloud.firestore {
+        \n     match /databases/{database}/documents {
+        \n       match /{document=**} {
+        \n         allow read, write: if true; // CAUTION: Open access
+        \n       }
+        \n     }
+        \n   }
+        \n3. Verify all NEXT_PUBLIC_FIREBASE_... environment variables in .env.local are correct & server restarted.
+        \n(Error Code: ${(error as any).code || 'N/A'})`;
       } else {
-         detailedMessage = "An unknown error occurred. Check console for details and ensure Firestore security rules allow writes.";
+         detailedMessage = `An unknown error occurred. 
+         Please check the browser console. 
+         Ensure Firestore is enabled in Firebase and security rules allow writes.`;
       }
 
       toast({
-        title: "Error",
+        title: "Firestore Upload Failed",
         description: detailedMessage,
         variant: "destructive",
+        duration: 15000, // Increased duration to allow reading the detailed message
       });
     } finally {
       setIsSubmitting(false);

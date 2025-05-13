@@ -9,8 +9,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '1',
     name: 'Paracetamol',
-    composition: 'Paracetamol 500mg (from mock)', // Fallback
-    barcode: '1234567890123 (from mock)', // Fallback
+    composition: 'Paracetamol 500mg', 
+    barcode: '1234567890123', 
     usage: 'For relief from fever and mild to moderate pain.',
     manufacturer: 'Generic Pharma Ltd.',
     dosage: '1-2 tablets every 4-6 hours as needed, not exceeding 8 tablets in 24 hours.',
@@ -19,8 +19,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '2',
     name: 'Amoxicillin',
-    composition: 'Amoxicillin 250mg (from mock)', // Fallback
-    barcode: '0987654321098 (from mock)', // Fallback
+    composition: 'Amoxicillin 250mg', 
+    barcode: '0987654321098', 
     usage: 'Bacterial infections such as chest infections (including pneumonia) and dental abscesses.',
     manufacturer: 'Rx Drugs Inc.',
     dosage: 'Typically 250mg to 500mg three times a day, or as prescribed by doctor.',
@@ -29,8 +29,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '3',
     name: 'Dolo 650',
-    composition: 'Paracetamol 650mg (from mock)', // Fallback
-    barcode: '1122334455667 (from mock)', // Fallback
+    composition: 'Paracetamol 650mg', 
+    barcode: '1122334455667', 
     usage: 'Higher strength for fever and pain relief.',
     manufacturer: 'Micro Labs Ltd.',
     dosage: 'One tablet every 4-6 hours, not exceeding 4 tablets in 24 hours.',
@@ -39,8 +39,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '4',
     name: 'Crocin',
-    composition: 'Paracetamol 500mg (from mock)', // Fallback
-    // barcode is optional, can be undefined here or in Firebase
+    composition: 'Paracetamol 500mg',
+    // barcode is optional
     usage: 'For symptomatic relief of fever, headache, and body ache.',
     manufacturer: 'GSK Consumer Healthcare',
     dosage: '1-2 tablets up to 4 times a day.',
@@ -49,8 +49,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '5',
     name: 'Aspirin',
-    composition: 'Acetylsalicylic acid 75mg (from mock)', // Fallback
-    barcode: '5556667778889 (from mock)', // Fallback
+    composition: 'Acetylsalicylic acid 75mg', 
+    barcode: '5556667778889', 
     usage: 'Low dose for prevention of heart attacks and strokes in high-risk individuals. Pain relief at higher doses.',
     manufacturer: 'Bayer AG',
     dosage: '75mg daily for prevention, or as directed by a physician for pain.',
@@ -59,7 +59,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '6',
     name: 'Ibuprofen',
-    composition: 'Ibuprofen 200mg (from mock)', // Fallback
+    composition: 'Ibuprofen 200mg', 
     usage: 'Pain relief, fever reduction, anti-inflammatory for conditions like arthritis.',
     manufacturer: 'Various Generic Manufacturers',
     dosage: '200mg-400mg every 4-6 hours as needed. Max 1200mg/day (OTC).',
@@ -68,8 +68,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '7',
     name: 'Cetirizine',
-    composition: 'Cetirizine Dihydrochloride 10mg (from mock)', // Fallback
-    barcode: '2244668800112 (from mock)', // Fallback
+    composition: 'Cetirizine Dihydrochloride 10mg', 
+    barcode: '2244668800112', 
     usage: 'Relief of symptoms of hay fever and other allergic conditions (e.g., sneezing, runny nose, itchy eyes).',
     manufacturer: 'Dr. Reddy\'s Laboratories',
     dosage: '10mg once daily.',
@@ -78,8 +78,8 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   {
     id: '8',
     name: 'Omeprazole',
-    composition: 'Omeprazole 20mg (from mock)', // Fallback
-    barcode: '3355779911223 (from mock)', // Fallback
+    composition: 'Omeprazole 20mg', 
+    barcode: '3355779911223', 
     usage: 'Treatment of heartburn, acid reflux (GERD), and stomach ulcers.',
     manufacturer: 'AstraZeneca',
     dosage: '20mg once daily, usually before breakfast.',
@@ -87,15 +87,27 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
   },
 ];
 
-export const fetchMedicineByName = async (name: string): Promise<Medicine | null> => {
+export const fetchMedicineByName = async (query: string): Promise<Medicine | null> => {
   // Simulate network delay for the initial mock search part
   await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
 
-  const searchTerm = name.toLowerCase().trim();
+  const normalizedQuery = query.toLowerCase().trim();
   
-  const baseMedicineData = mockMedicinesDB.find(
-    med => med.name.toLowerCase() === searchTerm
+  let baseMedicineData = mockMedicinesDB.find(
+    med => med.name.toLowerCase() === normalizedQuery
   );
+
+  if (!baseMedicineData) {
+    baseMedicineData = mockMedicinesDB.find(
+      med => med.barcode === normalizedQuery // Exact match for barcode
+    );
+  }
+  
+  if (!baseMedicineData) {
+    baseMedicineData = mockMedicinesDB.find(
+      med => med.composition?.toLowerCase().includes(normalizedQuery) // Substring match for composition
+    );
+  }
 
   if (!baseMedicineData) {
     return null; 
@@ -116,7 +128,6 @@ export const fetchMedicineByName = async (name: string): Promise<Medicine | null
 
   try {
     // Simulate network delay for Firebase fetch.
-    // In a real app, Firestore handles its own network latency.
     await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));
     
     const medicineDocRef = doc(db, 'medicines', baseMedicineData.id);
@@ -125,19 +136,24 @@ export const fetchMedicineByName = async (name: string): Promise<Medicine | null
     if (medicineDocSnap.exists()) {
       const firebaseData = medicineDocSnap.data();
       
-      // Override with Firebase data if available and valid
-      // Composition is expected to be a string.
+      // Override with Firebase data if available and valid for composition
       if (firebaseData && typeof firebaseData.composition === 'string' && firebaseData.composition.trim() !== '') {
         medicine.composition = firebaseData.composition;
-      } else if (firebaseData && firebaseData.composition === undefined) {
-        // If composition is explicitly undefined or missing in Firebase, keep the fallback.
-        console.warn(`Composition missing or invalid in Firebase for ID ${baseMedicineData.id}. Using fallback.`);
+      } else if (firebaseData && firebaseData.composition === undefined && !baseMedicineData.composition) {
+        // If composition is undefined in Firebase and also not in mock, keep default fallback
+        medicine.composition = "Composition details not available.";
       }
 
-      // Barcode is optional (string or undefined).
+
+      // Override/set barcode from Firebase. Barcode is optional.
       if (firebaseData && (typeof firebaseData.barcode === 'string' || firebaseData.barcode === undefined)) {
          medicine.barcode = firebaseData.barcode;
+      } else if (firebaseData && firebaseData.barcode !== undefined && typeof firebaseData.barcode !== 'string') {
+         console.warn(`Barcode for ID ${baseMedicineData.id} in Firebase is not a string. Using mock/fallback or undefined.`);
+         // Retain mock barcode if Firebase one is invalid type and mock exists
+         // Otherwise, it will be undefined if mock also doesn't have it.
       }
+
     } else {
       // Document doesn't exist in Firebase, use the mock data values already set.
       console.log(`Medicine ID ${baseMedicineData.id} (${baseMedicineData.name}) not found in Firebase. Using mock values for composition/barcode.`);

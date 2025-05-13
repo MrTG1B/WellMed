@@ -31,7 +31,7 @@ export const translations: Record<Language, TranslationKeys> = {
   en: {
     appName: 'MediSearch',
     searchTitle: 'Search for Medicines',
-    searchPlaceholder: 'Enter medicine name (e.g., Paracetamol)',
+    searchPlaceholder: 'Enter medicine name, barcode, or composition (e.g., Paracetamol, 123..., "Paracetamol 500mg")',
     searchButton: 'Search',
     languageLabel: 'Language',
     english: 'English',
@@ -57,7 +57,7 @@ export const translations: Record<Language, TranslationKeys> = {
   hi: {
     appName: 'मेडि सर्च',
     searchTitle: 'दवाएं खोजें',
-    searchPlaceholder: 'दवा का नाम दर्ज करें (जैसे, पैरासिटामोल)',
+    searchPlaceholder: 'दवा का नाम, बारकोड, या संरचना दर्ज करें (जैसे, पैरासिटामोल, 123..., "पैरासिटामोल 500mg")',
     searchButton: 'खोजें',
     languageLabel: 'भाषा',
     english: 'अंग्रेज़ी',
@@ -83,7 +83,7 @@ export const translations: Record<Language, TranslationKeys> = {
   bn: {
     appName: 'মেডিসার্চ',
     searchTitle: 'ওষুধ অনুসন্ধান করুন',
-    searchPlaceholder: 'ওষুধের নাম লিখুন (যেমন, প্যারাসিটামল)',
+    searchPlaceholder: 'ওষুধের নাম, বারকোড, বা গঠন লিখুন (যেমন, প্যারাসিটামল, 123..., "প্যারাসিটামল 500mg")',
     searchButton: 'অনুসন্ধান',
     languageLabel: 'ভাষা',
     english: 'ইংরেজি',

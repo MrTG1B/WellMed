@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { SubmitHandler } from "react-hook-form";
@@ -17,8 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { doc, setDoc } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { ref, set } from "firebase/database"; // Changed from firestore
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 
@@ -36,7 +37,13 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function AdminUploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTimestamp, setCurrentTimestamp] = useState<string>('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    setCurrentTimestamp(new Date().toISOString());
+  }, []);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,11 +54,11 @@ export default function AdminUploadForm() {
     },
   });
 
-  const { isDirty, isValid, formState } = form;
+  const { isDirty, isValid } = form;
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    console.log("[AdminUploadForm] onSubmit triggered. Data:", data, "Current isSubmitting:", isSubmitting);
+    console.log("[AdminUploadForm] onSubmit triggered. Initial isSubmitting:", isSubmitting);
     if (isSubmitting) {
       console.warn("[AdminUploadForm] Submission attempt while already submitting. Aborting.");
       return;
@@ -77,10 +84,10 @@ export default function AdminUploadForm() {
 
     try {
       if (!db) {
-        console.error("[AdminUploadForm] Firestore db instance is NOT available. Critical configuration issue.");
+        console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available. Critical configuration issue.");
         toast({
           title: "Database Error",
-          description: "Firestore database is not configured. Cannot save data.",
+          description: "Firebase Realtime Database is not configured. Cannot save data.",
           variant: "destructive",
         });
         setIsSubmitting(false); 
@@ -92,29 +99,30 @@ export default function AdminUploadForm() {
         name: data.medicineName.trim(),
         composition: data.composition.trim(),
         barcode: data.barcode?.trim() || null, 
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: currentTimestamp, // Use state for consistent timestamp
       };
 
-      console.log("[AdminUploadForm] Attempting to write to Firestore. Path:", `medicines/${medicineId}`, "Data:", medicineDataToSave);
-      const medicineRef = doc(db, "medicines", medicineId);
+      console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${medicineId}`, "Data:", medicineDataToSave);
+      const medicineRef = ref(db, `medicines/${medicineId}`); // Changed for RTDB
       
-      await setDoc(medicineRef, medicineDataToSave, { merge: true }); 
+      await set(medicineRef, medicineDataToSave); // Changed for RTDB
       
-      console.log("[AdminUploadForm] Firestore write successful for ID:", medicineId);
+      console.log("[AdminUploadForm] Realtime Database write successful for ID:", medicineId);
 
       toast({
         title: "Upload Successful",
-        description: `Medicine "${data.medicineName.trim()}" data saved.`,
+        description: `Medicine "${data.medicineName.trim()}" data saved to Realtime Database.`,
       });
       form.reset(); 
+      setCurrentTimestamp(new Date().toISOString()); // Refresh timestamp for next potential entry
       console.log("[AdminUploadForm] Form reset successfully.");
 
     } catch (error: any) {
-      console.error("[AdminUploadForm] Firestore write FAILED. Error:", error.message || error, error);
-      let userMessage = "Failed to upload medicine. ";
-      if (error.message?.toLowerCase().includes("permission denied") || error.message?.toLowerCase().includes("missing or insufficient permissions")) {
-        userMessage += "This is likely a Firestore security rules issue. Please check your Firebase project console.";
-      } else if (error.message?.toLowerCase().includes("offline") || error.message?.toLowerCase().includes("network error") || error.message?.toLowerCase().includes("transport errored")) {
+      console.error("[AdminUploadForm] Realtime Database write FAILED. Error:", error.message || error, error);
+      let userMessage = "Failed to upload medicine to Realtime Database. ";
+      if (error.message?.toLowerCase().includes("permission_denied") || error.message?.toLowerCase().includes("permission denied")) {
+        userMessage += "This is likely a Realtime Database security rules issue. Please check your Firebase project console (Realtime Database -> Rules).";
+      } else if (error.message?.toLowerCase().includes("network error") || error.message?.toLowerCase().includes("disconnected")) {
         userMessage += "Network or connection error with database. Please check your internet connection and Firebase setup.";
       }
        else {

@@ -1,13 +1,13 @@
+
 import type { Medicine } from '@/types';
-import { db } from './firebase'; // Import Firestore instance
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from './firebase'; // Import Realtime Database instance
+import { ref, get, child } from 'firebase/database'; // Changed from firestore
 
 // mockMedicinesDB remains the source for non-Firebase fields (usage, manufacturer, etc.)
 // and a fallback for barcode/composition if Firebase entry doesn't exist or fetch fails.
-// The 'composition' and 'barcode' fields here act as fallbacks.
 const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { composition?: string; barcode?: string })[] = [
   {
-    id: '1',
+    id: 'paracetamol', // Using lowercase and hyphenated IDs consistent with AdminUploadForm
     name: 'Paracetamol',
     composition: 'Paracetamol 500mg', 
     barcode: '1234567890123', 
@@ -17,7 +17,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Rare, but may include allergic reactions, skin rash. Nausea if taken on empty stomach.',
   },
   {
-    id: '2',
+    id: 'amoxicillin',
     name: 'Amoxicillin',
     composition: 'Amoxicillin 250mg', 
     barcode: '0987654321098', 
@@ -27,7 +27,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Nausea, diarrhea, rash. Seek medical attention for severe allergic reactions.',
   },
   {
-    id: '3',
+    id: 'dolo-650',
     name: 'Dolo 650',
     composition: 'Paracetamol 650mg', 
     barcode: '1122334455667', 
@@ -37,17 +37,16 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Similar to Paracetamol 500mg, but with higher single dose. Liver damage risk with overdose.',
   },
   {
-    id: '4',
+    id: 'crocin',
     name: 'Crocin',
     composition: 'Paracetamol 500mg',
-    // barcode is optional
     usage: 'For symptomatic relief of fever, headache, and body ache.',
     manufacturer: 'GSK Consumer Healthcare',
     dosage: '1-2 tablets up to 4 times a day.',
     sideEffects: 'Generally well-tolerated. Overdose can cause liver damage.',
   },
   {
-    id: '5',
+    id: 'aspirin',
     name: 'Aspirin',
     composition: 'Acetylsalicylic acid 75mg', 
     barcode: '5556667778889', 
@@ -57,7 +56,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Stomach irritation, bleeding, tinnitus (ringing in ears). Not for children with viral infections.',
   },
   {
-    id: '6',
+    id: 'ibuprofen',
     name: 'Ibuprofen',
     composition: 'Ibuprofen 200mg', 
     usage: 'Pain relief, fever reduction, anti-inflammatory for conditions like arthritis.',
@@ -66,7 +65,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Nausea, heartburn, stomach ulcers (with long-term use), increased risk of heart attack or stroke.',
   },
   {
-    id: '7',
+    id: 'cetirizine',
     name: 'Cetirizine',
     composition: 'Cetirizine Dihydrochloride 10mg', 
     barcode: '2244668800112', 
@@ -76,7 +75,7 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
     sideEffects: 'Drowsiness, dry mouth, fatigue. Less sedating than older antihistamines.',
   },
   {
-    id: '8',
+    id: 'omeprazole',
     name: 'Omeprazole',
     composition: 'Omeprazole 20mg', 
     barcode: '3355779911223', 
@@ -88,80 +87,108 @@ const mockMedicinesDB: (Omit<Medicine, 'composition' | 'barcode'> & { compositio
 ];
 
 export const fetchMedicineByName = async (query: string): Promise<Medicine | null> => {
-  // Simulate network delay for the initial mock search part
   await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
 
   const normalizedQuery = query.toLowerCase().trim();
-  
+  const medicineIdForFirebase = normalizedQuery.replace(/\s+/g, "-").replace(/[^\w-]+/g, '');
+
+
   let baseMedicineData = mockMedicinesDB.find(
-    med => med.name.toLowerCase() === normalizedQuery
+    med => med.name.toLowerCase() === normalizedQuery || med.id === medicineIdForFirebase
   );
 
   if (!baseMedicineData) {
     baseMedicineData = mockMedicinesDB.find(
-      med => med.barcode === normalizedQuery // Exact match for barcode
+      med => med.barcode === normalizedQuery 
     );
   }
   
   if (!baseMedicineData) {
     baseMedicineData = mockMedicinesDB.find(
-      med => med.composition?.toLowerCase().includes(normalizedQuery) // Substring match for composition
+      med => med.composition?.toLowerCase().includes(normalizedQuery) 
     );
   }
-
-  if (!baseMedicineData) {
-    return null; 
+  
+  // If still no base data, try to construct a minimal one if query itself is a potential ID
+  if (!baseMedicineData && medicineIdForFirebase) {
+      // This case implies the ID might exist in RTDB but not in mock.
+      // We'll rely on RTDB fetch entirely for name, composition, barcode.
+      // For other fields, we can't provide them.
+      console.log(`No mock data for query '${query}', will attempt RTDB fetch with ID '${medicineIdForFirebase}'.`)
   }
 
-  // Initialize medicine object with base data and fallbacks from mock
-  // This ensures that 'composition' is always a string, fulfilling the Medicine type.
+
+  // If no base mock data found at all, and it's not just an ID lookup, return null early
+  if (!baseMedicineData && !medicineIdForFirebase) {
+    return null; 
+  }
+  
+  const effectiveMedicineId = baseMedicineData ? baseMedicineData.id : medicineIdForFirebase;
+
+  if (!effectiveMedicineId) {
+      console.warn(`Could not determine an effective medicine ID for query: ${query}`);
+      return null;
+  }
+
+
+  // Initialize medicine object, prioritizing mock data if available
   let medicine: Medicine = {
-    id: baseMedicineData.id,
-    name: baseMedicineData.name,
-    usage: baseMedicineData.usage,
-    manufacturer: baseMedicineData.manufacturer,
-    dosage: baseMedicineData.dosage,
-    sideEffects: baseMedicineData.sideEffects,
-    composition: baseMedicineData.composition || "Composition details not available.", // Fallback
-    barcode: baseMedicineData.barcode, // Fallback
+    id: effectiveMedicineId,
+    name: baseMedicineData?.name || query, // Use query as fallback name if only ID was matched
+    usage: baseMedicineData?.usage || "Usage information not available.",
+    manufacturer: baseMedicineData?.manufacturer || "Manufacturer information not available.",
+    dosage: baseMedicineData?.dosage || "Dosage information not available.",
+    sideEffects: baseMedicineData?.sideEffects || "Side effects information not available.",
+    composition: baseMedicineData?.composition || "Composition details not available.",
+    barcode: baseMedicineData?.barcode,
   };
 
   try {
-    // Simulate network delay for Firebase fetch.
+    if (!db) {
+      console.error("Firebase Realtime Database (db) is not initialized in mockApi. Using only mock data.");
+      // If baseMedicineData was found, 'medicine' is already populated with it.
+      // If only an ID was derived, it will have many "not available" fields.
+      return baseMedicineData ? medicine : null;
+    }
+
     await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));
     
-    const medicineDocRef = doc(db, 'medicines', baseMedicineData.id);
-    const medicineDocSnap = await getDoc(medicineDocRef);
+    const medicineRTDBRef = child(ref(db, 'medicines'), effectiveMedicineId);
+    const snapshot = await get(medicineRTDBRef);
 
-    if (medicineDocSnap.exists()) {
-      const firebaseData = medicineDocSnap.data();
+    if (snapshot.exists()) {
+      const firebaseData = snapshot.val();
       
-      // Override with Firebase data if available and valid for composition
-      if (firebaseData && typeof firebaseData.composition === 'string' && firebaseData.composition.trim() !== '') {
-        medicine.composition = firebaseData.composition;
-      } else if (firebaseData && firebaseData.composition === undefined && !baseMedicineData.composition) {
-        // If composition is undefined in Firebase and also not in mock, keep default fallback
-        medicine.composition = "Composition details not available.";
+      // Override with Firebase data if available
+      if (firebaseData) {
+        medicine.name = firebaseData.name || medicine.name; // Keep mock name if RTDB name is missing
+        
+        if (typeof firebaseData.composition === 'string' && firebaseData.composition.trim() !== '') {
+          medicine.composition = firebaseData.composition;
+        } else if (firebaseData.composition === undefined && !baseMedicineData?.composition) {
+          medicine.composition = "Composition details not available.";
+        }
+        // else, keep mock composition if firebaseData.composition is not a valid string
+
+        if (firebaseData.barcode !== undefined) { // RTDB can store null, which is fine
+            medicine.barcode = typeof firebaseData.barcode === 'string' ? firebaseData.barcode : undefined;
+        } else if (baseMedicineData?.barcode !== undefined) {
+            // If firebase barcode is undefined, keep mock barcode
+            medicine.barcode = baseMedicineData.barcode;
+        }
+        // If both are undefined, medicine.barcode remains undefined.
       }
-
-
-      // Override/set barcode from Firebase. Barcode is optional.
-      if (firebaseData && (typeof firebaseData.barcode === 'string' || firebaseData.barcode === undefined)) {
-         medicine.barcode = firebaseData.barcode;
-      } else if (firebaseData && firebaseData.barcode !== undefined && typeof firebaseData.barcode !== 'string') {
-         console.warn(`Barcode for ID ${baseMedicineData.id} in Firebase is not a string. Using mock/fallback or undefined.`);
-         // Retain mock barcode if Firebase one is invalid type and mock exists
-         // Otherwise, it will be undefined if mock also doesn't have it.
-      }
-
     } else {
-      // Document doesn't exist in Firebase, use the mock data values already set.
-      console.log(`Medicine ID ${baseMedicineData.id} (${baseMedicineData.name}) not found in Firebase. Using mock values for composition/barcode.`);
+      console.log(`Medicine ID ${effectiveMedicineId} not found in Realtime Database. Using local mock values if available.`);
+      // If not in RTDB, and we didn't find it in mockMedicinesDB earlier, then it doesn't exist
+      if (!baseMedicineData) return null; 
     }
   } catch (error) {
-    console.error('Error fetching medicine data from Firebase:', error);
-    // In case of error, we're already using mock data as fallback.
-    // Toast notifications for errors are handled in MediSearchApp component.
+    console.error('Error fetching medicine data from Firebase Realtime Database:', error);
+    // In case of error, 'medicine' is already populated with mock data (if found)
+    // or with "not available" fallbacks.
+    // If no baseMedicineData was found, it should return null.
+    return baseMedicineData ? medicine : null;
   }
 
   return medicine;

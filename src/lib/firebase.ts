@@ -1,5 +1,6 @@
+
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getDatabase, type Database } from 'firebase/database'; // Changed from getFirestore
 
 // Your web app's Firebase configuration
 // Ensure these environment variables are set in your .env.local file
@@ -10,7 +11,7 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL, // Added for Realtime Database
 };
 
 // Check for missing environment variables
@@ -21,6 +22,7 @@ const requiredEnvVarKeys: (keyof typeof firebaseConfig)[] = [
   'storageBucket',
   'messagingSenderId',
   'appId',
+  'databaseURL', // Added for Realtime Database
 ];
 
 const missingVars = requiredEnvVarKeys.filter(key => !firebaseConfig[key]);
@@ -32,13 +34,13 @@ if (missingVars.length > 0) {
         const envVarName = `NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
         return `- ${envVarName}`;
     }).join('\n') +
-    '\n👉 Please ensure these are set in your .env.local file and the development server is restarted.' +
-    '\nFirebase functionality will be impaired, and Firestore operations (like uploads and data fetching) will likely fail.'
+    '\n👉 Please ensure these are set in your .env.local file (especially NEXT_PUBLIC_FIREBASE_DATABASE_URL for Realtime Database) and the development server is restarted.' +
+    '\nFirebase functionality will be impaired, and Realtime Database operations will likely fail.'
   );
 }
 
 let app: FirebaseApp | undefined = undefined;
-let db: Firestore | undefined = undefined;
+let db: Database | undefined = undefined; // Changed type from Firestore to Database
 
 try {
   if (missingVars.length > 0) {
@@ -54,10 +56,10 @@ try {
   }
 
   if (app) {
-    db = getFirestore(app);
-    console.log("✅ Firestore instance (db) obtained successfully.");
+    db = getDatabase(app); // Changed from getFirestore(app)
+    console.log("✅ Firebase Realtime Database instance (db) obtained successfully.");
   } else {
-    console.error("🔴 Firebase App object is undefined after initialization attempt. Firestore (db) cannot be initialized.");
+    console.error("🔴 Firebase App object is undefined after initialization attempt. Realtime Database (db) cannot be initialized.");
   }
 
 } catch (error: any) {
@@ -68,31 +70,28 @@ try {
 
 if (!db) {
     console.error(
-      "🔴 CRITICAL: Firestore database instance (db) is UNDEFINED after initialization attempts. \n" +
-      "   Firestore operations (reading/writing data) WILL FAIL. \n" +
-      "   If you see 'transport errored' or 'permission denied' messages in the console, please check the following:\n" +
-      "   1. Environment Variables: Ensure all NEXT_PUBLIC_FIREBASE_... variables in '.env.local' are correct and the server was restarted.\n" +
-      "   2. Firestore Database: Verify that Firestore is enabled in your Firebase project (console -> Firestore Database -> Create database).\n" +
-      "   3. Database Mode: Ensure Firestore is in 'Native Mode', NOT 'Datastore Mode'.\n" +
-      "   4. Security Rules: Your Firestore security rules (console -> Firestore Database -> Rules) might be blocking access. \n" +
+      "🔴 CRITICAL: Firebase Realtime Database instance (db) is UNDEFINED after initialization attempts. \n" +
+      "   Realtime Database operations (reading/writing data) WILL FAIL. \n" +
+      "   If you see connection/permission errors, please check the following:\n" +
+      "   1. Environment Variables: Ensure all NEXT_PUBLIC_FIREBASE_... variables in '.env.local' are correct, especially NEXT_PUBLIC_FIREBASE_DATABASE_URL, and the server was restarted.\n" +
+      "   2. Realtime Database Setup: Verify that Realtime Database is created in your Firebase project (console -> Realtime Database -> Create database).\n" +
+      "   3. Security Rules: Your Realtime Database security rules (console -> Realtime Database -> Rules) might be blocking access. \n" +
       "      For initial development, you might use permissive rules like:\n" +
-      "      rules_version = '2';\n" +
-      "      service cloud.firestore {\n" +
-      "        match /databases/{database}/documents {\n" +
-      "          match /{document=**} {\n" +
-      "            allow read, write: if true; // CAUTION: Open for development, secure before production!\n" +
-      "          }\n" +
+      "      {\n" +
+      "        \"rules\": {\n" +
+      "          \".read\": true, // CAUTION: Open for development\n" +
+      "          \".write\": true // CAUTION: Open for development\n" +
       "        }\n" +
       "      }\n" +
       "      IMPORTANT: Secure these rules properly before deploying to production!\n" +
-      "   5. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials):\n" +
+      "   4. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials):\n" +
       "      - Select your API key.\n" +
       "      - Under 'Application restrictions', if 'HTTP referrers' is set, ensure your development URL (e.g., http://localhost:9002) is allowed.\n" +
-      "      - Under 'API restrictions', if 'Restrict key' is selected, ensure 'Cloud Firestore API' is in the list of allowed APIs.\n" +
-      "   6. Billing: Ensure your Firebase project has billing enabled if it's on a plan that requires it (though Firestore's free tier is generous)."
+      "      - Under 'API restrictions', if 'Restrict key' is selected, ensure 'Firebase Realtime Database API' is in the list of allowed APIs.\n" +
+      "   5. Billing: Ensure your Firebase project has billing enabled if it's on a plan that requires it (though Realtime Database free tier is generous)."
     );
 } else {
-    console.log("ℹ️ Firestore (db) is available. If you still encounter Firestore connection/permission errors (like 'transport errored' or 'Missing or insufficient permissions'), please RE-CHECK your Firestore Security Rules and API key restrictions in the Firebase/Google Cloud console.");
+    console.log("ℹ️ Firebase Realtime Database (db) is available. If you still encounter connection/permission errors, please RE-CHECK your Realtime Database Security Rules and API key restrictions in the Firebase/Google Cloud console.");
 }
 
 

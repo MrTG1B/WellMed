@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates detailed medicine information using AI.
@@ -31,12 +32,28 @@ const GenerateMedicineDetailsOutputSchema = z.object({
   dosage: z.string().describe('General dosage guidelines for the medicine.'),
   sideEffects: z.string().describe('Common side effects associated with the medicine.'),
   barcode: z.string().optional().describe('The barcode of the medicine, if applicable or provided in context.'),
-  source: z.enum(['database_ai_enhanced', 'ai_generated']).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated.'),
+  source: z.enum(['database_ai_enhanced', 'ai_generated', 'database_only']).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated.'),
 });
 export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetailsOutputSchema>;
 
 
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
+  if (ai.plugins.length === 0 && !ai.registry.models['googleai/gemini-2.0-flash']) {
+    console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
+    // Fallback behavior: return minimal data if AI is not configured
+    const name = input.contextName || input.searchTermOrName;
+    const composition = input.contextComposition || "Not available due to AI configuration issue.";
+    return {
+      name: name,
+      composition: composition,
+      usage: "Not available due to AI configuration issue.",
+      manufacturer: "Not available due to AI configuration issue.",
+      dosage: "Not available due to AI configuration issue.",
+      sideEffects: "Not available due to AI configuration issue.",
+      barcode: input.contextBarcode,
+      source: input.contextName ? 'database_only' : 'ai_generated', // Simplified source
+    };
+  }
   return generateMedicineDetailsFlow(input);
 }
 

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,6 +25,11 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
+  if (ai.plugins.length === 0 && !ai.registry.models['googleai/gemini-2.0-flash']) {
+    console.warn("enhanceMedicineSearch: AI plugin not available. Returning original query.");
+    // Fallback behavior: return the original query if AI is not configured
+    return { correctedMedicineName: input.query };
+  }
   return enhanceMedicineSearchFlow(input);
 }
 
@@ -48,7 +54,7 @@ Examples:
 - Query: "Aceclofenac 100 mg Paracetamol 325 mg", correctedMedicineName: "Aceclofenac 100 mg Paracetamol 325 mg"
 - Query: "Barcode 1234567890123 for Paracetamol", correctedMedicineName: "Paracetamol"
 - Query: "1234567890123" (assume this is a barcode), correctedMedicineName: "1234567890123"
-- Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol" 
+- Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol"
 - Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen"
 
 
@@ -68,6 +74,11 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await enhanceMedicineSearchPrompt(input);
-    return output!;
+    if (!output) {
+      // This case should ideally be caught by Zod schema validation if the AI returns an invalid structure.
+      // However, this explicit check adds robustness if the AI returns nothing or a valid but empty object.
+      throw new Error("AI failed to enhance search query or return valid output structure.");
+    }
+    return output;
   }
 );

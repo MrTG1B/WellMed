@@ -27,12 +27,17 @@ export default function AdminLoginPage() {
     }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // To prevent routing before admin check, ensure user is the admin
         const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        if (!adminEmail) {
+           console.error("Admin email (NEXT_PUBLIC_ADMIN_EMAIL) is not configured. Cannot verify admin user.");
+           auth.signOut(); // Sign out if admin email is not configured
+           setError("Admin email configuration is missing. Unable to verify administrator status.");
+           setIsCheckingAuth(false);
+           return;
+        }
         if (user.email === adminEmail) {
           router.push("/admin");
         } else {
-          // If a non-admin user is somehow signed in, sign them out and show error or redirect
           auth.signOut();
           setError("Access denied. This login is for administrators only.");
           setIsCheckingAuth(false);
@@ -56,29 +61,26 @@ export default function AdminLoginPage() {
     }
     
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
-    if (!adminEmail || !adminPassword) {
-        setError("Admin credentials are not configured in environment variables. Please set NEXT_PUBLIC_ADMIN_EMAIL and NEXT_PUBLIC_ADMIN_PASSWORD in your .env.local file.");
+    if (!adminEmail) {
+        setError("Admin email (NEXT_PUBLIC_ADMIN_EMAIL) is not configured in environment variables. Login cannot proceed.");
         setIsLoading(false);
         return;
     }
 
     if (email !== adminEmail) {
-        setError("Invalid admin email. This login is restricted to the configured administrator account.");
+        setError(`Access denied. Login is restricted to the admin account (${adminEmail}). You entered: ${email}.`);
         setIsLoading(false);
         return;
     }
 
-
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged will handle redirect if login is successful and user is admin
-      // router.push("/admin"); // This might be redundant due to onAuthStateChanged
     } catch (e: any) {
       console.error("Login failed:", e);
       if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-        setError("Invalid email or password.");
+        setError("Invalid email or password. Please ensure the admin account exists in Firebase Authentication (Users tab) and the credentials (email/password) are correct.");
       } else if (e.code === 'auth/invalid-email') {
         setError("The email address is not valid.");
       } else if (e.code === 'auth/configuration-not-found') {
@@ -158,7 +160,7 @@ export default function AdminLoginPage() {
         </CardContent>
         <CardFooter>
             <p className="text-xs text-muted-foreground text-center w-full">
-                Ensure you have the correct admin credentials. Contact support if you face issues.
+                Ensure you are using the configured admin email and its correct password. Check Firebase Authentication console if issues persist.
             </p>
         </CardFooter>
       </Card>

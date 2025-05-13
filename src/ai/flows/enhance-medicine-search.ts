@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -25,12 +24,18 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
-  if (ai.plugins.length === 0 && !ai.registry.models['googleai/gemini-2.0-flash']) {
-    console.warn("enhanceMedicineSearch: AI plugin not available. Returning original query.");
-    // Fallback behavior: return the original query if AI is not configured
+  // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
+  if (ai.plugins.length === 0) {
+    console.warn("enhanceMedicineSearch: AI plugin not available (likely missing GOOGLE_API_KEY). Returning original query.");
     return { correctedMedicineName: input.query };
   }
-  return enhanceMedicineSearchFlow(input);
+  try {
+    return await enhanceMedicineSearchFlow(input);
+  } catch (error) {
+    console.error("Error in enhanceMedicineSearchFlow:", error);
+    // Fallback to original query if the flow itself errors out
+    return { correctedMedicineName: input.query };
+  }
 }
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
@@ -77,8 +82,10 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     if (!output) {
       // This case should ideally be caught by Zod schema validation if the AI returns an invalid structure.
       // However, this explicit check adds robustness if the AI returns nothing or a valid but empty object.
+      console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure.");
       throw new Error("AI failed to enhance search query or return valid output structure.");
     }
     return output;
   }
 );
+

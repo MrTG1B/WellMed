@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -6,7 +5,7 @@ import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch } from "@/ai/flows/enhance-medicine-search";
 import { generateMedicineDetails } from "@/ai/flows/generate-medicine-details";
-import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi"; 
+import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi";
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
@@ -14,6 +13,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, Info, RotateCcw, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const pillIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(180, 100%, 25.1%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
+
 
 export default function MediSearchApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
@@ -24,7 +26,7 @@ export default function MediSearchApp() {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
   const [searchAttempted, setSearchAttempted] = useState<boolean>(false);
-  
+
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,11 +75,18 @@ export default function MediSearchApp() {
           action: <Info className="h-5 w-5 text-primary" />,
         });
       } else {
+        // This case might be hit if AI fallback (no API key) is active, or if AI ran but returned empty/falsy.
+        // The fallback already logs to console. If AI ran and failed to produce output, this toast is relevant.
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
       }
-    } catch (aiError) {
+    } catch (aiError: any) {
       console.error("AI enhancement failed:", aiError);
-      toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
+      toast({
+        title: t.appName,
+        description: `${t.errorAi} ${aiError.message ? `Details: ${aiError.message}` : 'Unknown AI enhancement error.'}`,
+        variant: "destructive"
+      });
+      // Uses original term if AI enhancement fails
     }
 
     setLoadingMessage(t.loadingData);
@@ -88,26 +97,30 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
           generateMedicineDetails({
-            searchTermOrName: dbItem.name,
+            searchTermOrName: dbItem.name, // Use the name from DB as primary search term for AI
             language: selectedLanguage,
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
           }).then(aiDetails => ({
             id: dbItem.id,
-            name: aiDetails.name,
-            composition: aiDetails.composition,
-            barcode: aiDetails.barcode,
+            name: aiDetails.name, // Use AI's version of name if provided
+            composition: aiDetails.composition, // Use AI's version of composition
+            barcode: aiDetails.barcode, // Prefer AI's barcode, fallback to dbItem's if AI doesn't provide
             usage: aiDetails.usage,
             manufacturer: aiDetails.manufacturer,
             dosage: aiDetails.dosage,
             sideEffects: aiDetails.sideEffects,
             source: 'database_ai_enhanced' as const,
           }))
-          .catch(err => { 
+          .catch(err => {
             console.error(`AI details generation failed for ${dbItem.name}:`, err);
-            toast({ title: `AI Error for ${dbItem.name}`, description: t.errorAiDetailsShort, variant: "destructive" });
-            return { 
+            toast({
+              title: `AI Error for ${dbItem.name}`,
+              description: `${t.errorAiDetailsShort} ${err.message ? `Reason: ${err.message}` : 'Unknown error.'}`,
+              variant: "destructive"
+            });
+            return {
               id: dbItem.id,
               name: dbItem.name,
               composition: dbItem.composition,
@@ -126,11 +139,11 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         const aiDetails = await generateMedicineDetails({
-          searchTermOrName: aiEnhancedSearchTerm,
+          searchTermOrName: aiEnhancedSearchTerm, // This is the term (potentially AI-corrected) to generate details for
           language: selectedLanguage,
         });
         setSearchResults([{
-          id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`, 
+          id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
           name: aiDetails.name,
           composition: aiDetails.composition,
           barcode: aiDetails.barcode,
@@ -141,13 +154,15 @@ export default function MediSearchApp() {
           source: 'ai_generated' as const,
         }]);
       }
-    } catch (flowError) {
-      console.error("Main AI details generation failed:", flowError);
-      setError(t.errorAiDetails);
-      toast({ title: t.appName, description: t.errorAiDetails, variant: "destructive" });
+    } catch (flowError: any) {
+      console.error("Main AI/data processing failed:", flowError);
+      const errorMessage = `${t.errorAiDetails} ${flowError.message ? `Error: ${flowError.message}` : 'Unknown AI generation error.'}`;
+      setError(errorMessage);
+      toast({ title: t.appName, description: errorMessage, variant: "destructive" });
+
+      // Fallback to showing DB data only if AI enhancement failed after DB fetch
       if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
-      } else if (dbDataArray.length > 0) {
-        setSearchResults(dbDataArray.map(dbItem => ({
+         setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
             name: dbItem.name,
             composition: dbItem.composition,
@@ -158,8 +173,8 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
+        setError(null); // Clear general error if we are showing partial data
       }
-      setError(null); 
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
@@ -172,9 +187,9 @@ export default function MediSearchApp() {
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
-    setSearchQuery(suggestion); 
-    setShowSuggestions(false);  
-    await performSearchLogic(suggestion); 
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    await performSearchLogic(suggestion);
   };
 
   const handleSearchQueryChange = (query: string) => {
@@ -187,13 +202,13 @@ export default function MediSearchApp() {
         const fetchedSuggestions = await fetchSuggestions(query);
         setSuggestions(fetchedSuggestions);
         setShowSuggestions(fetchedSuggestions.length > 0);
-      }, 300); 
+      }, 300);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
     }
   };
-  
+
   const handleInputFocus = () => {
     if (searchQuery.length > 1 && suggestions.length > 0) {
       setShowSuggestions(true);
@@ -209,20 +224,20 @@ export default function MediSearchApp() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
-      <div className="w-full p-4 flex justify-end sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
+      <header className="w-full p-4 flex justify-end sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
         <LanguageSelector
           selectedLanguage={selectedLanguage}
           onLanguageChange={handleLanguageChange}
           t={t}
         />
-      </div>
+      </header>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-8 sm:pt-12">
-        <div className="flex items-center justify-center mb-10 space-x-3">
-          <Pill className="h-12 w-12 sm:h-14 sm:w-14 text-primary" />
-          <h1 className="text-4xl sm:text-5xl font-bold text-primary">{t.appName}</h1>
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
+        <div className="flex items-center justify-center mb-8 space-x-2 text-primary">
+          <div dangerouslySetInnerHTML={{ __html: pillIconSvg.replace('stroke="hsl(180, 100%, 25.1%)"', 'stroke="currentColor"') }} className="h-10 w-10 sm:h-12 sm:w-12" />
+          <h1 className="text-4xl sm:text-5xl font-bold ">{t.appName}</h1>
         </div>
-        
+
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
@@ -268,7 +283,7 @@ export default function MediSearchApp() {
             ))}
           </section>
         )}
-        
+
         {!isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && (
             <Alert className="w-full max-w-lg shadow-md">
                 <Info className="h-5 w-5" />
@@ -301,4 +316,3 @@ export default function MediSearchApp() {
     </div>
   );
 }
-

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Generates detailed medicine information using AI.
@@ -38,9 +37,9 @@ export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetai
 
 
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
-  if (ai.plugins.length === 0 && !ai.registry.models['googleai/gemini-2.0-flash']) {
-    console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
-    // Fallback behavior: return minimal data if AI is not configured
+  // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
+  if (ai.plugins.length === 0) {
+    console.warn("generateMedicineDetails: AI plugin not available (likely missing GOOGLE_API_KEY). Returning placeholder data.");
     const name = input.contextName || input.searchTermOrName;
     const composition = input.contextComposition || "Not available due to AI configuration issue.";
     return {
@@ -51,10 +50,27 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       dosage: "Not available due to AI configuration issue.",
       sideEffects: "Not available due to AI configuration issue.",
       barcode: input.contextBarcode,
-      source: input.contextName ? 'database_only' : 'ai_generated', // Simplified source
+      source: input.contextName ? 'database_only' : 'ai_generated', 
     };
   }
-  return generateMedicineDetailsFlow(input);
+  try {
+    return await generateMedicineDetailsFlow(input);
+  } catch (error) {
+    console.error("Error in generateMedicineDetailsFlow:", error);
+    // Fallback to minimal data if the flow itself errors out
+    const name = input.contextName || input.searchTermOrName;
+    const composition = input.contextComposition || "Error generating AI details.";
+     return {
+      name: name,
+      composition: composition,
+      usage: "Error generating AI details.",
+      manufacturer: "Error generating AI details.",
+      dosage: "Error generating AI details.",
+      sideEffects: "Error generating AI details.",
+      barcode: input.contextBarcode,
+      source: input.contextName ? 'database_only' : 'ai_generated',
+    };
+  }
 }
 
 const prompt = ai.definePrompt({
@@ -140,6 +156,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
   async (input) => {
     const {output} = await prompt(input);
     if (!output) {
+        console.error("generateMedicineDetailsFlow: AI returned no output or an invalid structure.");
         throw new Error("AI failed to generate medicine details.");
     }
     // Ensure source is correctly set based on context presence
@@ -150,3 +167,4 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     return output;
   }
 );
+

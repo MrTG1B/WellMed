@@ -273,14 +273,22 @@ const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$pro
     correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
-    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0 && !__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].registry.models['googleai/gemini-2.0-flash']) {
-        console.warn("enhanceMedicineSearch: AI plugin not available. Returning original query.");
-        // Fallback behavior: return the original query if AI is not configured
+    // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
+    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
+        console.warn("enhanceMedicineSearch: AI plugin not available (likely missing GOOGLE_API_KEY). Returning original query.");
         return {
             correctedMedicineName: input.query
         };
     }
-    return enhanceMedicineSearchFlow(input);
+    try {
+        return await enhanceMedicineSearchFlow(input);
+    } catch (error) {
+        console.error("Error in enhanceMedicineSearchFlow:", error);
+        // Fallback to original query if the flow itself errors out
+        return {
+            correctedMedicineName: input.query
+        };
+    }
 }
 const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'enhanceMedicineSearchPrompt',
@@ -327,6 +335,7 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
     if (!output) {
         // This case should ideally be caught by Zod schema validation if the AI returns an invalid structure.
         // However, this explicit check adds robustness if the AI returns nothing or a valid but empty object.
+        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure.");
         throw new Error("AI failed to enhance search query or return valid output structure.");
     }
     return output;
@@ -390,9 +399,9 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
-    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0 && !__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].registry.models['googleai/gemini-2.0-flash']) {
-        console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
-        // Fallback behavior: return minimal data if AI is not configured
+    // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
+    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
+        console.warn("generateMedicineDetails: AI plugin not available (likely missing GOOGLE_API_KEY). Returning placeholder data.");
         const name = input.contextName || input.searchTermOrName;
         const composition = input.contextComposition || "Not available due to AI configuration issue.";
         return {
@@ -406,7 +415,24 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             source: input.contextName ? 'database_only' : 'ai_generated'
         };
     }
-    return generateMedicineDetailsFlow(input);
+    try {
+        return await generateMedicineDetailsFlow(input);
+    } catch (error) {
+        console.error("Error in generateMedicineDetailsFlow:", error);
+        // Fallback to minimal data if the flow itself errors out
+        const name = input.contextName || input.searchTermOrName;
+        const composition = input.contextComposition || "Error generating AI details.";
+        return {
+            name: name,
+            composition: composition,
+            usage: "Error generating AI details.",
+            manufacturer: "Error generating AI details.",
+            dosage: "Error generating AI details.",
+            sideEffects: "Error generating AI details.",
+            barcode: input.contextBarcode,
+            source: input.contextName ? 'database_only' : 'ai_generated'
+        };
+    }
 }
 const prompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'generateMedicineDetailsPrompt',
@@ -492,6 +518,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
 }, async (input)=>{
     const { output } = await prompt(input);
     if (!output) {
+        console.error("generateMedicineDetailsFlow: AI returned no output or an invalid structure.");
         throw new Error("AI failed to generate medicine details.");
     }
     // Ensure source is correctly set based on context presence

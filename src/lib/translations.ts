@@ -13,6 +13,10 @@ export type TranslationKeys = {
   noResults: string;
   medicineNameLabel: string;
   compositionLabel: string;
+  usageLabel: string;
+  manufacturerLabel: string;
+  dosageLabel: string;
+  sideEffectsLabel: string;
   barcodeLabel: string;
   loadingAi: string;
   loadingData: string;
@@ -20,7 +24,7 @@ export type TranslationKeys = {
   errorAi: string;
   errorData: string;
   searchWithAiResult: (correctedName: string) => string;
-  clearSearchButton: string; // Added key
+  clearSearchButton: string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -37,6 +41,10 @@ export const translations: Record<Language, TranslationKeys> = {
     noResults: 'No medicine found matching your query.',
     medicineNameLabel: 'Name',
     compositionLabel: 'Composition',
+    usageLabel: 'Usage',
+    manufacturerLabel: 'Manufacturer',
+    dosageLabel: 'Dosage',
+    sideEffectsLabel: 'Side Effects',
     barcodeLabel: 'Barcode',
     loadingAi: 'Enhancing search with AI...',
     loadingData: 'Fetching medicine details...',
@@ -44,7 +52,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'AI search enhancement failed.',
     errorData: 'Failed to fetch medicine data.',
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
-    clearSearchButton: 'Clear Search', // Added translation
+    clearSearchButton: 'Clear Search',
   },
   hi: {
     appName: 'मेडि सर्च',
@@ -59,6 +67,10 @@ export const translations: Record<Language, TranslationKeys> = {
     noResults: 'आपकी क्वेरी से मेल खाने वाली कोई दवा नहीं मिली।',
     medicineNameLabel: 'नाम',
     compositionLabel: 'संरचना',
+    usageLabel: 'उपयोग',
+    manufacturerLabel: 'निर्माता',
+    dosageLabel: 'खुराक',
+    sideEffectsLabel: 'दुष्प्रभाव',
     barcodeLabel: 'बारकोड',
     loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
     loadingData: 'दवा का विवरण प्राप्त किया जा रहा है...',
@@ -66,7 +78,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'एआई खोज वृद्धि विफल रही।',
     errorData: 'दवा डेटा लाने में विफल।',
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
-    clearSearchButton: 'खोज साफ़ करें', // Added translation
+    clearSearchButton: 'खोज साफ़ करें',
   },
   bn: {
     appName: 'মেডিসার্চ',
@@ -81,6 +93,10 @@ export const translations: Record<Language, TranslationKeys> = {
     noResults: 'আপনার প্রশ্নের সাথে মেলে এমন কোন ওষুধ পাওয়া যায়নি।',
     medicineNameLabel: 'নাম',
     compositionLabel: 'গঠন',
+    usageLabel: 'ব্যবহার',
+    manufacturerLabel: 'প্রস্তুতকারক',
+    dosageLabel: 'মাত্রা',
+    sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
     barcodeLabel: 'বারকোড',
     loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
     loadingData: 'ওষুধের বিবরণ আনা হচ্ছে...',
@@ -88,7 +104,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে।',
     errorData: 'ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
-    clearSearchButton: 'অনুসন্ধান সাফ করুন', // Added translation
+    clearSearchButton: 'অনুসন্ধান সাফ করুন',
   },
 };
 

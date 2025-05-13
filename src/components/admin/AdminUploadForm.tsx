@@ -31,9 +31,12 @@ const formSchema = z.object({
   }).regex(/^[a-zA-Z0-9-_]+$/, {
     message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores."
   }),
-  medicineName: z.string().min(2, {
-    message: "Medicine name must be at least 2 characters.",
-  }),
+  medicineName: z.string()
+    .trim()
+    .refine(val => val === '' || val.length >= 2, {
+      message: "Medicine Display Name, if provided, must be at least 2 characters after trimming.",
+    })
+    .optional(),
   composition: z.string().min(5, {
     message: "Composition must be at least 5 characters.",
   }),
@@ -77,8 +80,14 @@ export default function AdminUploadForm() {
     console.log("[AdminUploadForm] isSubmitting set to true.");
 
     const newMedicineId = data.medicineId.trim();
-    const newMedicineName = data.medicineName.trim();
-    const newComposition = data.composition.trim().toLowerCase();
+    const trimmedMedicineName = data.medicineName?.trim();
+    
+    const finalMedicineName = trimmedMedicineName && trimmedMedicineName.length > 0 
+                            ? trimmedMedicineName 
+                            : newMedicineId; // Use medicineId if name is undefined, empty, or just whitespace
+
+    const newComposition = data.composition.trim().toLowerCase(); // For conflict checking
+    const originalComposition = data.composition.trim(); // For storing
     const newBarcode = data.barcode?.trim();
 
     try {
@@ -122,7 +131,7 @@ export default function AdminUploadForm() {
         warningMessages.push(`Medicine ID "${newMedicineId}" already exists.`);
       }
       if (compositionConflict) {
-        warningMessages.push(`A medicine with composition "${data.composition.trim()}" already exists.`);
+        warningMessages.push(`A medicine with composition "${originalComposition}" already exists.`);
       }
       if (barcodeConflict && newBarcode) {
         warningMessages.push(`A medicine with barcode "${newBarcode}" already exists.`);
@@ -140,10 +149,10 @@ export default function AdminUploadForm() {
       }
       
       const medicineDataToSave = {
-        name: newMedicineName,
-        composition: data.composition.trim(), // Store original casing for composition
+        name: finalMedicineName,
+        composition: originalComposition, 
         barcode: newBarcode || null, 
-        lastUpdated: new Date().toISOString(), // Update timestamp on each submission
+        lastUpdated: new Date().toISOString(),
       };
 
       console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${newMedicineId}`, "Data:", medicineDataToSave);
@@ -155,7 +164,7 @@ export default function AdminUploadForm() {
 
       toast({
         title: "Upload Successful",
-        description: `Medicine "${newMedicineName}" (ID: ${newMedicineId}) data saved to Realtime Database.`,
+        description: `Medicine "${finalMedicineName}" (ID: ${newMedicineId}) data saved to Realtime Database.`,
       });
       form.reset(); 
       setCurrentTimestamp(new Date().toISOString());
@@ -208,12 +217,12 @@ export default function AdminUploadForm() {
           name="medicineName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Medicine Display Name</FormLabel>
+              <FormLabel>Medicine Display Name (Optional)</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
               </FormControl>
               <FormDescription>
-                The user-friendly name of the medicine.
+                The user-friendly name of the medicine (Optional, uses Medicine ID if blank).
               </FormDescription>
               <FormMessage />
             </FormItem>

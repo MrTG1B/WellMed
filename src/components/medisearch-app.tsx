@@ -288,7 +288,7 @@ export default function MediSearchApp() {
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
         <div className="flex items-center justify-center mb-8 space-x-3 text-primary">
             <Image 
-                src="/images/logo.png" 
+                src="/images/logo_transparent.png" 
                 alt="WellMeds Logo" 
                 width={280} // Adjust width as needed
                 height={80} // Adjust height to maintain aspect ratio

@@ -25,33 +25,36 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
-  // Removed direct check for ai.plugins. Genkit.ts already warns if GOOGLE_API_KEY is missing.
-  // The try-catch block below will handle errors if AI processing fails (e.g., no model/plugin).
+  if (!input || typeof input.query !== 'string') {
+    console.error(`enhanceMedicineSearch: Invalid input received. Input: ${JSON.stringify(input)}`);
+    return {
+      correctedMedicineName: input?.query || "", // Fallback to empty or original query if possible
+      source: 'ai_failed',
+    };
+  }
+
   try {
     const result = await enhanceMedicineSearchFlow(input);
-    // If enhanceMedicineSearchFlow itself returns a specific source like 'ai_unavailable' due to an internal Genkit state,
-    // that should be respected. Otherwise, a successful call implies 'ai_enhanced' or similar.
     if (result.source === 'ai_unavailable') {
         console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
     }
     return result;
-  } catch (error: unknown) { 
+  } catch (error: unknown) {
     let message = "Unknown error during AI search enhancement.";
     if (error instanceof Error) {
       message = error.message;
     } else if (typeof error === 'string') {
       message = error;
     }
-    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error); 
-    // If the flow itself throws an error, it implies 'ai_failed' rather than 'ai_unavailable' from this wrapper's perspective.
-    return { correctedMedicineName: input.query, source: 'ai_failed' }; 
+    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
+    return { correctedMedicineName: input.query, source: 'ai_failed' };
   }
 }
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
   input: {schema: EnhanceMedicineSearchInputSchema},
-  output: {schema: EnhanceMedicineSearchOutputSchema}, // Output schema now includes source
+  output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
 The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its barcode, or keywords from its composition.
 Based on the input, determine the most likely *medicine name* or the *original query if it seems to be a direct identifier like a barcode or a specific product formulation that doesn't map to a more general common name*.
@@ -73,11 +76,10 @@ Examples:
 - Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol", source: "ai_enhanced"
 - Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen", source: "ai_enhanced"
 
-
 If the input is a barcode, and you cannot confidently map it to a common medicine name, return the barcode itself.
 If the input is a composition keyword (e.g. "Paracetamol"), return it or a slightly refined version.
 The key is to provide a search term that will be effective for the backend, preserving specificity when it seems intentional.
-Always set 'source' to 'ai_enhanced' in your direct response.
+Always set 'source' to 'ai_enhanced' in your direct response. Do not return empty strings for correctedMedicineName; if unsure, return the original query.
 
 User Query: {{{query}}}
   `,
@@ -95,28 +97,22 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
       const {output} = await enhanceMedicineSearchPrompt(input);
       rawOutputFromAI = output;
 
-      if (!rawOutputFromAI || 
-          typeof rawOutputFromAI.correctedMedicineName !== 'string' || 
+      if (!rawOutputFromAI ||
+          typeof rawOutputFromAI.correctedMedicineName !== 'string' ||
           rawOutputFromAI.correctedMedicineName.trim() === '' ||
-          rawOutputFromAI.source !== 'ai_enhanced' // Expect AI to set this
+          rawOutputFromAI.source !== 'ai_enhanced'
         ) {
         console.error(
-            "enhanceMedicineSearchFlow: AI returned no output, invalid structure, empty correctedMedicineName, or incorrect source. Input:", 
-            JSON.stringify(input, null, 2), 
-            "Raw Output:", 
+            "enhanceMedicineSearchFlow: AI returned no output, invalid structure, empty correctedMedicineName, or incorrect source. Input:",
+            JSON.stringify(input, null, 2),
+            "Raw Output:",
             JSON.stringify(rawOutputFromAI, null, 2)
         );
         if (rawOutputFromAI === null) {
-             // This case means Zod validation on the output schema failed or AI literally returned null.
-             // The prompt is defined with an output schema, so Genkit should attempt to conform.
-             // If it can't, it might throw an error before this point, or output might be null/undefined.
              console.error("enhanceMedicineSearchFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
         }
-        // Fallback if AI response is not as expected, but still use the input query
-        // This implies AI processing was attempted but the result was unusable.
         return { correctedMedicineName: input.query, source: 'original_query_used' };
       }
-      // Ensure source is explicitly set, even if AI provides it.
       return { ...rawOutputFromAI, source: 'ai_enhanced' };
     } catch (flowError: unknown) {
       let errorMessage = "AI model failed to process search enhancement or an unexpected error occurred.";
@@ -126,11 +122,9 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
           errorMessage = flowError.message;
           errorStack = flowError.stack;
 
-          // Check for common Genkit/Google AI errors related to API keys or model availability
           if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported')) {
             console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
-            // Indicate that AI is effectively unavailable due to configuration/permission
-            return { correctedMedicineName: input.query, source: 'ai_unavailable' }; 
+            return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }
           if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
             console.error(`enhanceMedicineSearchFlow: AI model not found or configured: ${errorMessage}`);
@@ -139,11 +133,10 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
       } else if (typeof flowError === 'string') {
           errorMessage = flowError;
       } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
-          errorMessage = String((flowError as any).message); 
+          errorMessage = String((flowError as any).message);
       }
-      
+
       console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
-      // On flow error, return original query and mark source as failed for AI part.
       return { correctedMedicineName: input.query, source: 'ai_failed' };
     }
   }

@@ -12,6 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import type { Language } from '@/types';
+import { getTranslations } from '@/lib/translations'; // Import getTranslations
 import {z} from 'genkit';
 
 const GenerateMedicineDetailsInputSchema = z.object({
@@ -37,14 +38,27 @@ export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetai
 
 
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
-  const detailsUnavailableMessage = "Information not available";
+  const languageToUse = input?.language || 'en';
+  const t_fallback = getTranslations(languageToUse);
+
+  if (!input || typeof input.searchTermOrName !== 'string' || typeof input.language !== 'string') {
+    console.error(`generateMedicineDetails: Invalid input received. Input: ${JSON.stringify(input)}`);
+    return {
+      name: t_fallback.infoNotAvailable,
+      composition: t_fallback.infoNotAvailable,
+      usage: t_fallback.infoNotAvailable,
+      manufacturer: t_fallback.infoNotAvailable,
+      dosage: t_fallback.infoNotAvailable,
+      sideEffects: t_fallback.infoNotAvailable,
+      barcode: undefined,
+      source: 'ai_failed',
+    };
+  }
+
   const name = input.contextName || input.searchTermOrName;
-  // Removed direct check for ai.plugins. Genkit.ts already warns if GOOGLE_API_KEY is missing.
-  // The try-catch block below will handle errors if AI processing fails.
 
   try {
     const result = await generateMedicineDetailsFlow(input);
-    // If flow indicates 'ai_unavailable', propagate it.
     if (result.source === 'ai_unavailable') {
         console.warn(`generateMedicineDetails: Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
     }
@@ -52,25 +66,22 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
   } catch (error: unknown) {
     let rawErrorMessage = "Unknown AI error during flow execution.";
     if (error instanceof Error) {
-      rawErrorMessage = error.message; 
+      rawErrorMessage = error.message;
     } else if (typeof error === 'string') {
       rawErrorMessage = error;
     }
     console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
-    
-    // If the flow itself throws an error, it implies 'ai_failed'.
-    // If there was context, it's 'database_only' because AI enhancement failed.
-    // If no context, and AI fails, it's purely 'ai_failed'.
-    const source: GenerateMedicineDetailsOutput['source'] = input.contextName ? 'database_only' : 'ai_failed';
+
+    const source: GenerateMedicineDetailsOutput['source'] = (input && input.contextName) ? 'database_only' : 'ai_failed';
      return {
-      name: name,
-      composition: input.contextComposition || detailsUnavailableMessage,
-      usage: detailsUnavailableMessage,
-      manufacturer: detailsUnavailableMessage,
-      dosage: detailsUnavailableMessage,
-      sideEffects: detailsUnavailableMessage,
+      name: name || t_fallback.infoNotAvailable, // Ensure name is not undefined
+      composition: input.contextComposition || t_fallback.infoNotAvailable,
+      usage: t_fallback.infoNotAvailable,
+      manufacturer: t_fallback.infoNotAvailable,
+      dosage: t_fallback.infoNotAvailable,
+      sideEffects: t_fallback.infoNotAvailable,
       barcode: input.contextBarcode,
-      source: source, 
+      source: source,
     };
   }
 }
@@ -146,7 +157,7 @@ Example for searchTermOrName="painkiller for headache":
 {{/if}}
 
 Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects) is in {{language}}.
-If any information is not found or cannot be reliably determined, explicitly state 'Information not available' or a similar phrase in the target language for that specific field rather than omitting it.
+For any field where specific information is not found or cannot be reliably determined, you MUST return the phrase 'Information not available' (or its equivalent in the target {{language}}) for that specific field. DO NOT return an empty string or omit the field.
 The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated'. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response; these are handled by the calling logic if AI fails or is unavailable.
 `,
 });
@@ -159,12 +170,14 @@ const generateMedicineDetailsFlow = ai.defineFlow(
   },
   async (input: GenerateMedicineDetailsInput) => {
     let rawOutputFromAI: any = null;
+    const t_fallback = getTranslations(input.language || 'en'); // For default messages if needed
+
     try {
       const {output} = await prompt(input);
       rawOutputFromAI = output;
-      
-      
-      if (!rawOutputFromAI || 
+
+
+      if (!rawOutputFromAI ||
           typeof rawOutputFromAI.name !== 'string' || rawOutputFromAI.name.trim() === '' ||
           typeof rawOutputFromAI.composition !== 'string' || rawOutputFromAI.composition.trim() === '' ||
           typeof rawOutputFromAI.usage !== 'string' || rawOutputFromAI.usage.trim() === '' ||
@@ -174,18 +187,17 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           typeof rawOutputFromAI.source !== 'string' || !['database_ai_enhanced', 'ai_generated'].includes(rawOutputFromAI.source)
       ) {
         console.error(
-          "generateMedicineDetailsFlow: AI returned incomplete, invalid, or empty-stringed data for required fields. Input:", 
-          JSON.stringify(input, null, 2), 
-          "Raw Output:", 
+          "generateMedicineDetailsFlow: AI returned incomplete, invalid, or empty-stringed data for required fields, or incorrect source. Input:",
+          JSON.stringify(input, null, 2),
+          "Raw Output:",
           JSON.stringify(rawOutputFromAI, null, 2)
         );
         if (rawOutputFromAI === null) {
              console.error("generateMedicineDetailsFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
         }
-        // This error will be caught by the wrapper function `generateMedicineDetails`
         throw new Error("AI returned incomplete, invalid, or empty-stringed data for required fields. Check logs for raw AI output.");
       }
-      
+
       const validatedOutput: GenerateMedicineDetailsOutput = {
         name: rawOutputFromAI.name,
         composition: rawOutputFromAI.composition,
@@ -193,10 +205,10 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         manufacturer: rawOutputFromAI.manufacturer,
         dosage: rawOutputFromAI.dosage,
         sideEffects: rawOutputFromAI.sideEffects,
-        barcode: rawOutputFromAI.barcode || input.contextBarcode, 
+        barcode: rawOutputFromAI.barcode || input.contextBarcode,
         source: rawOutputFromAI.source as GenerateMedicineDetailsOutput['source'],
       };
-      
+
       if (input.contextBarcode && !validatedOutput.barcode) {
           validatedOutput.barcode = input.contextBarcode;
       }
@@ -211,45 +223,39 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             errorMessage = flowError.message;
             errorStack = flowError.stack;
 
-            // Check for common Genkit/Google AI errors related to API keys or model availability
             if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported')) {
               console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`);
-              // This special return indicates AI is unavailable, to be handled by the main medisearch-app logic
-              // For database context, it means enhancement failed due to unavailibility
-              // For no context, it means AI generation failed due to unavailibility
               return {
                 name: input.contextName || input.searchTermOrName,
-                composition: input.contextComposition || "Information not available",
-                usage: "Information not available",
-                manufacturer: "Information not available",
-                dosage: "Information not available",
-                sideEffects: "Information not available",
+                composition: input.contextComposition || t_fallback.infoNotAvailable,
+                usage: t_fallback.infoNotAvailable,
+                manufacturer: t_fallback.infoNotAvailable,
+                dosage: t_fallback.infoNotAvailable,
+                sideEffects: t_fallback.infoNotAvailable,
                 barcode: input.contextBarcode,
-                source: 'ai_unavailable', 
+                source: 'ai_unavailable',
               };
             }
             if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
               console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`);
                return {
                 name: input.contextName || input.searchTermOrName,
-                composition: input.contextComposition || "Information not available",
-                usage: "Information not available",
-                manufacturer: "Information not available",
-                dosage: "Information not available",
-                sideEffects: "Information not available",
+                composition: input.contextComposition || t_fallback.infoNotAvailable,
+                usage: t_fallback.infoNotAvailable,
+                manufacturer: t_fallback.infoNotAvailable,
+                dosage: t_fallback.infoNotAvailable,
+                sideEffects: t_fallback.infoNotAvailable,
                 barcode: input.contextBarcode,
                 source: 'ai_unavailable',
               };
             }
-
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
         } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
             errorMessage = String((flowError as any).message);
         }
-        
+
         console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
-        // This error will be caught by the wrapper function `generateMedicineDetails`
         throw new Error(`AI Generation Error: ${errorMessage}`);
     }
   }

@@ -38,50 +38,46 @@ export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetai
 
 
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
-  // Explicit null/undefined check for 'input' itself first.
-  if (!input) {
-    console.error(`generateMedicineDetails: Critical - input argument is null or undefined.`);
-    const t_fallback_early = getTranslations('en'); 
-    return {
-      name: t_fallback_early.infoNotAvailable,
-      composition: t_fallback_early.infoNotAvailable,
-      usage: t_fallback_early.infoNotAvailable,
-      manufacturer: t_fallback_early.infoNotAvailable,
-      dosage: t_fallback_early.infoNotAvailable,
-      sideEffects: t_fallback_early.infoNotAvailable,
-      source: 'ai_failed', 
-    };
-  }
-
-  const languageToUse = input.language || 'en'; 
+  const languageToUse = input.language || 'en';
   const t_fallback = getTranslations(languageToUse);
 
-  if (typeof input.searchTermOrName !== 'string' || (input.language && typeof input.language !== 'string')) {
-    console.error(`generateMedicineDetails: Invalid input properties. Input: ${JSON.stringify(input)}`);
+  if (!input || typeof input.searchTermOrName !== 'string' || input.searchTermOrName.trim() === '') {
+    console.warn(`generateMedicineDetails: Invalid or empty input. Input: ${JSON.stringify(input)}`);
     return {
-      name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
-      composition: input.contextComposition || t_fallback.infoNotAvailable,
+      name: input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable,
+      composition: input?.contextComposition || t_fallback.infoNotAvailable,
       usage: t_fallback.infoNotAvailable,
       manufacturer: t_fallback.infoNotAvailable,
       dosage: t_fallback.infoNotAvailable,
       sideEffects: t_fallback.infoNotAvailable,
-      barcode: input.contextBarcode || undefined,
+      barcode: input?.contextBarcode,
       source: 'ai_failed',
     };
   }
-
-  const name = input.contextName || input.searchTermOrName;
+  
+  const nameForFallback = input.contextName || input.searchTermOrName;
 
   try {
-    console.log(`generateMedicineDetails: Calling flow with input:`, JSON.stringify(input, null, 2));
+    console.log(`generateMedicineDetails (wrapper): Calling flow with input:`, JSON.stringify(input, null, 2));
     const result = await generateMedicineDetailsFlow(input);
-    console.log(`generateMedicineDetails: Flow returned result:`, JSON.stringify(result, null, 2));
+    console.log(`generateMedicineDetails (wrapper): Flow returned result:`, JSON.stringify(result, null, 2));
     if (result.source === 'ai_unavailable') {
         console.warn(`generateMedicineDetails: Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
     }
-    return result;
+    // Ensure critical fields are not empty, if AI returns them as such, use fallback
+    const validatedResult = {
+        ...result,
+        name: result.name && result.name.trim() !== '' ? result.name : (input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable),
+        composition: result.composition && result.composition.trim() !== '' ? result.composition : (input.contextComposition || t_fallback.infoNotAvailable),
+        usage: result.usage && result.usage.trim() !== '' ? result.usage : t_fallback.infoNotAvailable,
+        manufacturer: result.manufacturer && result.manufacturer.trim() !== '' ? result.manufacturer : t_fallback.infoNotAvailable,
+        dosage: result.dosage && result.dosage.trim() !== '' ? result.dosage : t_fallback.infoNotAvailable,
+        sideEffects: result.sideEffects && result.sideEffects.trim() !== '' ? result.sideEffects : t_fallback.infoNotAvailable,
+        barcode: result.barcode || input.contextBarcode, // Prefer AI barcode, then context, then undefined
+    };
+    return validatedResult;
   } catch (error: unknown) {
-    let rawErrorMessage = "Unknown AI error during flow execution.";
+    let rawErrorMessage = "Unknown AI error during flow execution in wrapper.";
     if (error instanceof Error) {
       rawErrorMessage = error.message;
     } else if (typeof error === 'string') {
@@ -89,9 +85,9 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
     }
     console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
     
-    const source: GenerateMedicineDetailsOutput['source'] = (input && input.contextName) ? 'database_only' : 'ai_failed';
+    const source: GenerateMedicineDetailsOutput['source'] = (input.contextName) ? 'database_only' : 'ai_failed';
      return {
-      name: name || t_fallback.infoNotAvailable, 
+      name: nameForFallback || t_fallback.infoNotAvailable, 
       composition: input.contextComposition || t_fallback.infoNotAvailable,
       usage: t_fallback.infoNotAvailable,
       manufacturer: t_fallback.infoNotAvailable,
@@ -103,9 +99,9 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
   }
 }
 
-const prompt = ai.definePrompt({
+const medicineDetailsPrompt = ai.definePrompt({
   name: 'generateMedicineDetailsPrompt',
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-pro', // Explicitly use gemini-pro
   input: {schema: GenerateMedicineDetailsInputSchema},
   output: {schema: GenerateMedicineDetailsOutputSchema},
   prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
@@ -123,11 +119,11 @@ Based on this information, please generate the following details for "{{contextN
 - Common side effects.
 
 The output 'name' should be "{{contextName}}".
-{{#if contextComposition}}The output 'composition' should be "{{contextComposition}}".{{else}}The output 'composition' should be based on your knowledge of "{{contextName}}".{{/if}}
-{{#if contextBarcode}}The output 'barcode' should be "{{contextBarcode}}".{{/if}}
+The output 'composition' should be "{{contextComposition}}".
+{{#if contextBarcode}}The output 'barcode' should be "{{contextBarcode}}".{{else}}If a barcode for "{{contextName}}" is commonly known, provide it, otherwise omit or leave the 'barcode' field empty.{{/if}}
 The output 'source' should be "database_ai_enhanced".
 
-Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg":
+Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
   usage: "Used to treat pain and fever."
@@ -142,7 +138,7 @@ This term could be a medicine name, a partial name, a composition, or a barcode.
 
 First, try to identify the most likely specific medicine based on "{{searchTermOrName}}".
 Then, provide the following details for that identified medicine in {{language}}:
-- Common name.
+- Common name (this should be your identified medicine name).
 - Typical composition/active ingredients.
 - Typical usage or indications.
 - Common manufacturer(s) (if multiple, list prominent ones).
@@ -152,10 +148,10 @@ Then, provide the following details for that identified medicine in {{language}}
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
 If "{{searchTermOrName}}" seems to be a composition, describe a common medicine with that composition.
-If you cannot confidently identify a specific medicine from "{{searchTermOrName}}", clearly state that you are providing general information based on the term or that no specific medicine could be identified. In such cases, try your best to populate the fields, using "Not specifically identified" or similar for name/composition if needed.
+If you cannot confidently identify a specific medicine from "{{searchTermOrName}}", clearly state that you are providing general information based on the term or that no specific medicine could be identified. In such cases, try your best to populate the fields, using "Not specifically identified based on '{{searchTermOrName}}'" or similar for name/composition if needed.
 The output 'source' should be "ai_generated".
 
-Example for searchTermOrName="Amoxicillin":
+Example for searchTermOrName="Amoxicillin", language="en":
   name: "Amoxicillin"
   composition: "Amoxicillin Trihydrate (e.g., 250mg or 500mg capsules)"
   usage: "Used to treat a wide variety of bacterial infections."
@@ -164,13 +160,13 @@ Example for searchTermOrName="Amoxicillin":
   sideEffects: "Nausea, diarrhea, rash."
   source: "ai_generated"
 
-Example for searchTermOrName="painkiller for headache":
-  name: "Common Painkillers (e.g., Paracetamol, Ibuprofen)"
-  composition: "Varies (e.g., Paracetamol, Ibuprofen)"
-  usage: "To relieve headache pain."
-  manufacturer: "Various"
-  dosage: "Follow product-specific instructions."
-  sideEffects: "Varies by specific painkiller."
+Example for searchTermOrName="painkiller for headache", language="hi":
+  name: "सामान्य दर्दनाशक (जैसे, पैरासिटामोल, आइबुप्रोफेन)"
+  composition: "विभिन्न (जैसे, पैरासिटामोल, आइबुप्रोफेन)"
+  usage: "सिरदर्द से राहत के लिए।"
+  manufacturer: "विभिन्न"
+  dosage: "उत्पाद-विशिष्ट निर्देशों का पालन करें।"
+  sideEffects: "विशिष्ट दर्दनाशक के आधार पर भिन्न होता है।"
   source: "ai_generated"
 {{/if}}
 
@@ -186,36 +182,34 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     inputSchema: GenerateMedicineDetailsInputSchema,
     outputSchema: GenerateMedicineDetailsOutputSchema,
   },
-  async (input: GenerateMedicineDetailsInput) => {
-    let rawOutputFromAI: any = null;
+  async (input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> => {
+    let rawOutputFromAI: GenerateMedicineDetailsOutput | null = null;
     const t_fallback = getTranslations(input.language || 'en'); 
 
     try {
       console.log("generateMedicineDetailsFlow: Calling AI prompt with input:", JSON.stringify(input, null, 2));
-      const {output} = await prompt(input);
+      const {output} = await medicineDetailsPrompt(input); // Corrected: Use medicineDetailsPrompt
       rawOutputFromAI = output;
       console.log("generateMedicineDetailsFlow - Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
 
-
+      // Validate the AI output structure and content.
       if (!rawOutputFromAI ||
           typeof rawOutputFromAI.name !== 'string' || rawOutputFromAI.name.trim() === '' ||
-          typeof rawOutputFromAI.composition !== 'string' || rawOutputFromAI.composition.trim() === '' ||
+          typeof rawOutputFromAI.composition !== 'string' || // Composition can be "Information not available"
           typeof rawOutputFromAI.usage !== 'string' || rawOutputFromAI.usage.trim() === '' ||
           typeof rawOutputFromAI.manufacturer !== 'string' || rawOutputFromAI.manufacturer.trim() === '' ||
           typeof rawOutputFromAI.dosage !== 'string' || rawOutputFromAI.dosage.trim() === '' ||
           typeof rawOutputFromAI.sideEffects !== 'string' || rawOutputFromAI.sideEffects.trim() === '' ||
           typeof rawOutputFromAI.source !== 'string' || !['database_ai_enhanced', 'ai_generated'].includes(rawOutputFromAI.source)
       ) {
-        console.error(
+        console.warn(
           "generateMedicineDetailsFlow: AI returned incomplete, invalid, or empty-stringed data for required fields, or incorrect source. Input:",
           JSON.stringify(input, null, 2),
           "Raw Output:",
           JSON.stringify(rawOutputFromAI, null, 2)
         );
-        if (rawOutputFromAI === null) {
-             console.error("generateMedicineDetailsFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
-        }
         
+        const sourceForFailure: GenerateMedicineDetailsOutput['source'] = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input.contextComposition || t_fallback.infoNotAvailable,
@@ -224,21 +218,22 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             dosage: t_fallback.infoNotAvailable,
             sideEffects: t_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
-            source: 'ai_failed',
+            source: sourceForFailure,
         };
       }
 
       const validatedOutput: GenerateMedicineDetailsOutput = {
-        name: rawOutputFromAI.name,
-        composition: rawOutputFromAI.composition,
-        usage: rawOutputFromAI.usage,
-        manufacturer: rawOutputFromAI.manufacturer,
-        dosage: rawOutputFromAI.dosage,
-        sideEffects: rawOutputFromAI.sideEffects,
+        name: rawOutputFromAI.name || (input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable),
+        composition: rawOutputFromAI.composition || (input.contextComposition || t_fallback.infoNotAvailable),
+        usage: rawOutputFromAI.usage || t_fallback.infoNotAvailable,
+        manufacturer: rawOutputFromAI.manufacturer || t_fallback.infoNotAvailable,
+        dosage: rawOutputFromAI.dosage || t_fallback.infoNotAvailable,
+        sideEffects: rawOutputFromAI.sideEffects || t_fallback.infoNotAvailable,
         barcode: rawOutputFromAI.barcode || input.contextBarcode,
-        source: rawOutputFromAI.source as GenerateMedicineDetailsOutput['source'],
+        source: rawOutputFromAI.source as GenerateMedicineDetailsOutput['source'], // Already validated
       };
-
+      
+      // If contextBarcode was provided and AI didn't return one, use contextBarcode.
       if (input.contextBarcode && !validatedOutput.barcode) {
           validatedOutput.barcode = input.contextBarcode;
       }
@@ -248,20 +243,22 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     } catch (flowError: unknown) {
         let errorMessage = "AI model failed to generate valid details or an unexpected error occurred in the flow.";
         let errorStack: string | undefined;
-        let sourceForError: GenerateMedicineDetailsOutput['source'] = 'ai_failed';
+        let sourceForError: GenerateMedicineDetailsOutput['source'] = input.contextName ? 'database_only' : 'ai_failed';
 
 
         if (flowError instanceof Error) {
             errorMessage = flowError.message;
             errorStack = flowError.stack;
 
-            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID')) {
+            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid')) {
               console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`, flowError);
               sourceForError = 'ai_unavailable';
-            }
-            if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
+            } else if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
               console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`, flowError);
               sourceForError = 'ai_unavailable';
+            } else if (errorMessage.includes('Billing account not found') || errorMessage.includes('billing issues')) {
+                 console.error(`generateMedicineDetailsFlow: Billing issue: ${errorMessage}`);
+                 sourceForError = 'ai_unavailable';
             }
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;

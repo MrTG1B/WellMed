@@ -1,5 +1,8 @@
 import { config } from 'dotenv';
-config();
+config(); // Load .env variables
 
-import '@/ai/flows/enhance-medicine-search.ts';
-import '@/ai/flows/generate-medicine-details.ts';
+// Import your flows here to make them available for local Genkit tools (like Flow UI)
+import '@/ai/flows/enhance-medicine-search';
+import '@/ai/flows/generate-medicine-details';
+
+console.log("Genkit dev environment initialized. Flows enhance-medicine-search and generate-medicine-details are registered.");

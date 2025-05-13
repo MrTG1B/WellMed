@@ -5,9 +5,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
-import { enhanceMedicineSearch } from "@/ai/flows/enhance-medicine-search";
-import { generateMedicineDetails } from "@/ai/flows/generate-medicine-details";
-import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi";
+import { enhanceMedicineSearch, type EnhanceMedicineSearchOutput } from "@/ai/flows/enhance-medicine-search";
+import { generateMedicineDetails, type GenerateMedicineDetailsOutput } from "@/ai/flows/generate-medicine-details";
+import { fetchMedicineByName } from "@/lib/mockApi";
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
@@ -76,12 +76,12 @@ export default function MediSearchApp() {
       setLoadingMessage(t.loadingAi);
       console.log(`performSearchLogic: Calling enhanceMedicineSearch with query: "${termToSearch}"`);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
-      console.log(`performSearchLogic: enhanceMedicineSearch response:`, aiEnhanceResponse);
-      aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
+      console.log(`performSearchLogic: enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
+      aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed'; // Default to ai_failed if source is undefined
 
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
+        aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName.trim();
         if (aiEnhanceResponse.source === 'ai_enhanced') {
-          aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
           toast({
             title: t.appName,
             description: t.searchWithAiResult(aiEnhancedSearchTerm),
@@ -89,33 +89,35 @@ export default function MediSearchApp() {
           });
         } else if (aiEnhanceResponse.source === 'original_query_used') {
            toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
-           aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName; 
-        } else { 
-           toast({ title: t.appName, description: t.errorAi, variant: "default" });
-           aiEnhancedSearchTerm = termToSearch; 
+        } else if (aiEnhanceResponse.source === 'ai_unavailable') {
+            setAiConfigError(t.errorAiNotConfigured);
+            setAiConfigErrorType('key_missing');
+            toast({ title: t.appName, description: t.errorAiNotConfigured, variant: "destructive" });
+        } else { // ai_failed or other unexpected source
+           toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
         }
-      } else {
-        toast({ title: t.appName, description: t.errorAi, variant: "default" });
-        aiEnhancedSearchTerm = termToSearch;
+      } else { // AI enhancement effectively failed to produce a usable term
+        toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
+        aiEnhancedSearchTerm = termToSearch.trim(); // Fallback to original
         aiEnhancementSource = 'ai_failed';
       }
-    } catch (aiError: unknown) { 
-      let message = "AI enhancement failed. Using original query.";
-      if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
+    } catch (aiError: any) { 
+      let message = t.errorAi;
+      if (aiError?.message) message = `${t.errorAi} Details: ${aiError.message}`;
       console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError);
       toast({
         title: t.appName,
         description: message,
         variant: "destructive"
       });
-      aiEnhancedSearchTerm = termToSearch; 
+      aiEnhancedSearchTerm = termToSearch.trim(); 
       aiEnhancementSource = 'ai_failed';
     }
 
     setLoadingMessage(t.loadingData);
     console.log(`performSearchLogic: Calling fetchMedicineByName with term: "${aiEnhancedSearchTerm}"`);
     const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
-    console.log(`performSearchLogic: fetchMedicineByName response:`, dbDataArray);
+    console.log(`performSearchLogic: fetchMedicineByName response (found ${dbDataArray.length} items):`, JSON.stringify(dbDataArray, null, 2));
 
     try {
       let processedMedicines: Medicine[] = [];
@@ -123,22 +125,23 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
           generateMedicineDetails({ 
-            searchTermOrName: dbItem.name, 
+            searchTermOrName: dbItem.name, // Use the name from DB as the primary identifier for AI
             language: selectedLanguage,
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
           }).then(aiDetails => {
-            console.log(`performSearchLogic: generateMedicineDetails response for ${dbItem.name}:`, aiDetails);
+            console.log(`performSearchLogic: generateMedicineDetails (DB context) response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
+            // Prioritize AI details, fallback to DB, then to "Info not available"
             return { 
               id: dbItem.id,
-              name: aiDetails.name, 
-              composition: aiDetails.composition, 
-              barcode: aiDetails.barcode, 
-              usage: aiDetails.usage,
-              manufacturer: aiDetails.manufacturer,
-              dosage: aiDetails.dosage,
-              sideEffects: aiDetails.sideEffects,
+              name: aiDetails.name && aiDetails.name !== t.infoNotAvailable ? aiDetails.name : dbItem.name, 
+              composition: aiDetails.composition && aiDetails.composition !== t.infoNotAvailable ? aiDetails.composition : dbItem.composition || t.infoNotAvailable, 
+              barcode: aiDetails.barcode || dbItem.barcode, 
+              usage: aiDetails.usage || t.infoNotAvailable,
+              manufacturer: aiDetails.manufacturer || t.infoNotAvailable,
+              dosage: aiDetails.dosage || t.infoNotAvailable,
+              sideEffects: aiDetails.sideEffects || t.infoNotAvailable,
               source: aiDetails.source, 
             };
           })
@@ -147,8 +150,8 @@ export default function MediSearchApp() {
             if (err instanceof Error) errMessage = err.message;
             console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err);
             toast({
-              title: `AI Error for ${dbItem.name}`,
-              description: `${t.errorAiDetailsShort} ${errMessage}`,
+              title: `${t.errorAiDetailsShort} for ${dbItem.name}`,
+              description: `${t.errorAiDetails} ${errMessage}`,
               variant: "destructive"
             });
             return { 
@@ -165,7 +168,7 @@ export default function MediSearchApp() {
           })
         );
         processedMedicines = await Promise.all(medicinePromises);
-      } else {
+      } else { // Not found in DB, try full AI generation
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         console.log(`performSearchLogic: No DB data for "${aiEnhancedSearchTerm}". Calling generateMedicineDetails for pure AI generation.`);
@@ -173,44 +176,51 @@ export default function MediSearchApp() {
           searchTermOrName: aiEnhancedSearchTerm, 
           language: selectedLanguage,
         });
-        console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, aiDetails);
+        console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, JSON.stringify(aiDetails, null, 2));
         
-        processedMedicines = [{
-          id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-          name: aiDetails.name,
-          composition: aiDetails.composition,
-          barcode: aiDetails.barcode,
-          usage: aiDetails.usage,
-          manufacturer: aiDetails.manufacturer,
-          dosage: aiDetails.dosage,
-          sideEffects: aiDetails.sideEffects,
-          source: aiDetails.source,
-        }];
+        // If AI returns "Information not available" for name in pure AI gen, it means it couldn't identify it.
+        if (aiDetails.name === t.infoNotAvailable || aiDetails.name.trim() === '') {
+             processedMedicines = []; // Effectively, no result
+        } else {
+            processedMedicines = [{
+              id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+              name: aiDetails.name,
+              composition: aiDetails.composition || t.infoNotAvailable,
+              barcode: aiDetails.barcode,
+              usage: aiDetails.usage || t.infoNotAvailable,
+              manufacturer: aiDetails.manufacturer || t.infoNotAvailable,
+              dosage: aiDetails.dosage || t.infoNotAvailable,
+              sideEffects: aiDetails.sideEffects || t.infoNotAvailable,
+              source: aiDetails.source,
+            }];
+        }
       }
       setSearchResults(processedMedicines);
 
-      const anyAiUnavailable = processedMedicines.some(med => med.source === 'ai_unavailable') || aiEnhancementSource === 'ai_unavailable';
-      const anyAiFailed = processedMedicines.some(med => med.source === 'ai_failed') || aiEnhancementSource === 'ai_failed';
+      // Consolidate AI error state reporting based on all AI interactions
+      const anyAiUnavailableInDetails = processedMedicines.some(med => med.source === 'ai_unavailable');
+      const anyAiFailedInDetails = processedMedicines.some(med => med.source === 'ai_failed');
       
-      if (anyAiUnavailable) {
+      if (aiEnhancementSource === 'ai_unavailable' || anyAiUnavailableInDetails) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
-      } else if (anyAiFailed && !anyAiUnavailable) { // only show general API fail if not specific key_missing
+      } else if (aiEnhancementSource === 'ai_failed' || anyAiFailedInDetails) {
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
 
 
-    } catch (dataProcessingError: unknown) { 
+    } catch (dataProcessingError: any) { 
       let errorMessage = t.errorData;
-      if (dataProcessingError instanceof Error) {
+      if (dataProcessingError?.message) {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
-      console.error("Data processing or DB fetch failed (medisearch-app.tsx):", dataProcessingError);
+      console.error("Data processing or AI detail generation failed (medisearch-app.tsx):", dataProcessingError);
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
-      if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
+      // Fallback to DB data if AI details failed completely but DB data was available
+      if (dbDataArray.length > 0 && (!searchResults || searchResults.length === 0 || searchResults.every(r => r.source === 'database_only'))) {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
             name: dbItem.name,
@@ -222,7 +232,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); 
+        setError(null); // Clear general error if we successfully showed DB data
       }
     } finally {
       setIsLoading(false);
@@ -246,13 +256,13 @@ export default function MediSearchApp() {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    if (query.length > 1) {
-      if (aiConfigError) {
+    if (query.length > 1) { // Trigger suggestions if query length > 1
+      if (aiConfigError) { // Clear AI config error when user types
         setAiConfigError(null);
         setAiConfigErrorType(null);
       }
       debounceTimeoutRef.current = setTimeout(async () => {
-        const fetchedSuggestions = await fetchSuggestions(query);
+        const fetchedSuggestions = await fetchSuggestions(query); // Assuming fetchSuggestions is still from mockApi for DB based suggestions
         setSuggestions(fetchedSuggestions);
         setShowSuggestions(fetchedSuggestions.length > 0);
       }, 300);
@@ -268,6 +278,7 @@ export default function MediSearchApp() {
     }
   };
 
+  // Debounce hiding suggestions to allow click
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
@@ -290,10 +301,11 @@ export default function MediSearchApp() {
             <Image 
                 src="/images/logo_transparent.png" 
                 alt="WellMeds Logo" 
-                width={280} // Adjust width as needed
-                height={80} // Adjust height to maintain aspect ratio
-                priority // Load the logo faster
+                width={280} 
+                height={80} 
+                priority 
                 className="object-contain"
+                data-ai-hint="logo health"
             />
         </div>
 
@@ -394,10 +406,4 @@ export default function MediSearchApp() {
       `}</style>
     </div>
   );
-}
-declare global {
-  interface EnhanceMedicineSearchOutput {
-    correctedMedicineName: string;
-    source?: 'ai_enhanced' | 'ai_unavailable' | 'ai_failed' | 'original_query_used';
-  }
 }

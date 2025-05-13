@@ -1,5 +1,4 @@
 'use server';
-
 /**
  * @fileOverview Enhances medicine search functionality by extracting the intended medicine name from potentially misspelled, partial queries, barcodes, or composition keywords.
  *
@@ -25,18 +24,24 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
-  if (!input || typeof input.query !== 'string') {
-    console.error(`enhanceMedicineSearch: Invalid input received. Input: ${JSON.stringify(input)}`);
+  if (!input || typeof input.query !== 'string' || input.query.trim() === '') {
+    console.warn(`enhanceMedicineSearch: Invalid or empty input query. Input: ${JSON.stringify(input)}`);
     return {
       correctedMedicineName: input?.query || "", 
-      source: 'ai_failed',
+      source: 'original_query_used', // Treat as if AI was skipped for empty/invalid query
     };
   }
 
   try {
     const result = await enhanceMedicineSearchFlow(input);
+    console.log("enhanceMedicineSearch (wrapper) - Flow Result:", JSON.stringify(result, null, 2));
     if (result.source === 'ai_unavailable') {
         console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
+    }
+    // Ensure correctedMedicineName is not empty; if AI returns empty, fallback to original.
+    if (!result.correctedMedicineName || result.correctedMedicineName.trim() === '') {
+        console.warn(`enhanceMedicineSearch: AI returned empty correctedMedicineName. Falling back to original query. Input: "${input.query}", AI Result: ${JSON.stringify(result)}`);
+        return { correctedMedicineName: input.query, source: 'original_query_used' };
     }
     return result;
   } catch (error: unknown) {
@@ -53,7 +58,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
-  model: 'googleai/gemini-pro',
+  model: 'googleai/gemini-pro', // Explicitly use gemini-pro
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
@@ -92,31 +97,34 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     inputSchema: EnhanceMedicineSearchInputSchema,
     outputSchema: EnhanceMedicineSearchOutputSchema,
   },
-  async (input: EnhanceMedicineSearchInput) => {
-    let rawOutputFromAI: any = null;
+  async (input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> => {
+    let rawOutputFromAI: EnhanceMedicineSearchOutput | null = null;
     try {
       const {output} = await enhanceMedicineSearchPrompt(input);
       rawOutputFromAI = output;
       console.log("enhanceMedicineSearchFlow - Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
 
-
       if (!rawOutputFromAI ||
           typeof rawOutputFromAI.correctedMedicineName !== 'string' ||
-          rawOutputFromAI.correctedMedicineName.trim() === '' ||
-          rawOutputFromAI.source !== 'ai_enhanced'
+          rawOutputFromAI.correctedMedicineName.trim() === '' || // Ensure not empty
+          (rawOutputFromAI.source && !['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used'].includes(rawOutputFromAI.source)) // Validate source if present
         ) {
-        console.error(
-            "enhanceMedicineSearchFlow: AI returned no output, invalid structure, empty correctedMedicineName, or incorrect source. Input:",
+        console.warn(
+            "enhanceMedicineSearchFlow: AI returned invalid structure, empty correctedMedicineName, or invalid source. Input:",
             JSON.stringify(input, null, 2),
             "Raw Output:",
             JSON.stringify(rawOutputFromAI, null, 2)
         );
-        if (rawOutputFromAI === null) {
-             console.error("enhanceMedicineSearchFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
-        }
         return { correctedMedicineName: input.query, source: 'original_query_used' };
       }
-      return { ...rawOutputFromAI, source: 'ai_enhanced' };
+      // The prompt asks AI to set source to 'ai_enhanced'. If it's something else, it implies an issue on AI's side or schema mismatch.
+      // However, the schema for EnhanceMedicineSearchOutputSchema has source as optional.
+      // If AI provides a valid correctedMedicineName but no source, we'll assume 'ai_enhanced' based on prompt instructions.
+      return { 
+        correctedMedicineName: rawOutputFromAI.correctedMedicineName,
+        source: rawOutputFromAI.source || 'ai_enhanced' 
+      };
+
     } catch (flowError: unknown) {
       let errorMessage = "AI model failed to process search enhancement or an unexpected error occurred.";
       let errorStack: string | undefined;
@@ -125,12 +133,16 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
           errorMessage = flowError.message;
           errorStack = flowError.stack;
 
-          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID')) {
+          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid')) {
             console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
             return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }
           if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
             console.error(`enhanceMedicineSearchFlow: AI model not found or configured: ${errorMessage}`);
+            return { correctedMedicineName: input.query, source: 'ai_unavailable' };
+          }
+          if (errorMessage.includes('Billing account not found') || errorMessage.includes('billing issues')) {
+            console.error(`enhanceMedicineSearchFlow: Billing issue: ${errorMessage}`);
             return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }
       } else if (typeof flowError === 'string') {

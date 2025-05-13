@@ -1760,11 +1760,11 @@ function MediSearchApp() {
             const aiEnhanceResponse = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["enhanceMedicineSearch"])({
                 query: termToSearch
             });
-            console.log(`performSearchLogic: enhanceMedicineSearch response:`, aiEnhanceResponse);
-            aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
+            console.log(`performSearchLogic: enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
+            aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed'; // Default to ai_failed if source is undefined
             if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
+                aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName.trim();
                 if (aiEnhanceResponse.source === 'ai_enhanced') {
-                    aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
                     toast({
                         title: t.appName,
                         description: t.searchWithAiResult(aiEnhancedSearchTerm),
@@ -1782,40 +1782,46 @@ function MediSearchApp() {
                         description: t.errorAiEnhancementSkipped,
                         variant: "default"
                     });
-                    aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
+                } else if (aiEnhanceResponse.source === 'ai_unavailable') {
+                    setAiConfigError(t.errorAiNotConfigured);
+                    setAiConfigErrorType('key_missing');
+                    toast({
+                        title: t.appName,
+                        description: t.errorAiNotConfigured,
+                        variant: "destructive"
+                    });
                 } else {
                     toast({
                         title: t.appName,
                         description: t.errorAi,
-                        variant: "default"
+                        variant: "destructive"
                     });
-                    aiEnhancedSearchTerm = termToSearch;
                 }
             } else {
                 toast({
                     title: t.appName,
                     description: t.errorAi,
-                    variant: "default"
+                    variant: "destructive"
                 });
-                aiEnhancedSearchTerm = termToSearch;
+                aiEnhancedSearchTerm = termToSearch.trim(); // Fallback to original
                 aiEnhancementSource = 'ai_failed';
             }
         } catch (aiError) {
-            let message = "AI enhancement failed. Using original query.";
-            if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
+            let message = t.errorAi;
+            if (aiError?.message) message = `${t.errorAi} Details: ${aiError.message}`;
             console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError);
             toast({
                 title: t.appName,
                 description: message,
                 variant: "destructive"
             });
-            aiEnhancedSearchTerm = termToSearch;
+            aiEnhancedSearchTerm = termToSearch.trim();
             aiEnhancementSource = 'ai_failed';
         }
         setLoadingMessage(t.loadingData);
         console.log(`performSearchLogic: Calling fetchMedicineByName with term: "${aiEnhancedSearchTerm}"`);
         const dbDataArray = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$mockApi$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["fetchMedicineByName"])(aiEnhancedSearchTerm);
-        console.log(`performSearchLogic: fetchMedicineByName response:`, dbDataArray);
+        console.log(`performSearchLogic: fetchMedicineByName response (found ${dbDataArray.length} items):`, JSON.stringify(dbDataArray, null, 2));
         try {
             let processedMedicines = [];
             if (dbDataArray.length > 0) {
@@ -1827,16 +1833,17 @@ function MediSearchApp() {
                         contextComposition: dbItem.composition,
                         contextBarcode: dbItem.barcode
                     }).then((aiDetails)=>{
-                        console.log(`performSearchLogic: generateMedicineDetails response for ${dbItem.name}:`, aiDetails);
+                        console.log(`performSearchLogic: generateMedicineDetails (DB context) response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
+                        // Prioritize AI details, fallback to DB, then to "Info not available"
                         return {
                             id: dbItem.id,
-                            name: aiDetails.name,
-                            composition: aiDetails.composition,
-                            barcode: aiDetails.barcode,
-                            usage: aiDetails.usage,
-                            manufacturer: aiDetails.manufacturer,
-                            dosage: aiDetails.dosage,
-                            sideEffects: aiDetails.sideEffects,
+                            name: aiDetails.name && aiDetails.name !== t.infoNotAvailable ? aiDetails.name : dbItem.name,
+                            composition: aiDetails.composition && aiDetails.composition !== t.infoNotAvailable ? aiDetails.composition : dbItem.composition || t.infoNotAvailable,
+                            barcode: aiDetails.barcode || dbItem.barcode,
+                            usage: aiDetails.usage || t.infoNotAvailable,
+                            manufacturer: aiDetails.manufacturer || t.infoNotAvailable,
+                            dosage: aiDetails.dosage || t.infoNotAvailable,
+                            sideEffects: aiDetails.sideEffects || t.infoNotAvailable,
                             source: aiDetails.source
                         };
                     }).catch((err)=>{
@@ -1844,8 +1851,8 @@ function MediSearchApp() {
                         if (err instanceof Error) errMessage = err.message;
                         console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err);
                         toast({
-                            title: `AI Error for ${dbItem.name}`,
-                            description: `${t.errorAiDetailsShort} ${errMessage}`,
+                            title: `${t.errorAiDetailsShort} for ${dbItem.name}`,
+                            description: `${t.errorAiDetails} ${errMessage}`,
                             variant: "destructive"
                         });
                         return {
@@ -1870,7 +1877,7 @@ function MediSearchApp() {
                         className: "h-5 w-5 text-primary"
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 170,
+                        lineNumber: 173,
                         columnNumber: 85
                     }, this)
                 });
@@ -1879,44 +1886,51 @@ function MediSearchApp() {
                     searchTermOrName: aiEnhancedSearchTerm,
                     language: selectedLanguage
                 });
-                console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, aiDetails);
-                processedMedicines = [
-                    {
-                        id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-                        name: aiDetails.name,
-                        composition: aiDetails.composition,
-                        barcode: aiDetails.barcode,
-                        usage: aiDetails.usage,
-                        manufacturer: aiDetails.manufacturer,
-                        dosage: aiDetails.dosage,
-                        sideEffects: aiDetails.sideEffects,
-                        source: aiDetails.source
-                    }
-                ];
+                console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, JSON.stringify(aiDetails, null, 2));
+                // If AI returns "Information not available" for name in pure AI gen, it means it couldn't identify it.
+                if (aiDetails.name === t.infoNotAvailable || aiDetails.name.trim() === '') {
+                    processedMedicines = []; // Effectively, no result
+                } else {
+                    processedMedicines = [
+                        {
+                            id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+                            name: aiDetails.name,
+                            composition: aiDetails.composition || t.infoNotAvailable,
+                            barcode: aiDetails.barcode,
+                            usage: aiDetails.usage || t.infoNotAvailable,
+                            manufacturer: aiDetails.manufacturer || t.infoNotAvailable,
+                            dosage: aiDetails.dosage || t.infoNotAvailable,
+                            sideEffects: aiDetails.sideEffects || t.infoNotAvailable,
+                            source: aiDetails.source
+                        }
+                    ];
+                }
             }
             setSearchResults(processedMedicines);
-            const anyAiUnavailable = processedMedicines.some((med)=>med.source === 'ai_unavailable') || aiEnhancementSource === 'ai_unavailable';
-            const anyAiFailed = processedMedicines.some((med)=>med.source === 'ai_failed') || aiEnhancementSource === 'ai_failed';
-            if (anyAiUnavailable) {
+            // Consolidate AI error state reporting based on all AI interactions
+            const anyAiUnavailableInDetails = processedMedicines.some((med)=>med.source === 'ai_unavailable');
+            const anyAiFailedInDetails = processedMedicines.some((med)=>med.source === 'ai_failed');
+            if (aiEnhancementSource === 'ai_unavailable' || anyAiUnavailableInDetails) {
                 setAiConfigError(t.errorAiNotConfigured);
                 setAiConfigErrorType('key_missing');
-            } else if (anyAiFailed && !anyAiUnavailable) {
+            } else if (aiEnhancementSource === 'ai_failed' || anyAiFailedInDetails) {
                 setAiConfigError(t.errorAiFailed);
                 setAiConfigErrorType('api_fail');
             }
         } catch (dataProcessingError) {
             let errorMessage = t.errorData;
-            if (dataProcessingError instanceof Error) {
+            if (dataProcessingError?.message) {
                 errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
             }
-            console.error("Data processing or DB fetch failed (medisearch-app.tsx):", dataProcessingError);
+            console.error("Data processing or AI detail generation failed (medisearch-app.tsx):", dataProcessingError);
             setError(errorMessage);
             toast({
                 title: t.appName,
                 description: errorMessage,
                 variant: "destructive"
             });
-            if (dbDataArray.length > 0 && (!searchResults || searchResults.every((r)=>r.source === 'database_only'))) {
+            // Fallback to DB data if AI details failed completely but DB data was available
+            if (dbDataArray.length > 0 && (!searchResults || searchResults.length === 0 || searchResults.every((r)=>r.source === 'database_only'))) {
                 setSearchResults(dbDataArray.map((dbItem)=>({
                         id: dbItem.id,
                         name: dbItem.name,
@@ -1928,7 +1942,7 @@ function MediSearchApp() {
                         sideEffects: t.infoNotAvailable,
                         source: 'database_only'
                     })));
-                setError(null);
+                setError(null); // Clear general error if we successfully showed DB data
             }
         } finally{
             setIsLoading(false);
@@ -1955,7 +1969,7 @@ function MediSearchApp() {
                 setAiConfigErrorType(null);
             }
             debounceTimeoutRef.current = setTimeout(async ()=>{
-                const fetchedSuggestions = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$mockApi$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["fetchSuggestions"])(query);
+                const fetchedSuggestions = await fetchSuggestions(query); // Assuming fetchSuggestions is still from mockApi for DB based suggestions
                 setSuggestions(fetchedSuggestions);
                 setShowSuggestions(fetchedSuggestions.length > 0);
             }, 300);
@@ -1969,6 +1983,7 @@ function MediSearchApp() {
             setShowSuggestions(true);
         }
     };
+    // Debounce hiding suggestions to allow click
     const handleInputBlur = ()=>{
         setTimeout(()=>{
             setShowSuggestions(false);
@@ -1985,12 +2000,12 @@ function MediSearchApp() {
                     t: t
                 }, void 0, false, {
                     fileName: "[project]/src/components/medisearch-app.tsx",
-                    lineNumber: 281,
+                    lineNumber: 292,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 280,
+                lineNumber: 291,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -2004,15 +2019,16 @@ function MediSearchApp() {
                             width: 280,
                             height: 80,
                             priority: true,
-                            className: "object-contain"
+                            className: "object-contain",
+                            "data-ai-hint": "logo health"
                         }, void 0, false, {
                             fileName: "[project]/src/components/medisearch-app.tsx",
-                            lineNumber: 290,
+                            lineNumber: 301,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 289,
+                        lineNumber: 300,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -2023,7 +2039,7 @@ function MediSearchApp() {
                                 children: t.searchTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 301,
+                                lineNumber: 313,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$medisearch$2f$SearchBar$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SearchBar"], {
@@ -2039,13 +2055,13 @@ function MediSearchApp() {
                                 onInputBlur: handleInputBlur
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 302,
+                                lineNumber: 314,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 300,
+                        lineNumber: 312,
                         columnNumber: 9
                     }, this),
                     aiConfigError && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2056,20 +2072,20 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 318,
+                                lineNumber: 330,
                                 columnNumber: 52
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$server$2d$crash$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ServerCrash$3e$__["ServerCrash"], {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 318,
+                                lineNumber: 330,
                                 columnNumber: 87
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: aiConfigErrorType === 'key_missing' ? t.errorAiNotConfiguredTitle : t.errorAiFailedTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 319,
+                                lineNumber: 331,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertDescription"], {
@@ -2080,7 +2096,7 @@ function MediSearchApp() {
                                         children: t.errorAiNotConfiguredDetail
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch-app.tsx",
-                                        lineNumber: 323,
+                                        lineNumber: 335,
                                         columnNumber: 17
                                     }, this),
                                     aiConfigErrorType === 'api_fail' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2088,19 +2104,19 @@ function MediSearchApp() {
                                         children: t.errorAiFailedDetail
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch-app.tsx",
-                                        lineNumber: 328,
+                                        lineNumber: 340,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 320,
+                                lineNumber: 332,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 317,
+                        lineNumber: 329,
                         columnNumber: 11
                     }, this),
                     searchAttempted && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2112,14 +2128,14 @@ function MediSearchApp() {
                                 className: "mr-2 h-4 w-4"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 338,
+                                lineNumber: 350,
                                 columnNumber: 13
                             }, this),
                             t.clearSearchButton
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 337,
+                        lineNumber: 349,
                         columnNumber: 11
                     }, this),
                     isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2129,7 +2145,7 @@ function MediSearchApp() {
                                 className: "h-8 w-8 animate-spin text-primary"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 345,
+                                lineNumber: 357,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2137,13 +2153,13 @@ function MediSearchApp() {
                                 children: loadingMessage || t.loadingData
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 346,
+                                lineNumber: 358,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 344,
+                        lineNumber: 356,
                         columnNumber: 11
                     }, this),
                     error && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2154,27 +2170,27 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 352,
+                                lineNumber: 364,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: t.errorOccurred
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 353,
+                                lineNumber: 365,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertDescription"], {
                                 children: error
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 354,
+                                lineNumber: 366,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 351,
+                        lineNumber: 363,
                         columnNumber: 11
                     }, this),
                     !isLoading && !error && searchResults && searchResults.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -2184,12 +2200,12 @@ function MediSearchApp() {
                                 t: t
                             }, medicine.id, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 361,
+                                lineNumber: 373,
                                 columnNumber: 15
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 359,
+                        lineNumber: 371,
                         columnNumber: 11
                     }, this),
                     !isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && !aiConfigError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2199,27 +2215,27 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 368,
+                                lineNumber: 380,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: t.noResultsTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 369,
+                                lineNumber: 381,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AlertDescription"], {
                                 children: t.noResults
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 370,
+                                lineNumber: 382,
                                 columnNumber: 17
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 367,
+                        lineNumber: 379,
                         columnNumber: 13
                     }, this),
                     !isLoading && !searchAttempted && !aiConfigError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2227,13 +2243,13 @@ function MediSearchApp() {
                         children: t.initialHelperText
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 376,
+                        lineNumber: 388,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 288,
+                lineNumber: 299,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("footer", {
@@ -2250,12 +2266,12 @@ function MediSearchApp() {
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/medisearch-app.tsx",
-                    lineNumber: 384,
+                    lineNumber: 396,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 383,
+                lineNumber: 395,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$jsx$2f$style$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -2265,7 +2281,7 @@ function MediSearchApp() {
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/medisearch-app.tsx",
-        lineNumber: 279,
+        lineNumber: 290,
         columnNumber: 5
     }, this);
 }

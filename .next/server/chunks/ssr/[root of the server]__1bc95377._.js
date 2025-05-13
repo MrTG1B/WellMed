@@ -234,16 +234,9 @@ if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== "") {
 const ai = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$genkit$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["genkit"])({
     plugins: plugins
 });
-// Set a default model if the Google AI plugin was added.
-// Using gemini-pro as a general-purpose default.
-// gemini-1.5-flash is also a good, newer option.
 const googleAiPluginAdded = plugins.some((p)=>p.name === 'google-ai');
 if (googleAiPluginAdded) {
-    // Prefer gemini-1.5-flash if available, otherwise gemini-pro
-    // For simplicity, we'll stick to gemini-pro as it's widely available.
-    // The user can override this in specific prompts if needed.
-    ai.registry.setDefaultModel('googleai/gemini-pro');
-    console.log("Genkit: Google AI plugin initialized. Default model set to gemini-pro.");
+    console.log("Genkit: Google AI plugin initialized. Prompts are configured to use 'googleai/gemini-pro'.");
 } else {
     console.warn('⚠️ Genkit initialized without any AI plugins (likely due to missing GOOGLE_API_KEY). ' + 'AI-dependent flows will use fallbacks or may not function.');
 }
@@ -314,6 +307,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
 }
 const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'enhanceMedicineSearchPrompt',
+    model: 'googleai/gemini-pro',
     input: {
         schema: EnhanceMedicineSearchInputSchema
     },
@@ -625,7 +619,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
     // Explicit null/undefined check for 'input' itself first.
     if (!input) {
         console.error(`generateMedicineDetails: Critical - input argument is null or undefined.`);
-        const t_fallback_early = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])('en'); // Use default 'en' if language cannot be determined
+        const t_fallback_early = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])('en');
         return {
             name: t_fallback_early.infoNotAvailable,
             composition: t_fallback_early.infoNotAvailable,
@@ -636,7 +630,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             source: 'ai_failed'
         };
     }
-    const languageToUse = input.language || 'en'; // Now 'input' is guaranteed to be non-null
+    const languageToUse = input.language || 'en';
     const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(languageToUse);
     if (typeof input.searchTermOrName !== 'string' || input.language && typeof input.language !== 'string') {
         console.error(`generateMedicineDetails: Invalid input properties. Input: ${JSON.stringify(input)}`);
@@ -653,7 +647,9 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
     }
     const name = input.contextName || input.searchTermOrName;
     try {
+        console.log(`generateMedicineDetails: Calling flow with input:`, JSON.stringify(input, null, 2));
         const result = await generateMedicineDetailsFlow(input);
+        console.log(`generateMedicineDetails: Flow returned result:`, JSON.stringify(result, null, 2));
         if (result.source === 'ai_unavailable') {
             console.warn(`generateMedicineDetails: Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
         }
@@ -681,6 +677,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
 }
 const prompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'generateMedicineDetailsPrompt',
+    model: 'googleai/gemini-pro',
     input: {
         schema: GenerateMedicineDetailsInputSchema
     },
@@ -766,6 +763,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
     let rawOutputFromAI = null;
     const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(input.language || 'en');
     try {
+        console.log("generateMedicineDetailsFlow: Calling AI prompt with input:", JSON.stringify(input, null, 2));
         const { output } = await prompt(input);
         rawOutputFromAI = output;
         console.log("generateMedicineDetailsFlow - Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
@@ -810,11 +808,11 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             errorMessage = flowError.message;
             errorStack = flowError.stack;
             if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID')) {
-                console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`);
+                console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`, flowError);
                 sourceForError = 'ai_unavailable';
             }
             if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
-                console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`);
+                console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`, flowError);
                 sourceForError = 'ai_unavailable';
             }
         } else if (typeof flowError === 'string') {

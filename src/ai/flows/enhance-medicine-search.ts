@@ -28,7 +28,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
   if (!input || typeof input.query !== 'string') {
     console.error(`enhanceMedicineSearch: Invalid input received. Input: ${JSON.stringify(input)}`);
     return {
-      correctedMedicineName: input?.query || "", // Fallback to empty or original query if possible
+      correctedMedicineName: input?.query || "", 
       source: 'ai_failed',
     };
   }
@@ -53,6 +53,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
+  model: 'googleai/gemini-pro',
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.

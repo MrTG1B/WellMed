@@ -41,7 +41,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
   // Explicit null/undefined check for 'input' itself first.
   if (!input) {
     console.error(`generateMedicineDetails: Critical - input argument is null or undefined.`);
-    const t_fallback_early = getTranslations('en'); // Use default 'en' if language cannot be determined
+    const t_fallback_early = getTranslations('en'); 
     return {
       name: t_fallback_early.infoNotAvailable,
       composition: t_fallback_early.infoNotAvailable,
@@ -53,7 +53,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
     };
   }
 
-  const languageToUse = input.language || 'en'; // Now 'input' is guaranteed to be non-null
+  const languageToUse = input.language || 'en'; 
   const t_fallback = getTranslations(languageToUse);
 
   if (typeof input.searchTermOrName !== 'string' || (input.language && typeof input.language !== 'string')) {
@@ -73,7 +73,9 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
   const name = input.contextName || input.searchTermOrName;
 
   try {
+    console.log(`generateMedicineDetails: Calling flow with input:`, JSON.stringify(input, null, 2));
     const result = await generateMedicineDetailsFlow(input);
+    console.log(`generateMedicineDetails: Flow returned result:`, JSON.stringify(result, null, 2));
     if (result.source === 'ai_unavailable') {
         console.warn(`generateMedicineDetails: Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
     }
@@ -86,7 +88,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       rawErrorMessage = error;
     }
     console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
-
+    
     const source: GenerateMedicineDetailsOutput['source'] = (input && input.contextName) ? 'database_only' : 'ai_failed';
      return {
       name: name || t_fallback.infoNotAvailable, 
@@ -103,6 +105,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
 const prompt = ai.definePrompt({
   name: 'generateMedicineDetailsPrompt',
+  model: 'googleai/gemini-pro',
   input: {schema: GenerateMedicineDetailsInputSchema},
   output: {schema: GenerateMedicineDetailsOutputSchema},
   prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
@@ -188,6 +191,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     const t_fallback = getTranslations(input.language || 'en'); 
 
     try {
+      console.log("generateMedicineDetailsFlow: Calling AI prompt with input:", JSON.stringify(input, null, 2));
       const {output} = await prompt(input);
       rawOutputFromAI = output;
       console.log("generateMedicineDetailsFlow - Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
@@ -252,11 +256,11 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             errorStack = flowError.stack;
 
             if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID')) {
-              console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`);
+              console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`, flowError);
               sourceForError = 'ai_unavailable';
             }
             if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
-              console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`);
+              console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`, flowError);
               sourceForError = 'ai_unavailable';
             }
         } else if (typeof flowError === 'string') {

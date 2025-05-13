@@ -19,34 +19,34 @@ export const fetchMedicineByName = async (
   searchTerm: string // This searchTerm is expected to be the AI-enhanced term from enhanceMedicineSearch
 ): Promise<DbMedicineResult | NotFoundResult> => {
   if (!db) {
-    console.error("Firebase Realtime Database (db) is not initialized in mockApi. Cannot fetch from DB.");
+    console.error("[mockApi] Firebase Realtime Database (db) is not initialized. Cannot fetch from DB.");
     return { foundInDb: false };
   }
   if (!searchTerm || searchTerm.trim() === "") {
+    console.log("[mockApi] Search term is empty. Returning not found.");
     return { foundInDb: false };
   }
 
   const normalizedAiEnhancedSearchTerm = searchTerm.toLowerCase().trim();
+  console.log(`[mockApi] Starting search for term: "${searchTerm}", Normalized: "${normalizedAiEnhancedSearchTerm}"`);
   const medicinesRef = ref(db, 'medicines');
 
-  // Attempt 1: Direct ID lookup (using the AI-enhanced, normalized term as a potential ID)
-  // Assumes IDs are typically lowercase and hyphenated as per AdminUploadForm logic.
-  // The regex for medicineId in AdminUploadForm is /^[a-zA-Z0-9-_]+$/ which can be mixed case.
-  // For ID lookup, we should try both the normalized form and the original form if it matches ID pattern.
+  // Attempt 1: Direct ID lookup
   const potentialIdsToTry = new Set<string>();
-  potentialIdsToTry.add(normalizedAiEnhancedSearchTerm); // Try normalized form first
-  if (searchTerm.trim().match(/^[a-zA-Z0-9-_]+$/)) { // Check if original search term looks like an ID
+  potentialIdsToTry.add(normalizedAiEnhancedSearchTerm); 
+  if (searchTerm.trim().match(/^[a-zA-Z0-9-_]+$/) && searchTerm.trim() !== normalizedAiEnhancedSearchTerm) {
     potentialIdsToTry.add(searchTerm.trim());
   }
-
+  console.log(`[mockApi] Potential IDs for direct lookup:`, Array.from(potentialIdsToTry));
 
   for (const potentialId of potentialIdsToTry) {
     try {
+      console.log(`[mockApi] Attempting direct ID lookup for: "${potentialId}"`);
       const directIdSnapshot = await get(child(medicinesRef, potentialId));
       if (directIdSnapshot.exists()) {
         const data = directIdSnapshot.val();
-        if (data && data.name && data.composition) { // Ensure crucial fields exist
-          console.log(`Found by ID: ${potentialId}`);
+        if (data && data.name && data.composition) {
+          console.log(`[mockApi] Found by direct ID: "${potentialId}". Data:`, data);
           return {
             id: directIdSnapshot.key!,
             name: data.name,
@@ -54,17 +54,20 @@ export const fetchMedicineByName = async (
             barcode: data.barcode,
             foundInDb: true,
           };
+        } else {
+          console.log(`[mockApi] Direct ID "${potentialId}" exists but data is malformed:`, data);
         }
+      } else {
+        console.log(`[mockApi] No match for direct ID: "${potentialId}"`);
       }
-    } catch (e) {
-      console.error(`Error fetching medicine by direct ID '${potentialId}':`, e);
+    } catch (e: any) {
+      console.error(`[mockApi] Error fetching medicine by direct ID '${potentialId}':`, e.message);
     }
   }
   
   // Attempt 2: Query by barcode
-  // Using searchTerm.trim() as barcodes are usually exact and might not be lowercased by AI enhancement.
-  // Firebase rule index needed: { "rules": { "medicines": { ".indexOn": "barcode" } } }
-  const originalSearchTermTrimmed = searchTerm.trim(); // Use the term before toLowerCase for barcode
+  const originalSearchTermTrimmed = searchTerm.trim();
+  console.log(`[mockApi] Attempting barcode query for: "${originalSearchTermTrimmed}"`);
   try {
     const barcodeQueryInstance = dbQuery(medicinesRef, orderByChild('barcode'), equalTo(originalSearchTermTrimmed), limitToFirst(1));
     const barcodeSnapshot = await get(barcodeQueryInstance);
@@ -73,7 +76,7 @@ export const fetchMedicineByName = async (
       const id = Object.keys(data)[0];
       const medicine = data[id];
       if (medicine && medicine.name && medicine.composition) {
-        console.log(`Found by barcode: ${originalSearchTermTrimmed}`);
+        console.log(`[mockApi] Found by barcode: "${originalSearchTermTrimmed}". Data:`, medicine);
         return {
           id,
           name: medicine.name,
@@ -81,70 +84,99 @@ export const fetchMedicineByName = async (
           barcode: medicine.barcode,
           foundInDb: true,
         };
+      } else {
+         console.log(`[mockApi] Barcode query for "${originalSearchTermTrimmed}" successful but data malformed:`, medicine);
       }
+    } else {
+      console.log(`[mockApi] No match for barcode: "${originalSearchTermTrimmed}"`);
     }
-  } catch (e) {
-    console.error(`Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e);
-    // Log this error, especially if it's about missing index.
-    if (e instanceof Error && (e.message.includes("indexON") || e.message.includes("orderByChild"))){
-        console.warn("Firebase Realtime Database: Consider adding an index for 'barcode' in your security rules for efficient querying: \n{\n  \"rules\": {\n    \"medicines\": {\n      \".indexOn\": [\"barcode\"]\n    }\n  }\n}");
+  } catch (e: any) {
+    console.error(`[mockApi] Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e.message);
+    if (e.message?.toLowerCase().includes("indexon") || e.message?.toLowerCase().includes("orderbychild")) {
+        console.error(
+          "🔴 IMPORTANT: Firebase Realtime Database: Query by 'barcode' failed likely due to a missing index. " +
+          "Please add an index for 'barcode' in your Realtime Database security rules for efficient querying: \n" +
+          "{\n" +
+          "  \"rules\": {\n" +
+          "    \"medicines\": {\n" +
+          "      \".indexOn\": [\"barcode\", \"name_lowercase\"] // Ensure 'barcode' is listed here\n" +
+          "    }\n" +
+          "    // ... your other rules ...\n" +
+          "  }\n" +
+          "}"
+        );
     }
   }
   
   // Attempt 3 & 4: Full scan for Name (exact match) or Composition (includes match)
-  // Fetch all medicines once for these checks. This is not efficient for large datasets.
+  console.log(`[mockApi] Starting full scan of all medicines for name/composition match against "${normalizedAiEnhancedSearchTerm}"`);
   try {
     const allMedicinesSnapshot = await get(medicinesRef);
     if (allMedicinesSnapshot.exists()) {
       const medicinesData = allMedicinesSnapshot.val();
       
-      let foundByName: DbMedicineResult | null = null;
-      let foundByComposition: DbMedicineResult | null = null;
+      let firstMatchByNameExact: DbMedicineResult | null = null;
+      let firstMatchByComposition: DbMedicineResult | null = null;
+
+      console.log(`[mockApi] Full Scan: Processing ${Object.keys(medicinesData).length} records.`);
 
       for (const id in medicinesData) {
         const medicine = medicinesData[id];
-        if (!medicine || !medicine.name || !medicine.composition) continue; // Skip malformed records
+        if (!medicine || typeof medicine.name !== 'string' || typeof medicine.composition !== 'string') {
+          console.log(`[mockApi] Full Scan: Skipping malformed/incomplete record for ID ${id}:`, medicine);
+          continue;
+        }
+
+        const currentMedicineNameLower = medicine.name.toLowerCase();
+        const currentMedicineCompositionLower = medicine.composition.toLowerCase();
+
+        // console.log(`[mockApi] Full Scan DEBUG: Checking ID ${id}, Name: "${currentMedicineNameLower}", Composition (first 50 chars): "${currentMedicineCompositionLower.substring(0,50)}"`);
 
         // Check for exact name match (case-insensitive)
-        if (typeof medicine.name === 'string' && medicine.name.toLowerCase() === normalizedAiEnhancedSearchTerm) {
-          console.log(`Found by name (exact match): ${medicine.name} (search term: ${normalizedAiEnhancedSearchTerm})`);
-          foundByName = {
+        if (currentMedicineNameLower === normalizedAiEnhancedSearchTerm) {
+          console.log(`[mockApi] Full Scan: Found by EXACT NAME match: ID ${id}, Name: "${medicine.name}"`);
+          firstMatchByNameExact = {
             id,
             name: medicine.name,
             composition: medicine.composition,
             barcode: medicine.barcode,
             foundInDb: true,
           };
-          break; // Prioritize exact name match
+          break; // Prioritize exact name match, stop scan
         }
-      }
 
-      if (foundByName) return foundByName;
-
-      // If not found by exact name, check for composition 'includes' (case-insensitive)
-      for (const id in medicinesData) {
-        const medicine = medicinesData[id];
-         if (!medicine || !medicine.name || !medicine.composition) continue; // Skip malformed records
-
-        if (typeof medicine.composition === 'string' && medicine.composition.toLowerCase().includes(normalizedAiEnhancedSearchTerm)) {
-          console.log(`Found by composition (includes): ${medicine.composition} (search term: ${normalizedAiEnhancedSearchTerm})`);
-          foundByComposition = { // Don't break here, find the first, but name match would have priority
+        // Check for composition 'includes' (case-insensitive) - only if no exact name match yet
+        if (!firstMatchByComposition && currentMedicineCompositionLower.includes(normalizedAiEnhancedSearchTerm)) {
+          console.log(`[mockApi] Full Scan: Found by COMPOSITION INCLUDES: ID ${id}, Name: "${medicine.name}", Matched Composition against "${normalizedAiEnhancedSearchTerm}"`);
+          firstMatchByComposition = {
             id,
             name: medicine.name,
             composition: medicine.composition,
             barcode: medicine.barcode,
             foundInDb: true,
           };
-          break; 
+          // Continue scan in case an exact name match is found later for higher priority. 
+          // If exact name match is prioritized and breaks, this will only be set if no exact name match is found in the entire dataset.
         }
       }
-      
-      if (foundByComposition) return foundByComposition;
+
+      if (firstMatchByNameExact) {
+        console.log("[mockApi] Full Scan: Returning match by exact name.");
+        return firstMatchByNameExact;
+      }
+      if (firstMatchByComposition) {
+        console.log("[mockApi] Full Scan: Returning match by composition.");
+        return firstMatchByComposition;
+      }
+      console.log("[mockApi] Full Scan: No matches found by name or composition.");
+    } else {
+      console.log("[mockApi] Full Scan: No medicines data exists at 'medicines' path.");
     }
-  } catch (e) {
-      console.error(`Error fetching/processing all medicines for name/composition query (normalized term: '${normalizedAiEnhancedSearchTerm}'):`, e);
+  } catch (e: any) {
+      console.error(`[mockApi] Error during full scan for name/composition query (normalized term: '${normalizedAiEnhancedSearchTerm}'):`, e.message);
   }
 
-  console.log(`Medicine not found in DB for search term: '${searchTerm}' (normalized: '${normalizedAiEnhancedSearchTerm}')`);
+  console.log(`[mockApi] Medicine not found in DB after all checks for search term: '${searchTerm}' (normalized: '${normalizedAiEnhancedSearchTerm}')`);
   return { foundInDb: false };
 };
+

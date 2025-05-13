@@ -43,8 +43,8 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
   const name = input.contextName || input.searchTermOrName;
   let source: GenerateMedicineDetailsOutput['source'];
 
-  if (ai.plugins.length === 0) {
-    console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
+  if (!ai.plugins || ai.plugins.length === 0) { // Guard against ai.plugins being undefined
+    console.warn("generateMedicineDetails: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning placeholder data.");
     source = input.contextName ? 'database_only' : 'ai_unavailable';
     return {
       name: name,
@@ -68,7 +68,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
     } else if (typeof error === 'string') {
       message = error;
     }
-    console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error); // Log original error
+    console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error);
     
     source = input.contextName ? 'database_only' : 'ai_failed';
      return {
@@ -172,7 +172,6 @@ const generateMedicineDetailsFlow = ai.defineFlow(
       const {output} = await prompt(input);
       rawOutputFromAI = output;
       
-      console.log("generateMedicineDetailsFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
       
       if (!rawOutputFromAI || 
           typeof rawOutputFromAI.name !== 'string' || rawOutputFromAI.name.trim() === '' ||
@@ -230,3 +229,4 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     }
   }
 );
+

@@ -253,7 +253,7 @@ if (googleAiPluginAdded) {
 
 var { g: global, __dirname } = __turbopack_context__;
 {
-/* __next_internal_action_entry_do_not_use__ {"40fbc24ccba666b9884a02c882723b859f45842caa":"enhanceMedicineSearch"} */ __turbopack_context__.s({
+/* __next_internal_action_entry_do_not_use__ {"40936aecf030e96f2e9e269d8d20c758b4715711f1":"enhanceMedicineSearch"} */ __turbopack_context__.s({
     "enhanceMedicineSearch": (()=>enhanceMedicineSearch)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/webpack/loaders/next-flight-loader/server-reference.js [app-rsc] (ecmascript)");
@@ -279,8 +279,8 @@ const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$pro
     correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
-    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing). Returning original query.");
+    if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
+        console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning original query.");
         return {
             correctedMedicineName: input.query
         };
@@ -295,8 +295,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         } else if (typeof error === 'string') {
             message = error;
         }
-        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error); // Log the original error too
-        // Return original query as fallback
+        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
         return {
             correctedMedicineName: input.query
         };
@@ -347,7 +346,6 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
     try {
         const { output } = await enhanceMedicineSearchPrompt(input);
         rawOutputFromAI = output;
-        console.log("enhanceMedicineSearchFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
         if (!rawOutputFromAI || typeof rawOutputFromAI.correctedMedicineName !== 'string' || rawOutputFromAI.correctedMedicineName.trim() === '') {
             console.error("enhanceMedicineSearchFlow: AI returned no output, invalid structure, or empty correctedMedicineName. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
             if (rawOutputFromAI === null) {
@@ -375,14 +373,14 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
     enhanceMedicineSearch
 ]);
-(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(enhanceMedicineSearch, "40fbc24ccba666b9884a02c882723b859f45842caa", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(enhanceMedicineSearch, "40936aecf030e96f2e9e269d8d20c758b4715711f1", null);
 }}),
 "[project]/src/ai/flows/generate-medicine-details.ts [app-rsc] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
 var { g: global, __dirname } = __turbopack_context__;
 {
-/* __next_internal_action_entry_do_not_use__ {"40a6efb8e77320d0bbdff3ff14ccd4ca7b270c8e5e":"generateMedicineDetails"} */ __turbopack_context__.s({
+/* __next_internal_action_entry_do_not_use__ {"40d6a383f2510a88c3fc322b523ea1382058b4a5cc":"generateMedicineDetails"} */ __turbopack_context__.s({
     "generateMedicineDetails": (()=>generateMedicineDetails)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/webpack/loaders/next-flight-loader/server-reference.js [app-rsc] (ecmascript)");
@@ -436,8 +434,8 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
     const genericConfigIssueMessage = "AI not configured. Details unavailable.";
     const name = input.contextName || input.searchTermOrName;
     let source;
-    if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
+    if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
+        console.warn("generateMedicineDetails: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning placeholder data.");
         source = input.contextName ? 'database_only' : 'ai_unavailable';
         return {
             name: name,
@@ -460,7 +458,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         } else if (typeof error === 'string') {
             message = error;
         }
-        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error); // Log original error
+        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error);
         source = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: name,
@@ -562,7 +560,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
     try {
         const { output } = await prompt(input);
         rawOutputFromAI = output;
-        console.log("generateMedicineDetailsFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
         if (!rawOutputFromAI || typeof rawOutputFromAI.name !== 'string' || rawOutputFromAI.name.trim() === '' || typeof rawOutputFromAI.composition !== 'string' || rawOutputFromAI.composition.trim() === '' || typeof rawOutputFromAI.usage !== 'string' || rawOutputFromAI.usage.trim() === '' || typeof rawOutputFromAI.manufacturer !== 'string' || rawOutputFromAI.manufacturer.trim() === '' || typeof rawOutputFromAI.dosage !== 'string' || rawOutputFromAI.dosage.trim() === '' || typeof rawOutputFromAI.sideEffects !== 'string' || rawOutputFromAI.sideEffects.trim() === '' || typeof rawOutputFromAI.source !== 'string' || ![
             'database_ai_enhanced',
             'ai_generated'
@@ -606,7 +603,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
     generateMedicineDetails
 ]);
-(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(generateMedicineDetails, "40a6efb8e77320d0bbdff3ff14ccd4ca7b270c8e5e", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(generateMedicineDetails, "40d6a383f2510a88c3fc322b523ea1382058b4a5cc", null);
 }}),
 "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/src/ai/flows/generate-medicine-details.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript) <locals>": ((__turbopack_context__) => {
 "use strict";
@@ -633,8 +630,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server
 var { g: global, __dirname } = __turbopack_context__;
 {
 __turbopack_context__.s({
-    "40a6efb8e77320d0bbdff3ff14ccd4ca7b270c8e5e": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["generateMedicineDetails"]),
-    "40fbc24ccba666b9884a02c882723b859f45842caa": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["enhanceMedicineSearch"])
+    "40936aecf030e96f2e9e269d8d20c758b4715711f1": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["enhanceMedicineSearch"]),
+    "40d6a383f2510a88c3fc322b523ea1382058b4a5cc": (()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["generateMedicineDetails"])
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/ai/flows/generate-medicine-details.ts [app-rsc] (ecmascript)");
@@ -646,8 +643,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server
 var { g: global, __dirname } = __turbopack_context__;
 {
 __turbopack_context__.s({
-    "40a6efb8e77320d0bbdff3ff14ccd4ca7b270c8e5e": (()=>__TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$exports$3e$__["40a6efb8e77320d0bbdff3ff14ccd4ca7b270c8e5e"]),
-    "40fbc24ccba666b9884a02c882723b859f45842caa": (()=>__TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$exports$3e$__["40fbc24ccba666b9884a02c882723b859f45842caa"])
+    "40936aecf030e96f2e9e269d8d20c758b4715711f1": (()=>__TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$exports$3e$__["40936aecf030e96f2e9e269d8d20c758b4715711f1"]),
+    "40d6a383f2510a88c3fc322b523ea1382058b4a5cc": (()=>__TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$exports$3e$__["40d6a383f2510a88c3fc322b523ea1382058b4a5cc"])
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$module__evaluation$3e$__ = __turbopack_context__.i('[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => "[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)", ACTIONS_MODULE1 => "[project]/src/ai/flows/generate-medicine-details.ts [app-rsc] (ecmascript)" } [app-rsc] (server actions loader, ecmascript) <module evaluation>');
 var __TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$exports$3e$__ = __turbopack_context__.i('[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => "[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)", ACTIONS_MODULE1 => "[project]/src/ai/flows/generate-medicine-details.ts [app-rsc] (ecmascript)" } [app-rsc] (server actions loader, ecmascript) <exports>');

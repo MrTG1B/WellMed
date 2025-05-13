@@ -24,8 +24,8 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
-  if (ai.plugins.length === 0) {
-    console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing). Returning original query.");
+  if (!ai.plugins || ai.plugins.length === 0) {
+    console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning original query.");
     return { correctedMedicineName: input.query };
   }
   try {
@@ -38,8 +38,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     } else if (typeof error === 'string') {
       message = error;
     }
-    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error); // Log the original error too
-    // Return original query as fallback
+    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error); 
     return { correctedMedicineName: input.query }; 
   }
 }
@@ -89,7 +88,6 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
       const {output} = await enhanceMedicineSearchPrompt(input);
       rawOutputFromAI = output;
 
-      console.log("enhanceMedicineSearchFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
 
       if (!rawOutputFromAI || 
           typeof rawOutputFromAI.correctedMedicineName !== 'string' || 

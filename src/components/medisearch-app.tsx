@@ -75,13 +75,17 @@ export default function MediSearchApp() {
           action: <Info className="h-5 w-5 text-primary" />,
         });
       } else {
-        toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
+        // This case means enhanceMedicineSearch returned a fallback (original query) due to an internal error or AI unavailability.
+        // The flow wrapper for enhanceMedicineSearch already console.warns/errors.
+        toast({ title: t.appName, description: t.errorAi, variant: "default" }); // Use default variant as it's a soft failure
       }
-    } catch (aiError: any) {
-      console.error("AI enhancement failed:", aiError);
+    } catch (aiError: unknown) { // Catch errors if enhanceMedicineSearch itself throws unexpectedly
+      let message = "AI enhancement failed. Using original query.";
+      if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
+      console.error("AI enhancement critical failure:", aiError);
       toast({
         title: t.appName,
-        description: `${t.errorAi} ${aiError.message ? `Details: ${aiError.message}` : 'Unknown AI enhancement error.'}`,
+        description: message,
         variant: "destructive"
       });
     }
@@ -93,13 +97,13 @@ export default function MediSearchApp() {
       if (dbDataArray.length > 0) {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
-          generateMedicineDetails({
+          generateMedicineDetails({ // This function is expected to resolve, even on internal AI failure, with fallback data
             searchTermOrName: dbItem.name, 
             language: selectedLanguage,
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
-          }).then(aiDetails => ({ // aiDetails is the result from generateMedicineDetails (success or its own caught fallback)
+          }).then(aiDetails => ({ 
             id: dbItem.id,
             name: aiDetails.name, 
             composition: aiDetails.composition, 
@@ -108,16 +112,20 @@ export default function MediSearchApp() {
             manufacturer: aiDetails.manufacturer,
             dosage: aiDetails.dosage,
             sideEffects: aiDetails.sideEffects,
-            source: aiDetails.source, // Use the source from aiDetails
+            source: aiDetails.source, 
           }))
-          .catch(err => { // This .catch is for unhandled errors from generateMedicineDetails promise itself
-            console.error(`AI details generation failed for ${dbItem.name}:`, err);
+          // This catch is for *unexpected* rejections from generateMedicineDetails, 
+          // which shouldn't happen if its wrapper is correct.
+          .catch(err => { 
+            let errMessage = t.infoNotAvailable;
+            if (err instanceof Error) errMessage = err.message;
+            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name}:`, err);
             toast({
               title: `AI Error for ${dbItem.name}`,
-              description: `${t.errorAiDetailsShort} ${err.message ? `Reason: ${err.message}` : 'Unknown error.'}`,
+              description: `${t.errorAiDetailsShort} ${errMessage}`,
               variant: "destructive"
             });
-            return { // Fallback if generateMedicineDetails promise itself rejected unexpectedly
+            return { 
               id: dbItem.id,
               name: dbItem.name,
               composition: dbItem.composition,
@@ -135,12 +143,13 @@ export default function MediSearchApp() {
       } else {
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
+        
+        // generateMedicineDetails should always resolve with a GenerateMedicineDetailsOutput object
         const aiDetails = await generateMedicineDetails({
           searchTermOrName: aiEnhancedSearchTerm, 
           language: selectedLanguage,
         });
-        // aiDetails here is the result from generateMedicineDetails.
-        // It will have its 'source' correctly set by generateMedicineDetails itself (including its internal fallbacks).
+        
         setSearchResults([{
           id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
           name: aiDetails.name,
@@ -150,15 +159,19 @@ export default function MediSearchApp() {
           manufacturer: aiDetails.manufacturer,
           dosage: aiDetails.dosage,
           sideEffects: aiDetails.sideEffects,
-          source: aiDetails.source, // Use source from aiDetails
+          source: aiDetails.source,
         }]);
       }
-    } catch (flowError: any) { // This is for other errors in the process, e.g. fetchMedicineByName
-      console.error("Main AI/data processing failed:", flowError);
-      const errorMessage = `${t.errorAiDetails} ${flowError.message ? `Error: ${flowError.message}` : 'Unknown AI generation error.'}`;
+    } catch (dataProcessingError: unknown) { 
+      let errorMessage = t.errorData;
+      if (dataProcessingError instanceof Error) {
+        errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
+      }
+      console.error("Data processing or DB fetch failed:", dataProcessingError);
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
+      // Fallback to show DB data if AI details part failed but DB data was retrieved
       if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
@@ -171,7 +184,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); 
+        setError(null); // Clear general error if we are showing partial data
       }
     } finally {
       setIsLoading(false);
@@ -314,3 +327,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

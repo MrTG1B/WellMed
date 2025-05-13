@@ -26,12 +26,14 @@ export type TranslationKeys = {
   errorAi: string;
   errorData: string;
   errorAiDetails: string; 
-  errorAiDetailsShort: string; // New
+  errorAiDetailsShort: string;
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
   sourceDbAiMessage: string; 
   sourceAiOnlyMessage: string; 
   sourceDbOnlyMessage: string; 
+  sourceAiUnavailableMessage: string; // New
+  sourceAiFailedMessage: string; // New
   notFoundInDbAiGenerating: string; 
   barcodeNotAvailable: string; 
   initialHelperText: string; 
@@ -72,6 +74,8 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbAiMessage: 'Details from database, enhanced by AI.',
     sourceAiOnlyMessage: 'Medicine not in database. Details primarily AI-generated.',
     sourceDbOnlyMessage: 'Details from database. AI enhancement for full details failed.',
+    sourceAiUnavailableMessage: 'Details from database. AI not available for full details.', // New
+    sourceAiFailedMessage: 'Medicine not in database. AI generation failed.', // New
     notFoundInDbAiGenerating: 'Medicine not found in database. Attempting to generate details with AI.',
     barcodeNotAvailable: 'Not available',
     initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
@@ -110,6 +114,8 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
     sourceAiOnlyMessage: 'दवा डेटाबेस में नहीं है। विवरण मुख्य रूप से एआई-जनित।',
     sourceDbOnlyMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई वृद्धि विफल रही।',
+    sourceAiUnavailableMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई उपलब्ध नहीं है।', // New
+    sourceAiFailedMessage: 'दवा डेटाबेस में नहीं है। एआई उत्पादन विफल रहा।', // New
     notFoundInDbAiGenerating: 'दवा डेटाबेस में नहीं मिली। एआई के साथ विवरण उत्पन्न करने का प्रयास किया जा रहा है।',
     barcodeNotAvailable: 'उपलब्ध नहीं है',
     initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
@@ -148,6 +154,8 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
     sourceAiOnlyMessage: 'ওষুধ ডাটাবেসে নেই। বিস্তারিত প্রধানত এআই-উত্পন্ন।',
     sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।',
+    sourceAiUnavailableMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উপলব্ধ নেই।', // New
+    sourceAiFailedMessage: 'ওষুধ ডাটাবেসে নেই। এআই তৈরি ব্যর্থ হয়েছে।', // New
     notFoundInDbAiGenerating: 'ওষুধ ডাটাবেসে পাওয়া যায়নি। এআই দিয়ে বিস্তারিত তৈরি করার চেষ্টা করা হচ্ছে।',
     barcodeNotAvailable: 'উপলব্ধ নয়',
     initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',

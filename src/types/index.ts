@@ -7,8 +7,7 @@ export type Medicine = {
   dosage: string; 
   sideEffects: string; 
   barcode?: string;
-  source: 'database_ai_enhanced' | 'ai_generated' | 'database_only'; // Indicates the origin of the data
+  source: 'database_ai_enhanced' | 'ai_generated' | 'database_only' | 'ai_unavailable' | 'ai_failed'; // Indicates the origin of the data
 };
 
 export type Language = 'en' | 'hi' | 'bn';
-

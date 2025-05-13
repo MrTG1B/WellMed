@@ -29,6 +29,10 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     sourceMessage = t.sourceDbAiMessage;
   } else if (medicine.source === 'database_only') {
     sourceMessage = t.sourceDbOnlyMessage;
+  } else if (medicine.source === 'ai_unavailable') {
+    sourceMessage = t.sourceAiUnavailableMessage;
+  } else if (medicine.source === 'ai_failed') {
+    sourceMessage = t.sourceAiFailedMessage;
   }
 
 

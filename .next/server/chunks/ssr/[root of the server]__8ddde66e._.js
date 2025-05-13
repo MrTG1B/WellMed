@@ -283,7 +283,14 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         const result = await enhanceMedicineSearchFlow(input);
         return result;
     } catch (error) {
-        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, error.message || error);
+        let message = "Unknown error during AI search enhancement.";
+        if (error instanceof Error) {
+            message = error.message;
+        } else if (typeof error === 'string') {
+            message = error;
+        }
+        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message);
+        // Return original query as fallback
         return {
             correctedMedicineName: input.query
         };
@@ -332,14 +339,23 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
 }, async (input)=>{
     try {
         const { output } = await enhanceMedicineSearchPrompt(input);
-        if (!output) {
-            console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input);
+        if (!output || typeof output.correctedMedicineName !== 'string') {
+            console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input, "Output:", output);
             throw new Error("AI failed to enhance search query or return valid output structure.");
         }
         return output;
     } catch (flowError) {
-        const errorMessage = flowError.message || "Unknown error in enhanceMedicineSearchFlow";
-        console.error(`enhanceMedicineSearchFlow: Error during prompt execution for input: ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
+        let errorMessage = "Unknown error in enhanceMedicineSearchFlow";
+        let errorStack;
+        if (flowError instanceof Error) {
+            errorMessage = flowError.message;
+            errorStack = flowError.stack;
+        } else if (typeof flowError === 'string') {
+            errorMessage = flowError;
+        } else if (flowError && typeof flowError === 'object' && 'message' in flowError && typeof flowError.message === 'string') {
+            errorMessage = flowError.message;
+        }
+        console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`);
         // Throw a new, simple error to ensure serializability for Server Components
         throw new Error(`AI Enhancement Error: ${errorMessage}`);
     }
@@ -399,41 +415,52 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     source: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].enum([
         'database_ai_enhanced',
         'ai_generated',
-        'database_only'
-    ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure.')
+        'database_only',
+        'ai_unavailable',
+        'ai_failed'
+    ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
-    const genericAiFailureMessage = "AI generation failed. Details unavailable. Check API key or server logs.";
-    const genericConfigIssueMessage = "Not available due to AI configuration issue.";
+    const genericAiFailureMessage = "AI generation failed. Details unavailable.";
+    const genericConfigIssueMessage = "AI not configured. Details unavailable.";
     const name = input.contextName || input.searchTermOrName;
-    const composition = input.contextComposition || genericConfigIssueMessage;
+    let source;
     if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("generateMedicineDetails: AI plugin not available (likely GOOGLE_API_KEY missing). Returning placeholder data.");
+        console.warn("generateMedicineDetails: AI plugin not available. Returning placeholder data.");
+        source = input.contextName ? 'database_only' : 'ai_unavailable';
         return {
             name: name,
-            composition: composition,
+            composition: input.contextComposition || genericConfigIssueMessage,
             usage: genericConfigIssueMessage,
             manufacturer: genericConfigIssueMessage,
             dosage: genericConfigIssueMessage,
             sideEffects: genericConfigIssueMessage,
             barcode: input.contextBarcode,
-            source: input.contextName ? 'database_only' : 'ai_generated'
+            source: source
         };
     }
     try {
         const result = await generateMedicineDetailsFlow(input);
+        // The flow itself should set the source correctly (database_ai_enhanced or ai_generated)
         return result;
     } catch (error) {
-        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, error.message || error);
+        let message = genericAiFailureMessage;
+        if (error instanceof Error) {
+            message = error.message; // This will be "AI Generation Error: Original Flow Error"
+        } else if (typeof error === 'string') {
+            message = error;
+        }
+        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message);
+        source = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: name,
-            composition: composition,
-            usage: error.message || genericAiFailureMessage,
-            manufacturer: error.message || genericAiFailureMessage,
-            dosage: error.message || genericAiFailureMessage,
-            sideEffects: error.message || genericAiFailureMessage,
+            composition: input.contextComposition || `Error: ${message}`,
+            usage: `Error: ${message}`,
+            manufacturer: `Error: ${message}`,
+            dosage: `Error: ${message}`,
+            sideEffects: `Error: ${message}`,
             barcode: input.contextBarcode,
-            source: input.contextName ? 'database_only' : 'ai_generated'
+            source: source
         };
     }
 }
@@ -450,7 +477,7 @@ const prompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genk
 {{#if contextName}}
 The user has provided context for a medicine:
 Name: "{{contextName}}"
-Composition: "{{contextComposition}}"
+{{#if contextComposition}}Composition: "{{contextComposition}}"{{/if}}
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
 
 Based on this information, please generate the following details for "{{contextName}}" in {{language}}:
@@ -512,6 +539,8 @@ Example for searchTermOrName="painkiller for headache":
 {{/if}}
 
 Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects) is in {{language}}.
+If any information is not found or cannot be reliably determined, explicitly state 'Information not available' or a similar phrase in the target language for that specific field rather than omitting it.
+The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated'. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response; these are handled by the calling logic if AI fails or is unavailable.
 `
 });
 const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].defineFlow({
@@ -521,21 +550,49 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
 }, async (input)=>{
     try {
         const { output } = await prompt(input);
-        if (!output) {
-            console.error("generateMedicineDetailsFlow: AI returned no output or an invalid structure for input:", input);
-            throw new Error("AI failed to generate medicine details or return a valid structure.");
+        if (!output || !output.name || !output.composition || !output.usage || !output.manufacturer || !output.dosage || !output.sideEffects || !output.source) {
+            console.error("generateMedicineDetailsFlow: AI returned incomplete or invalid structure for input:", input, "Raw output:", output);
+            // This case should ideally be caught by Zod schema validation if output schema is strict.
+            // If AI provides partial data, we should throw to let the wrapper handle it.
+            throw new Error("AI returned incomplete or invalid data structure.");
         }
-        if (!output.source) {
-            output.source = input.contextName ? 'database_ai_enhanced' : 'ai_generated';
+        const validatedOutput = {
+            name: output.name,
+            composition: output.composition,
+            usage: output.usage,
+            manufacturer: output.manufacturer,
+            dosage: output.dosage,
+            sideEffects: output.sideEffects,
+            barcode: output.barcode || input.contextBarcode,
+            source: output.source
+        };
+        // Ensure barcode from context is preserved if AI doesn't return one and it's not already set
+        if (input.contextBarcode && !validatedOutput.barcode) {
+            validatedOutput.barcode = input.contextBarcode;
         }
-        if (input.contextBarcode && !output.barcode) {
-            output.barcode = input.contextBarcode;
+        // Final check on source based on context, AI should provide 'database_ai_enhanced' or 'ai_generated'
+        if (input.contextName && validatedOutput.source !== 'database_ai_enhanced') {
+        // If contextName was provided, AI should ideally return database_ai_enhanced.
+        // If it returns ai_generated, it means it ignored context, which is an issue with the prompt or AI.
+        // For robustness, we could override, but better to fix prompt or expect AI to follow.
+        // console.warn(`generateMedicineDetailsFlow: AI returned source '${validatedOutput.source}' despite contextName being present. Expected 'database_ai_enhanced'.`);
+        } else if (!input.contextName && validatedOutput.source !== 'ai_generated') {
+        // If no contextName, AI should return ai_generated.
+        // console.warn(`generateMedicineDetailsFlow: AI returned source '${validatedOutput.source}' without contextName. Expected 'ai_generated'.`);
         }
-        return output;
+        return validatedOutput;
     } catch (flowError) {
-        const errorMessage = flowError.message || "Unknown error in generateMedicineDetailsFlow";
-        console.error(`generateMedicineDetailsFlow: Error during prompt execution for input ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
-        // Throw a new, simple error to ensure serializability for Server Components
+        let errorMessage = "Unknown error in generateMedicineDetailsFlow";
+        let errorStack;
+        if (flowError instanceof Error) {
+            errorMessage = flowError.message;
+            errorStack = flowError.stack;
+        } else if (typeof flowError === 'string') {
+            errorMessage = flowError;
+        } else if (flowError && typeof flowError === 'object' && 'message' in flowError && typeof flowError.message === 'string') {
+            errorMessage = flowError.message;
+        }
+        console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`);
         throw new Error(`AI Generation Error: ${errorMessage}`);
     }
 });

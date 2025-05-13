@@ -31,8 +31,15 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
   try {
     const result = await enhanceMedicineSearchFlow(input);
     return result;
-  } catch (error: any) { 
-    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, error.message || error);
+  } catch (error: unknown) { 
+    let message = "Unknown error during AI search enhancement.";
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'string') {
+      message = error;
+    }
+    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message);
+    // Return original query as fallback
     return { correctedMedicineName: input.query }; 
   }
 }
@@ -79,16 +86,28 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
   async input => {
     try {
       const {output} = await enhanceMedicineSearchPrompt(input);
-      if (!output) {
-        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input);
+      if (!output || typeof output.correctedMedicineName !== 'string') { // More specific check
+        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input, "Output:", output);
         throw new Error("AI failed to enhance search query or return valid output structure.");
       }
       return output;
-    } catch (flowError: any) {
-      const errorMessage = flowError.message || "Unknown error in enhanceMedicineSearchFlow";
-      console.error(`enhanceMedicineSearchFlow: Error during prompt execution for input: ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
+    } catch (flowError: unknown) {
+      let errorMessage = "Unknown error in enhanceMedicineSearchFlow";
+      let errorStack: string | undefined;
+
+      if (flowError instanceof Error) {
+          errorMessage = flowError.message;
+          errorStack = flowError.stack;
+      } else if (typeof flowError === 'string') {
+          errorMessage = flowError;
+      } else if (flowError && typeof flowError === 'object' && 'message' in flowError && typeof (flowError as any).message === 'string') {
+          errorMessage = (flowError as any).message;
+      }
+      
+      console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`);
       // Throw a new, simple error to ensure serializability for Server Components
       throw new Error(`AI Enhancement Error: ${errorMessage}`);
     }
   }
 );
+

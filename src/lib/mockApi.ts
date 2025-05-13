@@ -15,6 +15,14 @@ interface NotFoundResult {
   foundInDb: false;
 }
 
+// Helper function to check if a term might be a barcode
+const isPotentiallyBarcode = (term: string): boolean => {
+  // Simple check: consists of 8 to 14 digits.
+  // Adjust regex as needed for your specific barcode formats (e.g., EAN-13, UPC-A).
+  return /^\d{8,14}$/.test(term);
+};
+
+
 export const fetchMedicineByName = async (
   searchTerm: string // This searchTerm is expected to be the AI-enhanced term from enhanceMedicineSearch
 ): Promise<DbMedicineResult | NotFoundResult> => {
@@ -28,14 +36,16 @@ export const fetchMedicineByName = async (
   }
 
   const normalizedAiEnhancedSearchTerm = searchTerm.toLowerCase().trim();
-  console.log(`[mockApi] Starting search for term: "${searchTerm}", Normalized: "${normalizedAiEnhancedSearchTerm}"`);
+  const originalSearchTermTrimmed = searchTerm.trim(); // Use this for barcode check
+  console.log(`[mockApi] Starting search for term: "${searchTerm}", Normalized for name/composition: "${normalizedAiEnhancedSearchTerm}", Original for barcode: "${originalSearchTermTrimmed}"`);
   const medicinesRef = ref(db, 'medicines');
 
   // Attempt 1: Direct ID lookup
   const potentialIdsToTry = new Set<string>();
   potentialIdsToTry.add(normalizedAiEnhancedSearchTerm); 
-  if (searchTerm.trim().match(/^[a-zA-Z0-9-_]+$/) && searchTerm.trim() !== normalizedAiEnhancedSearchTerm) {
-    potentialIdsToTry.add(searchTerm.trim());
+  // Also try the original trimmed search term if it's a valid ID format and different from normalized
+  if (originalSearchTermTrimmed.match(/^[a-zA-Z0-9-_]+$/) && originalSearchTermTrimmed !== normalizedAiEnhancedSearchTerm) {
+    potentialIdsToTry.add(originalSearchTermTrimmed);
   }
   console.log(`[mockApi] Potential IDs for direct lookup:`, Array.from(potentialIdsToTry));
 
@@ -65,51 +75,54 @@ export const fetchMedicineByName = async (
     }
   }
   
-  // Attempt 2: Query by barcode
-  const originalSearchTermTrimmed = searchTerm.trim();
-  console.log(`[mockApi] Attempting barcode query for: "${originalSearchTermTrimmed}"`);
-  try {
-    const barcodeQueryInstance = dbQuery(medicinesRef, orderByChild('barcode'), equalTo(originalSearchTermTrimmed), limitToFirst(1));
-    const barcodeSnapshot = await get(barcodeQueryInstance);
-    if (barcodeSnapshot.exists()) {
-      const data = barcodeSnapshot.val();
-      const id = Object.keys(data)[0];
-      const medicine = data[id];
-      if (medicine && medicine.name && medicine.composition) {
-        console.log(`[mockApi] Found by barcode: "${originalSearchTermTrimmed}". Data:`, medicine);
-        return {
-          id,
-          name: medicine.name,
-          composition: medicine.composition,
-          barcode: medicine.barcode,
-          foundInDb: true,
-        };
+  // Attempt 2: Query by barcode (conditionally)
+  if (isPotentiallyBarcode(originalSearchTermTrimmed)) {
+    console.log(`[mockApi] Term "${originalSearchTermTrimmed}" appears to be a barcode. Attempting barcode query.`);
+    try {
+      const barcodeQueryInstance = dbQuery(medicinesRef, orderByChild('barcode'), equalTo(originalSearchTermTrimmed), limitToFirst(1));
+      const barcodeSnapshot = await get(barcodeQueryInstance);
+      if (barcodeSnapshot.exists()) {
+        const data = barcodeSnapshot.val();
+        const id = Object.keys(data)[0];
+        const medicine = data[id];
+        if (medicine && medicine.name && medicine.composition) {
+          console.log(`[mockApi] Found by barcode: "${originalSearchTermTrimmed}". Data:`, medicine);
+          return {
+            id,
+            name: medicine.name,
+            composition: medicine.composition,
+            barcode: medicine.barcode,
+            foundInDb: true,
+          };
+        } else {
+           console.log(`[mockApi] Barcode query for "${originalSearchTermTrimmed}" successful but data malformed:`, medicine);
+        }
       } else {
-         console.log(`[mockApi] Barcode query for "${originalSearchTermTrimmed}" successful but data malformed:`, medicine);
+        console.log(`[mockApi] No match for barcode: "${originalSearchTermTrimmed}"`);
       }
-    } else {
-      console.log(`[mockApi] No match for barcode: "${originalSearchTermTrimmed}"`);
+    } catch (e: any) {
+      console.error(`[mockApi] Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e.message);
+      if (e.message?.toLowerCase().includes("indexon") || e.message?.toLowerCase().includes("orderbychild")) {
+          console.error(
+            "🔴 IMPORTANT: Firebase Realtime Database: Query by 'barcode' failed likely due to a missing index. " +
+            "Please add an index for 'barcode' in your Realtime Database security rules for efficient querying: \n" +
+            "{\n" +
+            "  \"rules\": {\n" +
+            "    \"medicines\": {\n" +
+            "      \".indexOn\": [\"barcode\", \"name_lowercase\"] // Ensure 'barcode' is listed here (and 'name_lowercase' if used elsewhere)\n" +
+            "    }\n" +
+            "    // ... your other rules ...\n" +
+            "  }\n" +
+            "}"
+          );
+      }
     }
-  } catch (e: any) {
-    console.error(`[mockApi] Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e.message);
-    if (e.message?.toLowerCase().includes("indexon") || e.message?.toLowerCase().includes("orderbychild")) {
-        console.error(
-          "🔴 IMPORTANT: Firebase Realtime Database: Query by 'barcode' failed likely due to a missing index. " +
-          "Please add an index for 'barcode' in your Realtime Database security rules for efficient querying: \n" +
-          "{\n" +
-          "  \"rules\": {\n" +
-          "    \"medicines\": {\n" +
-          "      \".indexOn\": [\"barcode\", \"name_lowercase\"] // Ensure 'barcode' is listed here\n" +
-          "    }\n" +
-          "    // ... your other rules ...\n" +
-          "  }\n" +
-          "}"
-        );
-    }
+  } else {
+    console.log(`[mockApi] Term "${originalSearchTermTrimmed}" does not appear to be a barcode. Skipping barcode-specific query.`);
   }
   
-  // Attempt 3 & 4: Full scan for Name (exact match) or Composition (includes match)
-  console.log(`[mockApi] Starting full scan of all medicines for name/composition match against "${normalizedAiEnhancedSearchTerm}"`);
+  // Attempt 3 & 4: Full scan for Name (exact match using normalized term) or Composition (includes match using normalized term)
+  console.log(`[mockApi] Starting full scan of all medicines for name/composition match against normalized term: "${normalizedAiEnhancedSearchTerm}"`);
   try {
     const allMedicinesSnapshot = await get(medicinesRef);
     if (allMedicinesSnapshot.exists()) {
@@ -130,11 +143,9 @@ export const fetchMedicineByName = async (
         const currentMedicineNameLower = medicine.name.toLowerCase();
         const currentMedicineCompositionLower = medicine.composition.toLowerCase();
 
-        // console.log(`[mockApi] Full Scan DEBUG: Checking ID ${id}, Name: "${currentMedicineNameLower}", Composition (first 50 chars): "${currentMedicineCompositionLower.substring(0,50)}"`);
-
-        // Check for exact name match (case-insensitive)
+        // Check for exact name match (case-insensitive) with normalized AI-enhanced term
         if (currentMedicineNameLower === normalizedAiEnhancedSearchTerm) {
-          console.log(`[mockApi] Full Scan: Found by EXACT NAME match: ID ${id}, Name: "${medicine.name}"`);
+          console.log(`[mockApi] Full Scan: Found by EXACT NAME match: ID ${id}, Name: "${medicine.name}" (matched against "${normalizedAiEnhancedSearchTerm}")`);
           firstMatchByNameExact = {
             id,
             name: medicine.name,
@@ -142,12 +153,12 @@ export const fetchMedicineByName = async (
             barcode: medicine.barcode,
             foundInDb: true,
           };
-          break; // Prioritize exact name match, stop scan
+          break; 
         }
 
         // Check for composition 'includes' (case-insensitive) - only if no exact name match yet
         if (!firstMatchByComposition && currentMedicineCompositionLower.includes(normalizedAiEnhancedSearchTerm)) {
-          console.log(`[mockApi] Full Scan: Found by COMPOSITION INCLUDES: ID ${id}, Name: "${medicine.name}", Matched Composition against "${normalizedAiEnhancedSearchTerm}"`);
+          console.log(`[mockApi] Full Scan: Found by COMPOSITION INCLUDES: ID ${id}, Name: "${medicine.name}" (matched "${currentMedicineCompositionLower}" against "${normalizedAiEnhancedSearchTerm}")`);
           firstMatchByComposition = {
             id,
             name: medicine.name,
@@ -155,8 +166,6 @@ export const fetchMedicineByName = async (
             barcode: medicine.barcode,
             foundInDb: true,
           };
-          // Continue scan in case an exact name match is found later for higher priority. 
-          // If exact name match is prioritized and breaks, this will only be set if no exact name match is found in the entire dataset.
         }
       }
 
@@ -168,7 +177,7 @@ export const fetchMedicineByName = async (
         console.log("[mockApi] Full Scan: Returning match by composition.");
         return firstMatchByComposition;
       }
-      console.log("[mockApi] Full Scan: No matches found by name or composition.");
+      console.log("[mockApi] Full Scan: No matches found by name or composition using normalized term:", normalizedAiEnhancedSearchTerm);
     } else {
       console.log("[mockApi] Full Scan: No medicines data exists at 'medicines' path.");
     }

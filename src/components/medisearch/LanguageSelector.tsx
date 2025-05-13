@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Language } from "@/types";
@@ -39,8 +40,8 @@ export function LanguageSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button 
-          variant="default" 
-          className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring"
+          variant="ghost" 
+          className="text-foreground hover:bg-primary/10 hover:text-primary focus-visible:ring-ring"
         >
           <Languages className="mr-2 h-5 w-5" />
           {getCurrentLanguageName(selectedLanguage, t)}

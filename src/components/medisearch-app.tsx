@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -211,10 +212,10 @@ export default function MediSearchApp() {
 
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-4 pt-8 sm:p-6 md:p-8 bg-background">
-      <header className="w-full max-w-4xl mb-8 flex flex-col sm:flex-row justify-between items-center">
+    <div className="flex flex-col items-center min-h-screen bg-background">
+      <header className="w-full max-w-4xl sticky top-0 z-50 bg-background/80 backdrop-blur-md p-4 sm:p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-center rounded-b-xl shadow-lg">
         <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-          <Image src="https://picsum.photos/64/64" alt="MediSearch Logo" width={48} height={48} className="rounded-lg" data-ai-hint="medical logo" />
+          <Image src="https://picsum.photos/64/64" alt="WellMeds Logo" width={48} height={48} className="rounded-lg" data-ai-hint="medical logo" />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">{t.appName}</h1>
         </div>
         <LanguageSelector
@@ -224,7 +225,7 @@ export default function MediSearchApp() {
         />
       </header>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-6">
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8">
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
@@ -288,7 +289,7 @@ export default function MediSearchApp() {
 
       </main>
 
-      <footer className="mt-auto pt-8 text-center text-sm text-muted-foreground">
+      <footer className="mt-auto pt-8 pb-4 text-center text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} {t.appName}. {t.allRightsReserved}</p>
       </footer>
        <style jsx global>{`
@@ -303,3 +304,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

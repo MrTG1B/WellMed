@@ -2,11 +2,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ref, onValue, type DataSnapshot, off } from "firebase/database"; // Changed from firestore
+import { ref, onValue, type DataSnapshot, off, remove } from "firebase/database"; 
 import { db } from "@/lib/firebase";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ListChecks, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, ListChecks, AlertCircle, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface MedicineDoc {
   id: string;
@@ -19,6 +31,10 @@ export default function MedicineList() {
   const [medicines, setMedicines] = useState<MedicineDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [medicineToDelete, setMedicineToDelete] = useState<MedicineDoc | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!db) {
@@ -40,7 +56,7 @@ export default function MedicineList() {
           const medsList = Object.keys(data).map(key => {
             const medData = data[key];
             return {
-              id: key, // The key in RTDB is the medicineId
+              id: key, 
               name: medData.name || "Unnamed Medicine",
               composition: medData.composition,
               barcode: medData.barcode,
@@ -49,25 +65,54 @@ export default function MedicineList() {
           setMedicines(medsList);
           console.log("MedicineList: Medicines state updated.", medsList);
         } else {
-          setMedicines([]); // No data at the path
+          setMedicines([]); 
           console.log("MedicineList: No medicines found in Realtime Database at 'medicines' path.");
         }
         setIsLoading(false);
         setError(null);
       }, 
-      (err: Error) => { // Changed type to Error
+      (err: Error) => { 
         console.error("MedicineList: Error fetching medicines from Realtime Database:", err);
         setError(`Failed to load medicines: ${err.message}. Check console and Realtime Database security rules.`);
         setIsLoading(false);
       }
     );
 
-    // Cleanup listener on unmount
     return () => {
       console.log("MedicineList: Unsubscribing from Realtime Database listener.");
-      off(medicinesRef, 'value', listener); // Correct way to remove RTDB listener
+      off(medicinesRef, 'value', listener); 
     };
   }, []);
+
+  const handleDeleteRequest = (medicine: MedicineDoc) => {
+    setMedicineToDelete(medicine);
+    setShowDeleteConfirmDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!medicineToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const medicineRef = ref(db, `medicines/${medicineToDelete.id}`);
+      await remove(medicineRef);
+      toast({
+        title: "Medicine Deleted",
+        description: `"${medicineToDelete.name}" has been successfully deleted.`,
+      });
+      setMedicineToDelete(null);
+      setShowDeleteConfirmDialog(false);
+    } catch (deleteError: any) {
+      console.error("Error deleting medicine:", deleteError);
+      toast({
+        title: "Deletion Failed",
+        description: `Could not delete "${medicineToDelete.name}". ${deleteError.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -101,19 +146,57 @@ export default function MedicineList() {
   }
 
   return (
-    <ScrollArea className="h-72 w-full rounded-md border bg-card shadow-inner">
-      <div className="p-4">
-        <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
-          Available Medicines ({medicines.length})
-        </h4>
-        {medicines.map((medicine) => (
-          <div key={medicine.id} className="text-sm p-3 mb-2 border-b last:border-b-0 hover:bg-muted/50 rounded-md transition-colors">
-            <p className="font-semibold text-foreground">{medicine.name}</p>
-            {medicine.composition && <p className="text-xs text-muted-foreground">Composition: {medicine.composition}</p>}
-            {medicine.barcode && <p className="text-xs text-muted-foreground">Barcode: {medicine.barcode}</p>}
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
+    <>
+      <ScrollArea className="h-72 w-full rounded-md border bg-card shadow-inner">
+        <div className="p-4">
+          <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
+            Available Medicines ({medicines.length})
+          </h4>
+          {medicines.map((medicine) => (
+            <div 
+              key={medicine.id} 
+              className="relative group text-sm p-3 mb-2 border-b last:border-b-0 hover:bg-muted/50 rounded-md transition-colors"
+            >
+              <p className="font-semibold text-foreground">{medicine.name} <span className="text-xs text-muted-foreground">({medicine.id})</span></p>
+              {medicine.composition && <p className="text-xs text-muted-foreground">Composition: {medicine.composition}</p>}
+              {medicine.barcode && <p className="text-xs text-muted-foreground">Barcode: {medicine.barcode}</p>}
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive-foreground hover:bg-destructive/90 p-1 h-7 w-7"
+                onClick={() => handleDeleteRequest(medicine)}
+                aria-label={`Delete ${medicine.name}`}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {medicineToDelete && (
+        <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{medicineToDelete.name}" (ID: {medicineToDelete.id})? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteConfirmDialog(false)} disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }

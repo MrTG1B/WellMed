@@ -16,7 +16,7 @@ interface NotFoundResult {
 }
 
 export const fetchMedicineByName = async (
-  searchTerm: string
+  searchTerm: string // This searchTerm is expected to be the AI-enhanced term from enhanceMedicineSearch
 ): Promise<DbMedicineResult | NotFoundResult> => {
   if (!db) {
     console.error("Firebase Realtime Database (db) is not initialized in mockApi. Cannot fetch from DB.");
@@ -26,106 +26,125 @@ export const fetchMedicineByName = async (
     return { foundInDb: false };
   }
 
-  const normalizedQuery = searchTerm.toLowerCase().trim();
+  const normalizedAiEnhancedSearchTerm = searchTerm.toLowerCase().trim();
   const medicinesRef = ref(db, 'medicines');
 
-  // Attempt 1: Direct ID lookup (if searchTerm could be an ID)
-  // An ID is typically one word, possibly with hyphens/numbers, e.g., "paracetamol-500"
-  if (/^[a-z0-9-]+$/.test(normalizedQuery)) {
+  // Attempt 1: Direct ID lookup (using the AI-enhanced, normalized term as a potential ID)
+  // Assumes IDs are typically lowercase and hyphenated as per AdminUploadForm logic.
+  // The regex for medicineId in AdminUploadForm is /^[a-zA-Z0-9-_]+$/ which can be mixed case.
+  // For ID lookup, we should try both the normalized form and the original form if it matches ID pattern.
+  const potentialIdsToTry = new Set<string>();
+  potentialIdsToTry.add(normalizedAiEnhancedSearchTerm); // Try normalized form first
+  if (searchTerm.trim().match(/^[a-zA-Z0-9-_]+$/)) { // Check if original search term looks like an ID
+    potentialIdsToTry.add(searchTerm.trim());
+  }
+
+
+  for (const potentialId of potentialIdsToTry) {
     try {
-      const directIdSnapshot = await get(child(medicinesRef, normalizedQuery));
+      const directIdSnapshot = await get(child(medicinesRef, potentialId));
       if (directIdSnapshot.exists()) {
         const data = directIdSnapshot.val();
-        return {
-          id: directIdSnapshot.key!,
-          name: data.name,
-          composition: data.composition,
-          barcode: data.barcode,
-          foundInDb: true,
-        };
-      }
-    } catch (e) {
-      console.error(`Error fetching medicine by direct ID '${normalizedQuery}':`, e);
-    }
-  }
-  
-
-  // Attempt 2: Query by name (exact match, case-insensitive handled by normalization)
-  // Firebase RTDB queries are case-sensitive for strings. We fetch all and filter, or store a normalized name.
-  // For simplicity with current structure, we'll fetch all and filter. This is not efficient for large datasets.
-  // A more scalable solution would involve pre-normalized fields or using a search service like Algolia/Elasticsearch.
-  try {
-    const snapshot = await get(medicinesRef);
-    if (snapshot.exists()) {
-      const medicinesData = snapshot.val();
-      for (const id in medicinesData) {
-        const medicine = medicinesData[id];
-        if (medicine.name && medicine.name.toLowerCase() === normalizedQuery) {
+        if (data && data.name && data.composition) { // Ensure crucial fields exist
+          console.log(`Found by ID: ${potentialId}`);
           return {
-            id,
-            name: medicine.name,
-            composition: medicine.composition,
-            barcode: medicine.barcode,
+            id: directIdSnapshot.key!,
+            name: data.name,
+            composition: data.composition,
+            barcode: data.barcode,
             foundInDb: true,
           };
         }
       }
+    } catch (e) {
+      console.error(`Error fetching medicine by direct ID '${potentialId}':`, e);
     }
-  } catch (e) {
-      console.error(`Error fetching all medicines for name query '${normalizedQuery}':`, e);
   }
-
-
-  // Attempt 3: Query by barcode
+  
+  // Attempt 2: Query by barcode
+  // Using searchTerm.trim() as barcodes are usually exact and might not be lowercased by AI enhancement.
+  // Firebase rule index needed: { "rules": { "medicines": { ".indexOn": "barcode" } } }
+  const originalSearchTermTrimmed = searchTerm.trim(); // Use the term before toLowerCase for barcode
   try {
-     // This requires an index on 'barcode' in Realtime Database rules for performance.
-     // { "rules": { "medicines": { ".indexOn": ["barcode"] } } }
-    const barcodeQuery = dbQuery(medicinesRef, orderByChild('barcode'), equalTo(searchTerm.trim()), limitToFirst(1));
-    const barcodeSnapshot = await get(barcodeQuery);
+    const barcodeQueryInstance = dbQuery(medicinesRef, orderByChild('barcode'), equalTo(originalSearchTermTrimmed), limitToFirst(1));
+    const barcodeSnapshot = await get(barcodeQueryInstance);
     if (barcodeSnapshot.exists()) {
       const data = barcodeSnapshot.val();
       const id = Object.keys(data)[0];
       const medicine = data[id];
-      return {
-        id,
-        name: medicine.name,
-        composition: medicine.composition,
-        barcode: medicine.barcode,
-        foundInDb: true,
-      };
+      if (medicine && medicine.name && medicine.composition) {
+        console.log(`Found by barcode: ${originalSearchTermTrimmed}`);
+        return {
+          id,
+          name: medicine.name,
+          composition: medicine.composition,
+          barcode: medicine.barcode,
+          foundInDb: true,
+        };
+      }
     }
   } catch (e) {
-    console.error(`Error fetching medicine by barcode '${searchTerm.trim()}':`, e);
+    console.error(`Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e);
+    // Log this error, especially if it's about missing index.
+    if (e instanceof Error && (e.message.includes("indexON") || e.message.includes("orderByChild"))){
+        console.warn("Firebase Realtime Database: Consider adding an index for 'barcode' in your security rules for efficient querying: \n{\n  \"rules\": {\n    \"medicines\": {\n      \".indexOn\": [\"barcode\"]\n    }\n  }\n}");
+    }
   }
   
-
-  // Attempt 4: Query by composition (contains, case-insensitive)
-  // Similar to name, this is inefficient without proper indexing/search service.
+  // Attempt 3 & 4: Full scan for Name (exact match) or Composition (includes match)
+  // Fetch all medicines once for these checks. This is not efficient for large datasets.
   try {
-    const snapshot = await get(medicinesRef); // Re-fetch if not cached or if previous attempts failed early
-    if (snapshot.exists()) {
-      const medicinesData = snapshot.val();
+    const allMedicinesSnapshot = await get(medicinesRef);
+    if (allMedicinesSnapshot.exists()) {
+      const medicinesData = allMedicinesSnapshot.val();
+      
+      let foundByName: DbMedicineResult | null = null;
+      let foundByComposition: DbMedicineResult | null = null;
+
       for (const id in medicinesData) {
         const medicine = medicinesData[id];
-        if (medicine.composition && medicine.composition.toLowerCase().includes(normalizedQuery)) {
-          return {
+        if (!medicine || !medicine.name || !medicine.composition) continue; // Skip malformed records
+
+        // Check for exact name match (case-insensitive)
+        if (typeof medicine.name === 'string' && medicine.name.toLowerCase() === normalizedAiEnhancedSearchTerm) {
+          console.log(`Found by name (exact match): ${medicine.name} (search term: ${normalizedAiEnhancedSearchTerm})`);
+          foundByName = {
             id,
             name: medicine.name,
             composition: medicine.composition,
             barcode: medicine.barcode,
             foundInDb: true,
           };
+          break; // Prioritize exact name match
         }
       }
+
+      if (foundByName) return foundByName;
+
+      // If not found by exact name, check for composition 'includes' (case-insensitive)
+      for (const id in medicinesData) {
+        const medicine = medicinesData[id];
+         if (!medicine || !medicine.name || !medicine.composition) continue; // Skip malformed records
+
+        if (typeof medicine.composition === 'string' && medicine.composition.toLowerCase().includes(normalizedAiEnhancedSearchTerm)) {
+          console.log(`Found by composition (includes): ${medicine.composition} (search term: ${normalizedAiEnhancedSearchTerm})`);
+          foundByComposition = { // Don't break here, find the first, but name match would have priority
+            id,
+            name: medicine.name,
+            composition: medicine.composition,
+            barcode: medicine.barcode,
+            foundInDb: true,
+          };
+          break; 
+        }
+      }
+      
+      if (foundByComposition) return foundByComposition;
     }
-  } catch(e) {
-      console.error(`Error fetching all medicines for composition query '${normalizedQuery}':`, e);
+  } catch (e) {
+      console.error(`Error fetching/processing all medicines for name/composition query (normalized term: '${normalizedAiEnhancedSearchTerm}'):`, e);
   }
 
+  console.log(`Medicine not found in DB for search term: '${searchTerm}' (normalized: '${normalizedAiEnhancedSearchTerm}')`);
   return { foundInDb: false };
 };
-
-// The mockMedicinesDB array is no longer used as the primary source for name/composition/barcode.
-// AI will generate usage, manufacturer, dosage, sideEffects.
-// If you need a hardcoded fallback for the entire app for some reason, it could be placed here,
-// but the current request implies Firebase then AI.

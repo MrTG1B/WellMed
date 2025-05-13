@@ -41,8 +41,10 @@ export type TranslationKeys = {
   infoNotAvailable: string; 
   errorAiNotConfiguredTitle: string;
   errorAiNotConfigured: string;
+  errorAiNotConfiguredDetail: string;
   errorAiFailedTitle: string;
   errorAiFailed: string;
+  errorAiFailedDetail: string;
   errorAiEnhancementSkipped: string;
 };
 
@@ -88,8 +90,10 @@ export const translations: Record<Language, TranslationKeys> = {
     infoNotAvailable: "Information not available.",
     errorAiNotConfiguredTitle: "AI Not Configured",
     errorAiNotConfigured: "AI-powered features are currently unavailable because the system is not configured for AI processing. Some details may be missing or incomplete.",
+    errorAiNotConfiguredDetail: "Please ensure the GOOGLE_API_KEY is set in your .env file and restart the server. You can obtain a key from Google AI Studio.",
     errorAiFailedTitle: "AI Processing Error",
     errorAiFailed: "There was an error while trying to generate details using AI. Some information may be missing or incomplete.",
+    errorAiFailedDetail: "Please check your server logs (terminal where `npm run dev` is running) for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.",
     errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query.",
   },
   hi: {
@@ -133,8 +137,10 @@ export const translations: Record<Language, TranslationKeys> = {
     infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
     errorAiNotConfiguredTitle: "एआई कॉन्फ़िगर नहीं है",
     errorAiNotConfigured: "एआई-संचालित सुविधाएँ वर्तमान में अनुपलब्ध हैं क्योंकि सिस्टम एआई प्रसंस्करण के लिए कॉन्फ़िगर नहीं किया गया है। कुछ विवरण गुम या अधूरे हो सकते हैं।",
+    errorAiNotConfiguredDetail: "कृपया सुनिश्चित करें कि GOOGLE_API_KEY आपकी .env फ़ाइल में सेट है और सर्वर को पुनरारंभ करें। आप Google AI Studio से एक कुंजी प्राप्त कर सकते हैं।",
     errorAiFailedTitle: "एआई प्रसंस्करण त्रुटि",
     errorAiFailed: "एआई का उपयोग करके विवरण उत्पन्न करने का प्रयास करते समय एक त्रुटि हुई। कुछ जानकारी गुम या अधूरी हो सकती है।",
+    errorAiFailedDetail: "एआई सेवा से अधिक विशिष्ट त्रुटि विवरण के लिए कृपया अपने सर्वर लॉग (टर्मिनल जहां `npm run dev` चल रहा है) की जांच करें। यह एक अमान्य एपीआई कुंजी, कोटा समस्याओं, या नेटवर्क समस्याओं के कारण हो सकता है।",
     errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।",
   },
   bn: {
@@ -177,9 +183,11 @@ export const translations: Record<Language, TranslationKeys> = {
     allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
     infoNotAvailable: "তথ্য উপলব্ধ নেই।",
     errorAiNotConfiguredTitle: "এআই কনফিগার করা হয়নি",
-    errorAiNotConfigured: "এআই-চালিত বৈশিষ্ট্যগুলি বর্তমানে अनुपलब्ध কারণ সিস্টেম এআই প্রক্রিয়াকরণের জন্য কনফিগার করা হয়নি। কিছু বিবরণ অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+    errorAiNotConfigured: "এআই-চালিত বৈশিষ্ট্যগুলি বর্তমানে অনুপলব্ধ কারণ সিস্টেম এআই প্রক্রিয়াকরণের জন্য কনফিগার করা হয়নি। কিছু বিবরণ অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+    errorAiNotConfiguredDetail: "দয়া করে নিশ্চিত করুন যে GOOGLE_API_KEY আপনার .env ফাইলে সেট করা আছে এবং সার্ভারটি পুনরায় চালু করুন। আপনি Google AI Studio থেকে একটি কী পেতে পারেন।",
     errorAiFailedTitle: "এআই প্রক্রিয়াকরণ ত্রুটি",
     errorAiFailed: "এআই ব্যবহার করে বিস্তারিত তৈরি করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে। কিছু তথ্য অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+    errorAiFailedDetail: "এআই পরিষেবা থেকে আরও নির্দিষ্ট ত্রুটির বিবরণের জন্য অনুগ্রহ করে আপনার সার্ভার লগগুলি (টার্মিনাল যেখানে `npm run dev` চলছে) পরীক্ষা করুন। এটি একটি অবৈধ API কী, কোটা সমস্যা বা নেটওয়ার্ক সমস্যার কারণে হতে পারে।",
     errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।",
   },
 };

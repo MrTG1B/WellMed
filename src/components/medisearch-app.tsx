@@ -69,35 +69,46 @@ export default function MediSearchApp() {
     setSearchAttempted(true);
     setShowSuggestions(false);
     let aiEnhancedSearchTerm = termToSearch.trim();
+    let aiEnhancementSource: EnhanceMedicineSearchOutput['source'] = 'original_query_used';
+
 
     try {
       setLoadingMessage(t.loadingAi);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
-      if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName) {
-        // Check if the response is the same as input, which is a fallback from enhanceMedicineSearch if AI is unavailable
-        if (aiEnhanceResponse.correctedMedicineName === termToSearch && !aiEnhanceResponse.source) { // Assuming source indicates AI processing
-           toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
-           // Potentially set a soft AI config error if this is the only AI interaction.
-        } else {
+      aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
+
+      if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
+        if (aiEnhanceResponse.source === 'ai_enhanced') {
           aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
           toast({
             title: t.appName,
             description: t.searchWithAiResult(aiEnhancedSearchTerm),
             action: <Info className="h-5 w-5 text-primary" />,
           });
+        } else if (aiEnhanceResponse.source === 'original_query_used') {
+           toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
+           aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName; // Use original query
+        } else { // ai_failed or ai_unavailable
+           toast({ title: t.appName, description: t.errorAi, variant: "default" });
+           aiEnhancedSearchTerm = termToSearch; // Fallback to original term
         }
       } else {
+        // If correctedMedicineName is empty or response is malformed, use original query and flag as AI failure.
         toast({ title: t.appName, description: t.errorAi, variant: "default" });
+        aiEnhancedSearchTerm = termToSearch;
+        aiEnhancementSource = 'ai_failed';
       }
     } catch (aiError: unknown) { 
       let message = "AI enhancement failed. Using original query.";
       if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
-      console.error("AI enhancement critical failure:", aiError);
+      console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError); // Enhanced logging
       toast({
         title: t.appName,
         description: message,
         variant: "destructive"
       });
+      aiEnhancedSearchTerm = termToSearch; // Ensure fallback
+      aiEnhancementSource = 'ai_failed'; // Mark as failed
     }
 
     setLoadingMessage(t.loadingData);
@@ -128,7 +139,8 @@ export default function MediSearchApp() {
           .catch(err => { 
             let errMessage = t.infoNotAvailable;
             if (err instanceof Error) errMessage = err.message;
-            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name}:`, err);
+            // This console.error is crucial for individual AI detail generation failures.
+            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err); // Enhanced logging
             toast({
               title: `AI Error for ${dbItem.name}`,
               description: `${t.errorAiDetailsShort} ${errMessage}`,
@@ -137,13 +149,13 @@ export default function MediSearchApp() {
             return { 
               id: dbItem.id,
               name: dbItem.name,
-              composition: dbItem.composition,
+              composition: dbItem.composition || t.infoNotAvailable,
               barcode: dbItem.barcode,
               usage: t.infoNotAvailable,
               manufacturer: t.infoNotAvailable,
               dosage: t.infoNotAvailable,
               sideEffects: t.infoNotAvailable,
-              source: 'database_only' as const, // Explicitly set as database_only on critical failure
+              source: 'database_only' as const, 
             };
           })
         );
@@ -171,14 +183,13 @@ export default function MediSearchApp() {
       }
       setSearchResults(processedMedicines);
 
-      // Check for AI configuration errors based on results
-      const aiUnavailable = processedMedicines.some(med => med.source === 'ai_unavailable');
-      const aiFailed = processedMedicines.some(med => med.source === 'ai_failed');
-
-      if (aiUnavailable) {
+      const anyAiUnavailable = processedMedicines.some(med => med.source === 'ai_unavailable') || aiEnhancementSource === 'ai_unavailable';
+      const anyAiFailed = processedMedicines.some(med => med.source === 'ai_failed') || aiEnhancementSource === 'ai_failed';
+      
+      if (anyAiUnavailable) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
-      } else if (aiFailed) {
+      } else if (anyAiFailed) {
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
@@ -188,7 +199,7 @@ export default function MediSearchApp() {
       if (dataProcessingError instanceof Error) {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
-      console.error("Data processing or DB fetch failed:", dataProcessingError);
+      console.error("Data processing or DB fetch failed (medisearch-app.tsx):", dataProcessingError); // Enhanced logging
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
@@ -196,7 +207,7 @@ export default function MediSearchApp() {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
             name: dbItem.name,
-            composition: dbItem.composition,
+            composition: dbItem.composition || t.infoNotAvailable,
             barcode: dbItem.barcode,
             usage: t.infoNotAvailable,
             manufacturer: t.infoNotAvailable,
@@ -204,7 +215,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null);
+        setError(null); // Clear general error if we are showing DB data as fallback
       }
     } finally {
       setIsLoading(false);
@@ -229,7 +240,6 @@ export default function MediSearchApp() {
       clearTimeout(debounceTimeoutRef.current);
     }
     if (query.length > 1) {
-      // Clear previous AI config error when user types new query
       if (aiConfigError) {
         setAiConfigError(null);
         setAiConfigErrorType(null);
@@ -270,7 +280,7 @@ export default function MediSearchApp() {
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
         <div className="flex items-center justify-center mb-8 space-x-2 text-primary">
-          <div dangerouslySetInnerHTML={{ __html: pillIconSvg.replace('stroke="hsl(180, 100%, 25.1%)"', 'stroke="currentColor"') }} className="h-10 w-10 sm:h-12 sm:w-12" />
+           <div dangerouslySetInnerHTML={{ __html: pillIconSvg.replace('stroke="hsl(180, 100%, 25.1%)"', 'stroke="currentColor"') }} className="h-10 w-10 sm:h-12 sm:w-12" />
           <h1 className="text-4xl sm:text-5xl font-bold ">{t.appName}</h1>
         </div>
 
@@ -298,13 +308,12 @@ export default function MediSearchApp() {
               {aiConfigError}
               {aiConfigErrorType === 'key_missing' && (
                 <p className="mt-2 text-xs">
-                  Please ensure the <code className="font-mono bg-muted px-1 py-0.5 rounded">GOOGLE_API_KEY</code> is set in your <code className="font-mono bg-muted px-1 py-0.5 rounded">.env</code> file and restart the server.
-                   You can obtain a key from Google AI Studio.
+                  {t.errorAiNotConfiguredDetail}
                 </p>
               )}
                {aiConfigErrorType === 'api_fail' && (
                 <p className="mt-2 text-xs">
-                  Please check your server logs for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.
+                 {t.errorAiFailedDetail}
                 </p>
               )}
             </AlertDescription>
@@ -373,4 +382,9 @@ export default function MediSearchApp() {
     </div>
   );
 }
-
+declare global {
+  interface EnhanceMedicineSearchOutput {
+    correctedMedicineName: string;
+    source?: 'ai_enhanced' | 'ai_unavailable' | 'ai_failed' | 'original_query_used';
+  }
+}

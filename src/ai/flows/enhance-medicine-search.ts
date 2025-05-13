@@ -24,17 +24,16 @@ const EnhanceMedicineSearchOutputSchema = z.object({
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
 export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): Promise<EnhanceMedicineSearchOutput> {
-  // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
   if (ai.plugins.length === 0) {
-    console.warn("enhanceMedicineSearch: AI plugin not available (likely missing GOOGLE_API_KEY). Returning original query.");
+    console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing). Returning original query.");
     return { correctedMedicineName: input.query };
   }
   try {
-    return await enhanceMedicineSearchFlow(input);
-  } catch (error) {
-    console.error("Error in enhanceMedicineSearchFlow:", error);
-    // Fallback to original query if the flow itself errors out
-    return { correctedMedicineName: input.query };
+    const result = await enhanceMedicineSearchFlow(input);
+    return result;
+  } catch (error: any) { 
+    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, error.message || error);
+    return { correctedMedicineName: input.query }; 
   }
 }
 
@@ -78,14 +77,18 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     outputSchema: EnhanceMedicineSearchOutputSchema,
   },
   async input => {
-    const {output} = await enhanceMedicineSearchPrompt(input);
-    if (!output) {
-      // This case should ideally be caught by Zod schema validation if the AI returns an invalid structure.
-      // However, this explicit check adds robustness if the AI returns nothing or a valid but empty object.
-      console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure.");
-      throw new Error("AI failed to enhance search query or return valid output structure.");
+    try {
+      const {output} = await enhanceMedicineSearchPrompt(input);
+      if (!output) {
+        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input);
+        throw new Error("AI failed to enhance search query or return valid output structure.");
+      }
+      return output;
+    } catch (flowError: any) {
+      const errorMessage = flowError.message || "Unknown error in enhanceMedicineSearchFlow";
+      console.error(`enhanceMedicineSearchFlow: Error during prompt execution for input: ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
+      // Throw a new, simple error to ensure serializability for Server Components
+      throw new Error(`AI Enhancement Error: ${errorMessage}`);
     }
-    return output;
   }
 );
-

@@ -11,10 +11,10 @@ import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Info, RotateCcw, Pill } from "lucide-react";
+import { Loader2, AlertCircle, Info, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const pillIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(180, 100%, 25.1%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
+const pillIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(180, 100%, 25.1%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
 
 
 export default function MediSearchApp() {
@@ -75,8 +75,6 @@ export default function MediSearchApp() {
           action: <Info className="h-5 w-5 text-primary" />,
         });
       } else {
-        // This case might be hit if AI fallback (no API key) is active, or if AI ran but returned empty/falsy.
-        // The fallback already logs to console. If AI ran and failed to produce output, this toast is relevant.
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
       }
     } catch (aiError: any) {
@@ -86,7 +84,6 @@ export default function MediSearchApp() {
         description: `${t.errorAi} ${aiError.message ? `Details: ${aiError.message}` : 'Unknown AI enhancement error.'}`,
         variant: "destructive"
       });
-      // Uses original term if AI enhancement fails
     }
 
     setLoadingMessage(t.loadingData);
@@ -97,30 +94,30 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
           generateMedicineDetails({
-            searchTermOrName: dbItem.name, // Use the name from DB as primary search term for AI
+            searchTermOrName: dbItem.name, 
             language: selectedLanguage,
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
-          }).then(aiDetails => ({
+          }).then(aiDetails => ({ // aiDetails is the result from generateMedicineDetails (success or its own caught fallback)
             id: dbItem.id,
-            name: aiDetails.name, // Use AI's version of name if provided
-            composition: aiDetails.composition, // Use AI's version of composition
-            barcode: aiDetails.barcode, // Prefer AI's barcode, fallback to dbItem's if AI doesn't provide
+            name: aiDetails.name, 
+            composition: aiDetails.composition, 
+            barcode: aiDetails.barcode, 
             usage: aiDetails.usage,
             manufacturer: aiDetails.manufacturer,
             dosage: aiDetails.dosage,
             sideEffects: aiDetails.sideEffects,
-            source: 'database_ai_enhanced' as const,
+            source: aiDetails.source, // Use the source from aiDetails
           }))
-          .catch(err => {
+          .catch(err => { // This .catch is for unhandled errors from generateMedicineDetails promise itself
             console.error(`AI details generation failed for ${dbItem.name}:`, err);
             toast({
               title: `AI Error for ${dbItem.name}`,
               description: `${t.errorAiDetailsShort} ${err.message ? `Reason: ${err.message}` : 'Unknown error.'}`,
               variant: "destructive"
             });
-            return {
+            return { // Fallback if generateMedicineDetails promise itself rejected unexpectedly
               id: dbItem.id,
               name: dbItem.name,
               composition: dbItem.composition,
@@ -139,9 +136,11 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         const aiDetails = await generateMedicineDetails({
-          searchTermOrName: aiEnhancedSearchTerm, // This is the term (potentially AI-corrected) to generate details for
+          searchTermOrName: aiEnhancedSearchTerm, 
           language: selectedLanguage,
         });
+        // aiDetails here is the result from generateMedicineDetails.
+        // It will have its 'source' correctly set by generateMedicineDetails itself (including its internal fallbacks).
         setSearchResults([{
           id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
           name: aiDetails.name,
@@ -151,16 +150,15 @@ export default function MediSearchApp() {
           manufacturer: aiDetails.manufacturer,
           dosage: aiDetails.dosage,
           sideEffects: aiDetails.sideEffects,
-          source: 'ai_generated' as const,
+          source: aiDetails.source, // Use source from aiDetails
         }]);
       }
-    } catch (flowError: any) {
+    } catch (flowError: any) { // This is for other errors in the process, e.g. fetchMedicineByName
       console.error("Main AI/data processing failed:", flowError);
       const errorMessage = `${t.errorAiDetails} ${flowError.message ? `Error: ${flowError.message}` : 'Unknown AI generation error.'}`;
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
-      // Fallback to showing DB data only if AI enhancement failed after DB fetch
       if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
@@ -173,7 +171,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); // Clear general error if we are showing partial data
+        setError(null); 
       }
     } finally {
       setIsLoading(false);
@@ -218,7 +216,7 @@ export default function MediSearchApp() {
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
-    }, 150);
+    }, 150); 
   };
 
 

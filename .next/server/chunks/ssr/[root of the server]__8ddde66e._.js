@@ -273,18 +273,17 @@ const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$pro
     correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
-    // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
     if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("enhanceMedicineSearch: AI plugin not available (likely missing GOOGLE_API_KEY). Returning original query.");
+        console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing). Returning original query.");
         return {
             correctedMedicineName: input.query
         };
     }
     try {
-        return await enhanceMedicineSearchFlow(input);
+        const result = await enhanceMedicineSearchFlow(input);
+        return result;
     } catch (error) {
-        console.error("Error in enhanceMedicineSearchFlow:", error);
-        // Fallback to original query if the flow itself errors out
+        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, error.message || error);
         return {
             correctedMedicineName: input.query
         };
@@ -331,14 +330,19 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
     inputSchema: EnhanceMedicineSearchInputSchema,
     outputSchema: EnhanceMedicineSearchOutputSchema
 }, async (input)=>{
-    const { output } = await enhanceMedicineSearchPrompt(input);
-    if (!output) {
-        // This case should ideally be caught by Zod schema validation if the AI returns an invalid structure.
-        // However, this explicit check adds robustness if the AI returns nothing or a valid but empty object.
-        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure.");
-        throw new Error("AI failed to enhance search query or return valid output structure.");
+    try {
+        const { output } = await enhanceMedicineSearchPrompt(input);
+        if (!output) {
+            console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input);
+            throw new Error("AI failed to enhance search query or return valid output structure.");
+        }
+        return output;
+    } catch (flowError) {
+        const errorMessage = flowError.message || "Unknown error in enhanceMedicineSearchFlow";
+        console.error(`enhanceMedicineSearchFlow: Error during prompt execution for input: ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
+        // Throw a new, simple error to ensure serializability for Server Components
+        throw new Error(`AI Enhancement Error: ${errorMessage}`);
     }
-    return output;
 });
 ;
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
@@ -396,39 +400,38 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
         'database_ai_enhanced',
         'ai_generated',
         'database_only'
-    ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated.')
+    ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
-    // If no AI plugins are loaded (e.g., GOOGLE_API_KEY is missing), use fallback.
+    const genericAiFailureMessage = "AI generation failed. Details unavailable. Check API key or server logs.";
+    const genericConfigIssueMessage = "Not available due to AI configuration issue.";
+    const name = input.contextName || input.searchTermOrName;
+    const composition = input.contextComposition || genericConfigIssueMessage;
     if (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("generateMedicineDetails: AI plugin not available (likely missing GOOGLE_API_KEY). Returning placeholder data.");
-        const name = input.contextName || input.searchTermOrName;
-        const composition = input.contextComposition || "Not available due to AI configuration issue.";
+        console.warn("generateMedicineDetails: AI plugin not available (likely GOOGLE_API_KEY missing). Returning placeholder data.");
         return {
             name: name,
             composition: composition,
-            usage: "Not available due to AI configuration issue.",
-            manufacturer: "Not available due to AI configuration issue.",
-            dosage: "Not available due to AI configuration issue.",
-            sideEffects: "Not available due to AI configuration issue.",
+            usage: genericConfigIssueMessage,
+            manufacturer: genericConfigIssueMessage,
+            dosage: genericConfigIssueMessage,
+            sideEffects: genericConfigIssueMessage,
             barcode: input.contextBarcode,
             source: input.contextName ? 'database_only' : 'ai_generated'
         };
     }
     try {
-        return await generateMedicineDetailsFlow(input);
+        const result = await generateMedicineDetailsFlow(input);
+        return result;
     } catch (error) {
-        console.error("Error in generateMedicineDetailsFlow:", error);
-        // Fallback to minimal data if the flow itself errors out
-        const name = input.contextName || input.searchTermOrName;
-        const composition = input.contextComposition || "Error generating AI details.";
+        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, error.message || error);
         return {
             name: name,
             composition: composition,
-            usage: "Error generating AI details.",
-            manufacturer: "Error generating AI details.",
-            dosage: "Error generating AI details.",
-            sideEffects: "Error generating AI details.",
+            usage: error.message || genericAiFailureMessage,
+            manufacturer: error.message || genericAiFailureMessage,
+            dosage: error.message || genericAiFailureMessage,
+            sideEffects: error.message || genericAiFailureMessage,
             barcode: input.contextBarcode,
             source: input.contextName ? 'database_only' : 'ai_generated'
         };
@@ -516,17 +519,25 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
     inputSchema: GenerateMedicineDetailsInputSchema,
     outputSchema: GenerateMedicineDetailsOutputSchema
 }, async (input)=>{
-    const { output } = await prompt(input);
-    if (!output) {
-        console.error("generateMedicineDetailsFlow: AI returned no output or an invalid structure.");
-        throw new Error("AI failed to generate medicine details.");
+    try {
+        const { output } = await prompt(input);
+        if (!output) {
+            console.error("generateMedicineDetailsFlow: AI returned no output or an invalid structure for input:", input);
+            throw new Error("AI failed to generate medicine details or return a valid structure.");
+        }
+        if (!output.source) {
+            output.source = input.contextName ? 'database_ai_enhanced' : 'ai_generated';
+        }
+        if (input.contextBarcode && !output.barcode) {
+            output.barcode = input.contextBarcode;
+        }
+        return output;
+    } catch (flowError) {
+        const errorMessage = flowError.message || "Unknown error in generateMedicineDetailsFlow";
+        console.error(`generateMedicineDetailsFlow: Error during prompt execution for input ${JSON.stringify(input)} - Error:`, errorMessage, flowError.stack);
+        // Throw a new, simple error to ensure serializability for Server Components
+        throw new Error(`AI Generation Error: ${errorMessage}`);
     }
-    // Ensure source is correctly set based on context presence
-    output.source = input.contextName ? 'database_ai_enhanced' : 'ai_generated';
-    if (input.contextBarcode && !output.barcode) {
-        output.barcode = input.contextBarcode;
-    }
-    return output;
 });
 ;
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([

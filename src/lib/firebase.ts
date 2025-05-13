@@ -70,7 +70,7 @@ if (!db) {
     console.error(
       "🔴 CRITICAL: Firestore database instance (db) is UNDEFINED after initialization attempts. \n" +
       "   Firestore operations (reading/writing data) WILL FAIL. \n" +
-      "   Please check the following in your Firebase project console and .env.local file:\n" +
+      "   If you see 'transport errored' or 'permission denied' messages in the console, please check the following:\n" +
       "   1. Environment Variables: Ensure all NEXT_PUBLIC_FIREBASE_... variables in '.env.local' are correct and the server was restarted.\n" +
       "   2. Firestore Database: Verify that Firestore is enabled in your Firebase project (console -> Firestore Database -> Create database).\n" +
       "   3. Database Mode: Ensure Firestore is in 'Native Mode', NOT 'Datastore Mode'.\n" +
@@ -85,11 +85,14 @@ if (!db) {
       "        }\n" +
       "      }\n" +
       "      IMPORTANT: Secure these rules properly before deploying to production!\n" +
-      "   5. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials), check if your API key has restrictions (e.g., HTTP referrers, API restrictions) that might prevent access from localhost or your app's domain.\n" +
+      "   5. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials):\n" +
+      "      - Select your API key.\n" +
+      "      - Under 'Application restrictions', if 'HTTP referrers' is set, ensure your development URL (e.g., http://localhost:9002) is allowed.\n" +
+      "      - Under 'API restrictions', if 'Restrict key' is selected, ensure 'Cloud Firestore API' is in the list of allowed APIs.\n" +
       "   6. Billing: Ensure your Firebase project has billing enabled if it's on a plan that requires it (though Firestore's free tier is generous)."
     );
 } else {
-    console.log("ℹ️ Firestore (db) is available. If you still encounter Firestore connection/permission errors (like 'RPC transport errored' or 'Missing or insufficient permissions'), please double-check your Firestore Security Rules and API key restrictions in the Firebase console.");
+    console.log("ℹ️ Firestore (db) is available. If you still encounter Firestore connection/permission errors (like 'transport errored' or 'Missing or insufficient permissions'), please RE-CHECK your Firestore Security Rules and API key restrictions in the Firebase/Google Cloud console.");
 }
 
 

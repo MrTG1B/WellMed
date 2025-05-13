@@ -51,69 +51,74 @@ export default function AdminUploadForm() {
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    console.log("AdminUploadForm: onSubmit triggered. Current isSubmitting state:", isSubmitting);
+    console.log("[AdminUploadForm] onSubmit triggered. Data:", data, "Current isSubmitting:", isSubmitting);
     if (isSubmitting) {
-      console.warn("AdminUploadForm: Submission attempt while already submitting. Aborting.");
+      console.warn("[AdminUploadForm] Submission attempt while already submitting. Aborting.");
       return;
     }
     
     setIsSubmitting(true);
-    console.log("AdminUploadForm: isSubmitting set to true.");
+    console.log("[AdminUploadForm] isSubmitting set to true.");
 
     const medicineId = data.medicineName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, '');
+    
     if (!medicineId) {
-        console.error("AdminUploadForm: Could not generate a valid medicine ID from name:", data.medicineName);
+        console.error("[AdminUploadForm] Invalid Medicine ID generated from name:", data.medicineName);
         toast({
             title: "Invalid Input",
-            description: "Medicine name is invalid for ID generation.",
+            description: "Medicine name is invalid for ID generation. Please use alphanumeric characters.",
             variant: "destructive",
         });
         setIsSubmitting(false);
-        console.log("AdminUploadForm: setIsSubmitting(false) due to invalid medicineId. New isSubmitting state: false");
+        console.log("[AdminUploadForm] isSubmitting set to false due to invalid medicineId.");
         return;
     }
-    console.log(`AdminUploadForm: Generated medicineId = ${medicineId}`);
+    console.log(`[AdminUploadForm] Generated medicineId: ${medicineId}`);
 
     try {
       if (!db) {
-        console.error("AdminUploadForm: Firestore db instance is not available! This is a critical issue. Check firebase.ts and console for Firebase initialization errors.");
+        console.error("[AdminUploadForm] Firestore db instance is NOT available. Critical configuration issue.");
         toast({
-          title: "Database Configuration Error",
-          description: "Firestore database is not properly configured or available. Cannot save data.",
+          title: "Database Error",
+          description: "Firestore database is not configured. Cannot save data.",
           variant: "destructive",
         });
         setIsSubmitting(false); 
-        console.log("AdminUploadForm: setIsSubmitting(false) due to no db instance. New isSubmitting state: false");
+        console.log("[AdminUploadForm] isSubmitting set to false (no db instance).");
         return;
       }
       
-      console.log("AdminUploadForm: Attempting setDoc for ID:", medicineId, "with data:", data);
-      const medicineRef = doc(db, "medicines", medicineId);
-      await setDoc(medicineRef, {
+      const medicineDataToSave = {
         name: data.medicineName.trim(),
         composition: data.composition.trim(),
         barcode: data.barcode?.trim() || null, 
-        // Add a timestamp for easier debugging in Firestore console
         lastUpdated: new Date().toISOString(),
-      }, { merge: true }); 
-      
-      console.log("AdminUploadForm: setDoc successful for ID:", medicineId);
+      };
 
-      const successMessage = `Medicine "${data.medicineName.trim()}" uploaded/updated successfully.`;
+      console.log("[AdminUploadForm] Attempting to write to Firestore. Path:", `medicines/${medicineId}`, "Data:", medicineDataToSave);
+      const medicineRef = doc(db, "medicines", medicineId);
+      
+      await setDoc(medicineRef, medicineDataToSave, { merge: true }); 
+      
+      console.log("[AdminUploadForm] Firestore write successful for ID:", medicineId);
+
       toast({
         title: "Upload Successful",
-        description: successMessage,
+        description: `Medicine "${data.medicineName.trim()}" data saved.`,
       });
-      form.reset(); // Reset form fields
-      console.log("AdminUploadForm: Form reset. Form state isDirty:", formState.isDirty, "isValid:", formState.isValid);
+      form.reset(); 
+      console.log("[AdminUploadForm] Form reset successfully.");
 
     } catch (error: any) {
-      console.error("AdminUploadForm: Error during Firestore setDoc operation:", error.message || error);
+      console.error("[AdminUploadForm] Firestore write FAILED. Error:", error.message || error, error);
       let userMessage = "Failed to upload medicine. ";
-      if (error.message && error.message.toLowerCase().includes("permission denied") || error.message.toLowerCase().includes("missing or insufficient permissions")) {
-        userMessage += "This might be due to Firestore security rules. Please check your Firebase project console.";
-      } else {
-        userMessage += "Please check the console for more details and ensure your internet connection and Firebase setup are correct.";
+      if (error.message?.toLowerCase().includes("permission denied") || error.message?.toLowerCase().includes("missing or insufficient permissions")) {
+        userMessage += "This is likely a Firestore security rules issue. Please check your Firebase project console.";
+      } else if (error.message?.toLowerCase().includes("offline") || error.message?.toLowerCase().includes("network error") || error.message?.toLowerCase().includes("transport errored")) {
+        userMessage += "Network or connection error with database. Please check your internet connection and Firebase setup.";
+      }
+       else {
+        userMessage += "An unexpected error occurred. Check console for details and Firebase setup.";
       }
       toast({
         title: "Upload Failed",
@@ -121,13 +126,11 @@ export default function AdminUploadForm() {
         variant: "destructive",
       });
     } finally {
+      console.log("[AdminUploadForm] Entering finally block.");
       setIsSubmitting(false);
-      console.log("AdminUploadForm: setIsSubmitting(false) in finally block. New isSubmitting state: false");
+      console.log("[AdminUploadForm] isSubmitting set to false in finally block.");
     }
   };
-
-  // Log current isSubmitting state before render (for debugging)
-  // console.log("AdminUploadForm rendering, isSubmitting:", isSubmitting, "isDirty:", isDirty, "isValid:", isValid);
 
   return (
     <Form {...form}>

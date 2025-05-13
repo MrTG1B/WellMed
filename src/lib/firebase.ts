@@ -1,6 +1,7 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getDatabase, type Database } from 'firebase/database'; // Changed from getFirestore
+import { getDatabase, type Database } from 'firebase/database';
+import { getAuth, type Auth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 // Ensure these environment variables are set in your .env.local file
@@ -11,7 +12,7 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL, // Added for Realtime Database
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
 };
 
 // Check for missing environment variables
@@ -22,7 +23,7 @@ const requiredEnvVarKeys: (keyof typeof firebaseConfig)[] = [
   'storageBucket',
   'messagingSenderId',
   'appId',
-  'databaseURL', // Added for Realtime Database
+  'databaseURL',
 ];
 
 const missingVars = requiredEnvVarKeys.filter(key => !firebaseConfig[key]);
@@ -39,8 +40,9 @@ if (missingVars.length > 0) {
   );
 }
 
-let app: FirebaseApp | undefined = undefined;
-let db: Database | undefined = undefined; // Changed type from Firestore to Database
+export let app: FirebaseApp | undefined = undefined;
+export let db: Database | undefined = undefined;
+export let auth: Auth | undefined = undefined;
 
 try {
   if (missingVars.length > 0) {
@@ -56,16 +58,18 @@ try {
   }
 
   if (app) {
-    db = getDatabase(app); // Changed from getFirestore(app)
-    console.log("✅ Firebase Realtime Database instance (db) obtained successfully.");
+    db = getDatabase(app);
+    auth = getAuth(app); // Initialize Auth
+    console.log("✅ Firebase Realtime Database and Auth instances obtained successfully.");
   } else {
-    console.error("🔴 Firebase App object is undefined after initialization attempt. Realtime Database (db) cannot be initialized.");
+    console.error("🔴 Firebase App object is undefined after initialization attempt. Realtime Database (db) and Auth (auth) cannot be initialized.");
   }
 
 } catch (error: any) {
-    console.error("🔴 Firebase SDK Initialization Failed critically during app/db setup:", error.message || error);
+    console.error("🔴 Firebase SDK Initialization Failed critically during app/db/auth setup:", error.message || error);
     app = undefined;
     db = undefined;
+    auth = undefined;
 }
 
 if (!db) {
@@ -79,20 +83,30 @@ if (!db) {
       "      For initial development, you might use permissive rules like:\n" +
       "      {\n" +
       "        \"rules\": {\n" +
-      "          \".read\": true, // CAUTION: Open for development\n" +
-      "          \".write\": true // CAUTION: Open for development\n" +
+      "          \".read\": \"auth != null\", // Or true for public read access (less secure)\n" +
+      "          \".write\": \"auth != null\" // Or true for public write access (less secure)\n" +
       "        }\n" +
       "      }\n" +
       "      IMPORTANT: Secure these rules properly before deploying to production!\n" +
       "   4. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials):\n" +
       "      - Select your API key.\n" +
       "      - Under 'Application restrictions', if 'HTTP referrers' is set, ensure your development URL (e.g., http://localhost:9002) is allowed.\n" +
-      "      - Under 'API restrictions', if 'Restrict key' is selected, ensure 'Firebase Realtime Database API' is in the list of allowed APIs.\n" +
+      "      - Under 'API restrictions', if 'Restrict key' is selected, ensure 'Firebase Realtime Database API' and 'Identity Toolkit API' (for Auth) are in the list of allowed APIs.\n" +
       "   5. Billing: Ensure your Firebase project has billing enabled if it's on a plan that requires it (though Realtime Database free tier is generous)."
     );
 } else {
     console.log("ℹ️ Firebase Realtime Database (db) is available. If you still encounter connection/permission errors, please RE-CHECK your Realtime Database Security Rules and API key restrictions in the Firebase/Google Cloud console.");
 }
 
+if (!auth) {
+    console.error(
+      "🔴 CRITICAL: Firebase Auth instance (auth) is UNDEFINED after initialization attempts. \n" +
+      "   Authentication WILL FAIL. \n" +
+      "   Please check your Firebase project setup, ensure Authentication (with Email/Password provider) is enabled in the Firebase console, and all environment variables are correct."
+    );
+} else {
+    console.log("ℹ️ Firebase Auth (auth) is available.");
+}
 
-export { app, db };
+
+export { app, db, auth };

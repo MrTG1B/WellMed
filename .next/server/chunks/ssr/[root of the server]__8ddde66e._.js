@@ -285,15 +285,15 @@ const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$pro
     ]).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned.")
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
-    if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning original query.");
-        return {
-            correctedMedicineName: input.query,
-            source: 'ai_unavailable'
-        };
-    }
+    // Removed direct check for ai.plugins. Genkit.ts already warns if GOOGLE_API_KEY is missing.
+    // The try-catch block below will handle errors if AI processing fails (e.g., no model/plugin).
     try {
         const result = await enhanceMedicineSearchFlow(input);
+        // If enhanceMedicineSearchFlow itself returns a specific source like 'ai_unavailable' due to an internal Genkit state,
+        // that should be respected. Otherwise, a successful call implies 'ai_enhanced' or similar.
+        if (result.source === 'ai_unavailable') {
+            console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
+        }
         return result;
     } catch (error) {
         let message = "Unknown error during AI search enhancement.";
@@ -303,6 +303,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
             message = error;
         }
         console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
+        // If the flow itself throws an error, it implies 'ai_failed' rather than 'ai_unavailable' from this wrapper's perspective.
         return {
             correctedMedicineName: input.query,
             source: 'ai_failed'
@@ -360,9 +361,13 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
         ) {
             console.error("enhanceMedicineSearchFlow: AI returned no output, invalid structure, empty correctedMedicineName, or incorrect source. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
             if (rawOutputFromAI === null) {
-                throw new Error("AI prompt output failed Zod schema validation or AI returned null for enhanceMedicineSearch. Raw output was null.");
+                // This case means Zod validation on the output schema failed or AI literally returned null.
+                // The prompt is defined with an output schema, so Genkit should attempt to conform.
+                // If it can't, it might throw an error before this point, or output might be null/undefined.
+                console.error("enhanceMedicineSearchFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
             }
             // Fallback if AI response is not as expected, but still use the input query
+            // This implies AI processing was attempted but the result was unusable.
             return {
                 correctedMedicineName: input.query,
                 source: 'original_query_used'
@@ -379,6 +384,22 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
         if (flowError instanceof Error) {
             errorMessage = flowError.message;
             errorStack = flowError.stack;
+            // Check for common Genkit/Google AI errors related to API keys or model availability
+            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported')) {
+                console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
+                // Indicate that AI is effectively unavailable due to configuration/permission
+                return {
+                    correctedMedicineName: input.query,
+                    source: 'ai_unavailable'
+                };
+            }
+            if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
+                console.error(`enhanceMedicineSearchFlow: AI model not found or configured: ${errorMessage}`);
+                return {
+                    correctedMedicineName: input.query,
+                    source: 'ai_unavailable'
+                };
+            }
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
         } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
@@ -455,23 +476,14 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
     const detailsUnavailableMessage = "Information not available";
     const name = input.contextName || input.searchTermOrName;
-    let source;
-    if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
-        console.warn("generateMedicineDetails: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning placeholder data.");
-        source = input.contextName ? 'database_only' : 'ai_unavailable';
-        return {
-            name: name,
-            composition: input.contextComposition || detailsUnavailableMessage,
-            usage: detailsUnavailableMessage,
-            manufacturer: detailsUnavailableMessage,
-            dosage: detailsUnavailableMessage,
-            sideEffects: detailsUnavailableMessage,
-            barcode: input.contextBarcode,
-            source: source
-        };
-    }
+    // Removed direct check for ai.plugins. Genkit.ts already warns if GOOGLE_API_KEY is missing.
+    // The try-catch block below will handle errors if AI processing fails.
     try {
         const result = await generateMedicineDetailsFlow(input);
+        // If flow indicates 'ai_unavailable', propagate it.
+        if (result.source === 'ai_unavailable') {
+            console.warn(`generateMedicineDetails: Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
+        }
         return result;
     } catch (error) {
         let rawErrorMessage = "Unknown AI error during flow execution.";
@@ -481,7 +493,10 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             rawErrorMessage = error;
         }
         console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
-        source = input.contextName ? 'database_only' : 'ai_failed';
+        // If the flow itself throws an error, it implies 'ai_failed'.
+        // If there was context, it's 'database_only' because AI enhancement failed.
+        // If no context, and AI fails, it's purely 'ai_failed'.
+        const source = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: name,
             composition: input.contextComposition || detailsUnavailableMessage,
@@ -588,8 +603,9 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         ].includes(rawOutputFromAI.source)) {
             console.error("generateMedicineDetailsFlow: AI returned incomplete, invalid, or empty-stringed data for required fields. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
             if (rawOutputFromAI === null) {
-                throw new Error("AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
+                console.error("generateMedicineDetailsFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
             }
+            // This error will be caught by the wrapper function `generateMedicineDetails`
             throw new Error("AI returned incomplete, invalid, or empty-stringed data for required fields. Check logs for raw AI output.");
         }
         const validatedOutput = {
@@ -612,12 +628,43 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         if (flowError instanceof Error) {
             errorMessage = flowError.message;
             errorStack = flowError.stack;
+            // Check for common Genkit/Google AI errors related to API keys or model availability
+            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported')) {
+                console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`);
+                // This special return indicates AI is unavailable, to be handled by the main medisearch-app logic
+                // For database context, it means enhancement failed due to unavailibility
+                // For no context, it means AI generation failed due to unavailibility
+                return {
+                    name: input.contextName || input.searchTermOrName,
+                    composition: input.contextComposition || "Information not available",
+                    usage: "Information not available",
+                    manufacturer: "Information not available",
+                    dosage: "Information not available",
+                    sideEffects: "Information not available",
+                    barcode: input.contextBarcode,
+                    source: 'ai_unavailable'
+                };
+            }
+            if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
+                console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`);
+                return {
+                    name: input.contextName || input.searchTermOrName,
+                    composition: input.contextComposition || "Information not available",
+                    usage: "Information not available",
+                    manufacturer: "Information not available",
+                    dosage: "Information not available",
+                    sideEffects: "Information not available",
+                    barcode: input.contextBarcode,
+                    source: 'ai_unavailable'
+                };
+            }
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
         } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
             errorMessage = String(flowError.message);
         }
         console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
+        // This error will be caught by the wrapper function `generateMedicineDetails`
         throw new Error(`AI Generation Error: ${errorMessage}`);
     }
 });

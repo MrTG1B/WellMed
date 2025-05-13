@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, Info, RotateCcw, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
+// Image import is removed as the placeholder image is no longer used.
 
 export default function MediSearchApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
@@ -210,30 +210,23 @@ export default function MediSearchApp() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
-      <header className="w-full sticky top-0 z-50 bg-background/80 backdrop-blur-md p-4 sm:p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-center rounded-b-xl shadow-lg">
-        <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-           <Pill className="h-10 w-10 text-primary" />
-          <h1 className="text-3xl sm:text-4xl font-bold text-primary">{t.appName}</h1>
-        </div>
+      {/* Language Selector - Positioned at the top-right with glassmorphism */}
+      <div className="w-full p-4 flex justify-end sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
         <LanguageSelector
           selectedLanguage={selectedLanguage}
           onLanguageChange={handleLanguageChange}
           t={t}
         />
-      </header>
+      </div>
 
-      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8">
-        <div className="flex justify-center mb-6">
-          <Image
-            src="https://picsum.photos/120/120"
-            alt="WellMeds Site Logo"
-            width={120}
-            height={120}
-            className="rounded-lg shadow-md"
-            data-ai-hint="brand logo"
-          />
+      <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-8 sm:pt-12"> {/* Added top padding */}
+        {/* Logo and App Name - Centered */}
+        <div className="flex flex-col items-center mb-10"> {/* Increased bottom margin */}
+          <Pill className="h-16 w-16 sm:h-20 sm:w-20 text-primary mb-3" /> {/* App Logo */}
+          <h1 className="text-4xl sm:text-5xl font-bold text-primary">{t.appName}</h1>
         </div>
         
+        {/* Search Section */}
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar

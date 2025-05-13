@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({ // Corrected instantiation
 });
 
 export const metadata: Metadata = {
-  title: 'MediSearch - Your Medicine Information Hub',
-  description: 'Search for medicine details by name, enhanced by AI. Supports multiple languages.',
-  keywords: 'medicine, search, pharmacy, health, AI, multilingual, Paracetamol, Amoxicillin',
+  title: 'WellMeds - Your Medicine Information Hub',
+  description: 'Search for medicine details by name, enhanced by AI with WellMeds. Supports multiple languages.',
+  keywords: 'medicine, search, pharmacy, health, AI, multilingual, Paracetamol, Amoxicillin, WellMeds',
 };
 
 export default function RootLayout({

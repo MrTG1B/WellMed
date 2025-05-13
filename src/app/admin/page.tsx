@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
           <Button variant="outline" asChild>
             <Link href="/">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to MediSearch
+              Back to WellMeds
             </Link>
           </Button>
           <Button variant="destructive" onClick={handleLogout}>
@@ -136,7 +136,7 @@ export default function AdminDashboardPage() {
       </main>
 
       <footer className="mt-auto pt-12 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} MediSearch Admin. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} WellMeds Admin. All rights reserved.</p>
       </footer>
     </div>
   );

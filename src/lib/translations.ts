@@ -41,7 +41,7 @@ export type TranslationKeys = {
 
 export const translations: Record<Language, TranslationKeys> = {
   en: {
-    appName: 'MediSearch',
+    appName: 'WellMeds',
     searchTitle: 'Search for Medicines',
     searchPlaceholder: 'Enter medicine name, barcode, or composition...',
     searchButton: 'Search',
@@ -79,7 +79,7 @@ export const translations: Record<Language, TranslationKeys> = {
     infoNotAvailable: "Information not available.",
   },
   hi: {
-    appName: 'मेडि सर्च',
+    appName: 'वेलमेड्स',
     searchTitle: 'दवाएं खोजें',
     searchPlaceholder: 'दवा का नाम, बारकोड, या संरचना दर्ज करें...',
     searchButton: 'खोजें',
@@ -117,7 +117,7 @@ export const translations: Record<Language, TranslationKeys> = {
     infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
   },
   bn: {
-    appName: 'মেডিসার্চ',
+    appName: 'ওয়েলমেডস',
     searchTitle: 'ওষুধ অনুসন্ধান করুন',
     searchPlaceholder: 'ওষুধের নাম, বারকোড, বা গঠন লিখুন...',
     searchButton: 'অনুসন্ধান',

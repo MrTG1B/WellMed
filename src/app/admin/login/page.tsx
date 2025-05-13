@@ -111,7 +111,7 @@ export default function AdminLoginPage() {
             <LogIn className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">Admin Login</CardTitle>
-          <CardDescription>Access the MediSearch Admin Dashboard.</CardDescription>
+          <CardDescription>Access the WellMeds Admin Dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">

@@ -276,13 +276,20 @@ const EnhanceMedicineSearchInputSchema = __TURBOPACK__imported__module__$5b$proj
     query: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The user input query, which may contain misspellings, be incomplete, a barcode, or composition keywords, potentially including dosages.')
 });
 const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].object({
-    correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.')
+    correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
+    source: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].enum([
+        'ai_enhanced',
+        'ai_unavailable',
+        'ai_failed',
+        'original_query_used'
+    ]).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned.")
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
     if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
         console.warn("enhanceMedicineSearch: AI plugin not available (likely GOOGLE_API_KEY missing or Genkit initialization issue). Returning original query.");
         return {
-            correctedMedicineName: input.query
+            correctedMedicineName: input.query,
+            source: 'ai_unavailable'
         };
     }
     try {
@@ -297,7 +304,8 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         }
         console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
         return {
-            correctedMedicineName: input.query
+            correctedMedicineName: input.query,
+            source: 'ai_failed'
         };
     }
 }
@@ -313,26 +321,28 @@ const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5
 The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its barcode, or keywords from its composition.
 Based on the input, determine the most likely *medicine name* or the *original query if it seems to be a direct identifier like a barcode or a specific product formulation that doesn't map to a more general common name*.
 Return this as \`correctedMedicineName\`.
+Set the 'source' field to 'ai_enhanced'.
 
 The subsequent search will use this \`correctedMedicineName\` to look up medicines by name, barcode, or composition.
 If the query includes dosage or strength (e.g., "Paracetamol 500mg", "Dolo 650"), and this appears to be part of a specific product name or common way of referring to it, RETAIN these details in \`correctedMedicineName\`.
 If the query is a general description (e.g., "medicine for headache"), extract the key medicinal component.
 
 Examples:
-- Query: "panadol", correctedMedicineName: "Panadol"
-- Query: "amoxilin", correctedMedicineName: "Amoxicillin"
-- Query: "dolo 650", correctedMedicineName: "Dolo 650"
-- Query: "Paracetamol 500mg Tablet", correctedMedicineName: "Paracetamol 500mg Tablet"
-- Query: "Aceclofenac 100 mg Paracetamol 325 mg", correctedMedicineName: "Aceclofenac 100 mg Paracetamol 325 mg"
-- Query: "Barcode 1234567890123 for Paracetamol", correctedMedicineName: "Paracetamol"
-- Query: "1234567890123" (assume this is a barcode), correctedMedicineName: "1234567890123"
-- Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol"
-- Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen"
+- Query: "panadol", correctedMedicineName: "Panadol", source: "ai_enhanced"
+- Query: "amoxilin", correctedMedicineName: "Amoxicillin", source: "ai_enhanced"
+- Query: "dolo 650", correctedMedicineName: "Dolo 650", source: "ai_enhanced"
+- Query: "Paracetamol 500mg Tablet", correctedMedicineName: "Paracetamol 500mg Tablet", source: "ai_enhanced"
+- Query: "Aceclofenac 100 mg Paracetamol 325 mg", correctedMedicineName: "Aceclofenac 100 mg Paracetamol 325 mg", source: "ai_enhanced"
+- Query: "Barcode 1234567890123 for Paracetamol", correctedMedicineName: "Paracetamol", source: "ai_enhanced"
+- Query: "1234567890123" (assume this is a barcode), correctedMedicineName: "1234567890123", source: "ai_enhanced"
+- Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol", source: "ai_enhanced"
+- Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen", source: "ai_enhanced"
 
 
 If the input is a barcode, and you cannot confidently map it to a common medicine name, return the barcode itself.
 If the input is a composition keyword (e.g. "Paracetamol"), return it or a slightly refined version.
 The key is to provide a search term that will be effective for the backend, preserving specificity when it seems intentional.
+Always set 'source' to 'ai_enhanced' in your direct response.
 
 User Query: {{{query}}}
   `
@@ -346,14 +356,23 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
     try {
         const { output } = await enhanceMedicineSearchPrompt(input);
         rawOutputFromAI = output;
-        if (!rawOutputFromAI || typeof rawOutputFromAI.correctedMedicineName !== 'string' || rawOutputFromAI.correctedMedicineName.trim() === '') {
-            console.error("enhanceMedicineSearchFlow: AI returned no output, invalid structure, or empty correctedMedicineName. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
+        if (!rawOutputFromAI || typeof rawOutputFromAI.correctedMedicineName !== 'string' || rawOutputFromAI.correctedMedicineName.trim() === '' || rawOutputFromAI.source !== 'ai_enhanced' // Expect AI to set this
+        ) {
+            console.error("enhanceMedicineSearchFlow: AI returned no output, invalid structure, empty correctedMedicineName, or incorrect source. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
             if (rawOutputFromAI === null) {
                 throw new Error("AI prompt output failed Zod schema validation or AI returned null for enhanceMedicineSearch. Raw output was null.");
             }
-            throw new Error("AI failed to enhance search query with a valid, non-empty correctedMedicineName. Check logs for raw AI output.");
+            // Fallback if AI response is not as expected, but still use the input query
+            return {
+                correctedMedicineName: input.query,
+                source: 'original_query_used'
+            };
         }
-        return rawOutputFromAI;
+        // Ensure source is explicitly set, even if AI provides it.
+        return {
+            ...rawOutputFromAI,
+            source: 'ai_enhanced'
+        };
     } catch (flowError) {
         let errorMessage = "AI model failed to process search enhancement or an unexpected error occurred.";
         let errorStack;
@@ -366,7 +385,11 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
             errorMessage = String(flowError.message);
         }
         console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
-        throw new Error(`AI Enhancement Error: ${errorMessage}`);
+        // On flow error, return original query and mark source as failed for AI part.
+        return {
+            correctedMedicineName: input.query,
+            source: 'ai_failed'
+        };
     }
 });
 ;

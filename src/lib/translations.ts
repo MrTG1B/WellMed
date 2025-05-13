@@ -32,13 +32,18 @@ export type TranslationKeys = {
   sourceDbAiMessage: string; 
   sourceAiOnlyMessage: string; 
   sourceDbOnlyMessage: string; 
-  sourceAiUnavailableMessage: string; // New
-  sourceAiFailedMessage: string; // New
+  sourceAiUnavailableMessage: string;
+  sourceAiFailedMessage: string;
   notFoundInDbAiGenerating: string; 
   barcodeNotAvailable: string; 
   initialHelperText: string; 
   allRightsReserved: string; 
   infoNotAvailable: string; 
+  errorAiNotConfiguredTitle: string;
+  errorAiNotConfigured: string;
+  errorAiFailedTitle: string;
+  errorAiFailed: string;
+  errorAiEnhancementSkipped: string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -65,7 +70,7 @@ export const translations: Record<Language, TranslationKeys> = {
     loadingData: 'Searching database...',
     loadingAiDetails: 'Generating details with AI...',
     errorOccurred: 'An Error Occurred',
-    errorAi: 'AI search enhancement failed. Using original query.',
+    errorAi: 'AI search enhancement failed or was skipped. Using original query.',
     errorData: 'Failed to fetch medicine data from database.',
     errorAiDetails: 'AI failed to generate complete details.',
     errorAiDetailsShort: 'AI details failed.',
@@ -73,14 +78,19 @@ export const translations: Record<Language, TranslationKeys> = {
     clearSearchButton: 'Clear Search',
     sourceDbAiMessage: 'Details from database, enhanced by AI.',
     sourceAiOnlyMessage: 'Medicine not in database. Details primarily AI-generated.',
-    sourceDbOnlyMessage: 'Details from database. AI enhancement for full details failed.',
-    sourceAiUnavailableMessage: 'Details from database. AI not available for full details.', // New
-    sourceAiFailedMessage: 'Medicine not in database. AI generation failed.', // New
+    sourceDbOnlyMessage: 'Details from database. AI enhancement for full details failed or was unavailable.',
+    sourceAiUnavailableMessage: 'AI features are not available. Details might be incomplete.',
+    sourceAiFailedMessage: 'AI generation failed for this medicine. Details might be incomplete.',
     notFoundInDbAiGenerating: 'Medicine not found in database. Attempting to generate details with AI.',
     barcodeNotAvailable: 'Not available',
     initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
     allRightsReserved: 'All rights reserved.',
     infoNotAvailable: "Information not available.",
+    errorAiNotConfiguredTitle: "AI Not Configured",
+    errorAiNotConfigured: "AI-powered features are currently unavailable because the system is not configured for AI processing. Some details may be missing or incomplete.",
+    errorAiFailedTitle: "AI Processing Error",
+    errorAiFailed: "There was an error while trying to generate details using AI. Some information may be missing or incomplete.",
+    errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query.",
   },
   hi: {
     appName: 'वेलमेड्स',
@@ -105,7 +115,7 @@ export const translations: Record<Language, TranslationKeys> = {
     loadingData: 'डेटाबेस में खोजा जा रहा है...',
     loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
     errorOccurred: 'एक त्रुटि हुई',
-    errorAi: 'एआई खोज वृद्धि विफल रही। मूल क्वेरी का उपयोग किया जा रहा है।',
+    errorAi: 'एआई खोज वृद्धि विफल रही या छोड़ दी गई। मूल क्वेरी का उपयोग किया जा रहा है।',
     errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
     errorAiDetails: 'एआई पूर्ण विवरण उत्पन्न करने में विफल रहा।',
     errorAiDetailsShort: 'एआई विवरण विफल।',
@@ -113,14 +123,19 @@ export const translations: Record<Language, TranslationKeys> = {
     clearSearchButton: 'खोज साफ़ करें',
     sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
     sourceAiOnlyMessage: 'दवा डेटाबेस में नहीं है। विवरण मुख्य रूप से एआई-जनित।',
-    sourceDbOnlyMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई वृद्धि विफल रही।',
-    sourceAiUnavailableMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई उपलब्ध नहीं है।', // New
-    sourceAiFailedMessage: 'दवा डेटाबेस में नहीं है। एआई उत्पादन विफल रहा।', // New
+    sourceDbOnlyMessage: 'डेटाबेस से विवरण। पूर्ण विवरण के लिए एआई वृद्धि विफल रही या अनुपलब्ध थी।',
+    sourceAiUnavailableMessage: 'एआई सुविधाएँ उपलब्ध नहीं हैं। विवरण अधूरे हो सकते हैं।',
+    sourceAiFailedMessage: 'इस दवा के लिए एआई उत्पादन विफल रहा। विवरण अधूरे हो सकते हैं।',
     notFoundInDbAiGenerating: 'दवा डेटाबेस में नहीं मिली। एआई के साथ विवरण उत्पन्न करने का प्रयास किया जा रहा है।',
     barcodeNotAvailable: 'उपलब्ध नहीं है',
     initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
     allRightsReserved: 'सभी अधिकार सुरक्षित।',
     infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
+    errorAiNotConfiguredTitle: "एआई कॉन्फ़िगर नहीं है",
+    errorAiNotConfigured: "एआई-संचालित सुविधाएँ वर्तमान में अनुपलब्ध हैं क्योंकि सिस्टम एआई प्रसंस्करण के लिए कॉन्फ़िगर नहीं किया गया है। कुछ विवरण गुम या अधूरे हो सकते हैं।",
+    errorAiFailedTitle: "एआई प्रसंस्करण त्रुटि",
+    errorAiFailed: "एआई का उपयोग करके विवरण उत्पन्न करने का प्रयास करते समय एक त्रुटि हुई। कुछ जानकारी गुम या अधूरी हो सकती है।",
+    errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।",
   },
   bn: {
     appName: 'ওয়েলমেডস',
@@ -145,7 +160,7 @@ export const translations: Record<Language, TranslationKeys> = {
     loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
     loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
     errorOccurred: 'একটি ত্রুটি ঘটেছে',
-    errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
+    errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে বা এড়িয়ে যাওয়া হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
     errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
     errorAiDetails: 'এআই সম্পূর্ণ বিবরণ তৈরি করতে ব্যর্থ হয়েছে।',
     errorAiDetailsShort: 'এআই বিস্তারিত ব্যর্থ হয়েছে।',
@@ -153,14 +168,19 @@ export const translations: Record<Language, TranslationKeys> = {
     clearSearchButton: 'অনুসন্ধান সাফ করুন',
     sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
     sourceAiOnlyMessage: 'ওষুধ ডাটাবেসে নেই। বিস্তারিত প্রধানত এআই-উত্পন্ন।',
-    sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।',
-    sourceAiUnavailableMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উপলব্ধ নেই।', // New
-    sourceAiFailedMessage: 'ওষুধ ডাটাবেসে নেই। এআই তৈরি ব্যর্থ হয়েছে।', // New
+    sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত। সম্পূর্ণ বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে বা অনুপলব্ধ ছিল।',
+    sourceAiUnavailableMessage: 'এআই বৈশিষ্ট্য উপলব্ধ নেই। বিস্তারিত অসম্পূর্ণ হতে পারে।',
+    sourceAiFailedMessage: 'এই ওষুধের জন্য এআই তৈরি ব্যর্থ হয়েছে। বিস্তারিত অসম্পূর্ণ হতে পারে।',
     notFoundInDbAiGenerating: 'ওষুধ ডাটাবেসে পাওয়া যায়নি। এআই দিয়ে বিস্তারিত তৈরি করার চেষ্টা করা হচ্ছে।',
     barcodeNotAvailable: 'উপলব্ধ নয়',
     initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',
     allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
     infoNotAvailable: "তথ্য উপলব্ধ নেই।",
+    errorAiNotConfiguredTitle: "এআই কনফিগার করা হয়নি",
+    errorAiNotConfigured: "এআই-চালিত বৈশিষ্ট্যগুলি বর্তমানে अनुपलब्ध কারণ সিস্টেম এআই প্রক্রিয়াকরণের জন্য কনফিগার করা হয়নি। কিছু বিবরণ অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+    errorAiFailedTitle: "এআই প্রক্রিয়াকরণ ত্রুটি",
+    errorAiFailed: "এআই ব্যবহার করে বিস্তারিত তৈরি করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে। কিছু তথ্য অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+    errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।",
   },
 };
 

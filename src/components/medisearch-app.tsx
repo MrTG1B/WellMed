@@ -11,7 +11,7 @@ import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Info, RotateCcw } from "lucide-react";
+import { Loader2, AlertCircle, Info, RotateCcw, KeyRound, ServerCrash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const pillIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(180, 100%, 25.1%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
@@ -24,6 +24,8 @@ export default function MediSearchApp() {
   const [searchResults, setSearchResults] = useState<Medicine[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiConfigError, setAiConfigError] = useState<string | null>(null);
+  const [aiConfigErrorType, setAiConfigErrorType] = useState<'key_missing' | 'api_fail' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
   const [searchAttempted, setSearchAttempted] = useState<boolean>(false);
 
@@ -46,6 +48,8 @@ export default function MediSearchApp() {
     setSearchQuery("");
     setSearchResults(null);
     setError(null);
+    setAiConfigError(null);
+    setAiConfigErrorType(null);
     setSearchAttempted(false);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -59,6 +63,8 @@ export default function MediSearchApp() {
 
     setIsLoading(true);
     setError(null);
+    setAiConfigError(null); 
+    setAiConfigErrorType(null);
     setSearchResults(null);
     setSearchAttempted(true);
     setShowSuggestions(false);
@@ -68,18 +74,22 @@ export default function MediSearchApp() {
       setLoadingMessage(t.loadingAi);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName) {
-        aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
-        toast({
-          title: t.appName,
-          description: t.searchWithAiResult(aiEnhancedSearchTerm),
-          action: <Info className="h-5 w-5 text-primary" />,
-        });
+        // Check if the response is the same as input, which is a fallback from enhanceMedicineSearch if AI is unavailable
+        if (aiEnhanceResponse.correctedMedicineName === termToSearch && !aiEnhanceResponse.source) { // Assuming source indicates AI processing
+           toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
+           // Potentially set a soft AI config error if this is the only AI interaction.
+        } else {
+          aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName;
+          toast({
+            title: t.appName,
+            description: t.searchWithAiResult(aiEnhancedSearchTerm),
+            action: <Info className="h-5 w-5 text-primary" />,
+          });
+        }
       } else {
-        // This case means enhanceMedicineSearch returned a fallback (original query) due to an internal error or AI unavailability.
-        // The flow wrapper for enhanceMedicineSearch already console.warns/errors.
-        toast({ title: t.appName, description: t.errorAi, variant: "default" }); // Use default variant as it's a soft failure
+        toast({ title: t.appName, description: t.errorAi, variant: "default" });
       }
-    } catch (aiError: unknown) { // Catch errors if enhanceMedicineSearch itself throws unexpectedly
+    } catch (aiError: unknown) { 
       let message = "AI enhancement failed. Using original query.";
       if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
       console.error("AI enhancement critical failure:", aiError);
@@ -94,10 +104,11 @@ export default function MediSearchApp() {
     const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
 
     try {
+      let processedMedicines: Medicine[] = [];
       if (dbDataArray.length > 0) {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
-          generateMedicineDetails({ // This function is expected to resolve, even on internal AI failure, with fallback data
+          generateMedicineDetails({ 
             searchTermOrName: dbItem.name, 
             language: selectedLanguage,
             contextName: dbItem.name,
@@ -114,8 +125,6 @@ export default function MediSearchApp() {
             sideEffects: aiDetails.sideEffects,
             source: aiDetails.source, 
           }))
-          // This catch is for *unexpected* rejections from generateMedicineDetails, 
-          // which shouldn't happen if its wrapper is correct.
           .catch(err => { 
             let errMessage = t.infoNotAvailable;
             if (err instanceof Error) errMessage = err.message;
@@ -134,23 +143,21 @@ export default function MediSearchApp() {
               manufacturer: t.infoNotAvailable,
               dosage: t.infoNotAvailable,
               sideEffects: t.infoNotAvailable,
-              source: 'database_only' as const,
+              source: 'database_only' as const, // Explicitly set as database_only on critical failure
             };
           })
         );
-        const detailedMedicines = await Promise.all(medicinePromises);
-        setSearchResults(detailedMedicines);
+        processedMedicines = await Promise.all(medicinePromises);
       } else {
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         
-        // generateMedicineDetails should always resolve with a GenerateMedicineDetailsOutput object
         const aiDetails = await generateMedicineDetails({
           searchTermOrName: aiEnhancedSearchTerm, 
           language: selectedLanguage,
         });
         
-        setSearchResults([{
+        processedMedicines = [{
           id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
           name: aiDetails.name,
           composition: aiDetails.composition,
@@ -160,8 +167,22 @@ export default function MediSearchApp() {
           dosage: aiDetails.dosage,
           sideEffects: aiDetails.sideEffects,
           source: aiDetails.source,
-        }]);
+        }];
       }
+      setSearchResults(processedMedicines);
+
+      // Check for AI configuration errors based on results
+      const aiUnavailable = processedMedicines.some(med => med.source === 'ai_unavailable');
+      const aiFailed = processedMedicines.some(med => med.source === 'ai_failed');
+
+      if (aiUnavailable) {
+        setAiConfigError(t.errorAiNotConfigured);
+        setAiConfigErrorType('key_missing');
+      } else if (aiFailed) {
+        setAiConfigError(t.errorAiFailed);
+        setAiConfigErrorType('api_fail');
+      }
+
     } catch (dataProcessingError: unknown) { 
       let errorMessage = t.errorData;
       if (dataProcessingError instanceof Error) {
@@ -171,7 +192,6 @@ export default function MediSearchApp() {
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
-      // Fallback to show DB data if AI details part failed but DB data was retrieved
       if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
@@ -184,7 +204,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); // Clear general error if we are showing partial data
+        setError(null);
       }
     } finally {
       setIsLoading(false);
@@ -209,6 +229,11 @@ export default function MediSearchApp() {
       clearTimeout(debounceTimeoutRef.current);
     }
     if (query.length > 1) {
+      // Clear previous AI config error when user types new query
+      if (aiConfigError) {
+        setAiConfigError(null);
+        setAiConfigErrorType(null);
+      }
       debounceTimeoutRef.current = setTimeout(async () => {
         const fetchedSuggestions = await fetchSuggestions(query);
         setSuggestions(fetchedSuggestions);
@@ -265,6 +290,27 @@ export default function MediSearchApp() {
           />
         </section>
 
+        {aiConfigError && !isLoading && (
+          <Alert variant="destructive" className="w-full max-w-lg shadow-md">
+            {aiConfigErrorType === 'key_missing' ? <KeyRound className="h-5 w-5" /> : <ServerCrash className="h-5 w-5" />}
+            <AlertTitle>{aiConfigErrorType === 'key_missing' ? t.errorAiNotConfiguredTitle : t.errorAiFailedTitle}</AlertTitle>
+            <AlertDescription>
+              {aiConfigError}
+              {aiConfigErrorType === 'key_missing' && (
+                <p className="mt-2 text-xs">
+                  Please ensure the <code className="font-mono bg-muted px-1 py-0.5 rounded">GOOGLE_API_KEY</code> is set in your <code className="font-mono bg-muted px-1 py-0.5 rounded">.env</code> file and restart the server.
+                   You can obtain a key from Google AI Studio.
+                </p>
+              )}
+               {aiConfigErrorType === 'api_fail' && (
+                <p className="mt-2 text-xs">
+                  Please check your server logs for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {searchAttempted && !isLoading && (
           <Button variant="outline" onClick={handleClearSearch} className="self-center shadow-sm hover:shadow-md transition-shadow">
             <RotateCcw className="mr-2 h-4 w-4" />
@@ -295,7 +341,7 @@ export default function MediSearchApp() {
           </section>
         )}
 
-        {!isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && (
+        {!isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && !aiConfigError && (
             <Alert className="w-full max-w-lg shadow-md">
                 <Info className="h-5 w-5" />
                 <AlertTitle>{t.noResultsTitle}</AlertTitle>
@@ -304,7 +350,7 @@ export default function MediSearchApp() {
         )}
 
 
-        {!isLoading && !searchAttempted && (
+        {!isLoading && !searchAttempted && !aiConfigError && (
             <div className="text-center p-4 text-muted-foreground">
                 {t.initialHelperText}
             </div>

@@ -1,6 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch } from "@/ai/flows/enhance-medicine-search";
@@ -13,8 +15,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, Info, RotateCcw, KeyRound, ServerCrash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const pillIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="hsl(180, 100%, 25.1%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`;
 
 
 export default function MediSearchApp() {
@@ -74,7 +74,9 @@ export default function MediSearchApp() {
 
     try {
       setLoadingMessage(t.loadingAi);
+      console.log(`performSearchLogic: Calling enhanceMedicineSearch with query: "${termToSearch}"`);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
+      console.log(`performSearchLogic: enhanceMedicineSearch response:`, aiEnhanceResponse);
       aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
 
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
@@ -87,13 +89,12 @@ export default function MediSearchApp() {
           });
         } else if (aiEnhanceResponse.source === 'original_query_used') {
            toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
-           aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName; // Use original query
-        } else { // ai_failed or ai_unavailable
+           aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName; 
+        } else { 
            toast({ title: t.appName, description: t.errorAi, variant: "default" });
-           aiEnhancedSearchTerm = termToSearch; // Fallback to original term
+           aiEnhancedSearchTerm = termToSearch; 
         }
       } else {
-        // If correctedMedicineName is empty or response is malformed, use original query and flag as AI failure.
         toast({ title: t.appName, description: t.errorAi, variant: "default" });
         aiEnhancedSearchTerm = termToSearch;
         aiEnhancementSource = 'ai_failed';
@@ -101,18 +102,20 @@ export default function MediSearchApp() {
     } catch (aiError: unknown) { 
       let message = "AI enhancement failed. Using original query.";
       if (aiError instanceof Error) message = `${message} Details: ${aiError.message}`;
-      console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError); // Enhanced logging
+      console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError);
       toast({
         title: t.appName,
         description: message,
         variant: "destructive"
       });
-      aiEnhancedSearchTerm = termToSearch; // Ensure fallback
-      aiEnhancementSource = 'ai_failed'; // Mark as failed
+      aiEnhancedSearchTerm = termToSearch; 
+      aiEnhancementSource = 'ai_failed';
     }
 
     setLoadingMessage(t.loadingData);
+    console.log(`performSearchLogic: Calling fetchMedicineByName with term: "${aiEnhancedSearchTerm}"`);
     const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
+    console.log(`performSearchLogic: fetchMedicineByName response:`, dbDataArray);
 
     try {
       let processedMedicines: Medicine[] = [];
@@ -125,22 +128,24 @@ export default function MediSearchApp() {
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
-          }).then(aiDetails => ({ 
-            id: dbItem.id,
-            name: aiDetails.name, 
-            composition: aiDetails.composition, 
-            barcode: aiDetails.barcode, 
-            usage: aiDetails.usage,
-            manufacturer: aiDetails.manufacturer,
-            dosage: aiDetails.dosage,
-            sideEffects: aiDetails.sideEffects,
-            source: aiDetails.source, 
-          }))
+          }).then(aiDetails => {
+            console.log(`performSearchLogic: generateMedicineDetails response for ${dbItem.name}:`, aiDetails);
+            return { 
+              id: dbItem.id,
+              name: aiDetails.name, 
+              composition: aiDetails.composition, 
+              barcode: aiDetails.barcode, 
+              usage: aiDetails.usage,
+              manufacturer: aiDetails.manufacturer,
+              dosage: aiDetails.dosage,
+              sideEffects: aiDetails.sideEffects,
+              source: aiDetails.source, 
+            };
+          })
           .catch(err => { 
             let errMessage = t.infoNotAvailable;
             if (err instanceof Error) errMessage = err.message;
-            // This console.error is crucial for individual AI detail generation failures.
-            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err); // Enhanced logging
+            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err);
             toast({
               title: `AI Error for ${dbItem.name}`,
               description: `${t.errorAiDetailsShort} ${errMessage}`,
@@ -163,11 +168,12 @@ export default function MediSearchApp() {
       } else {
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
-        
+        console.log(`performSearchLogic: No DB data for "${aiEnhancedSearchTerm}". Calling generateMedicineDetails for pure AI generation.`);
         const aiDetails = await generateMedicineDetails({
           searchTermOrName: aiEnhancedSearchTerm, 
           language: selectedLanguage,
         });
+        console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, aiDetails);
         
         processedMedicines = [{
           id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
@@ -189,17 +195,18 @@ export default function MediSearchApp() {
       if (anyAiUnavailable) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
-      } else if (anyAiFailed) {
+      } else if (anyAiFailed && !anyAiUnavailable) { // only show general API fail if not specific key_missing
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
+
 
     } catch (dataProcessingError: unknown) { 
       let errorMessage = t.errorData;
       if (dataProcessingError instanceof Error) {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
-      console.error("Data processing or DB fetch failed (medisearch-app.tsx):", dataProcessingError); // Enhanced logging
+      console.error("Data processing or DB fetch failed (medisearch-app.tsx):", dataProcessingError);
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
@@ -215,7 +222,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); // Clear general error if we are showing DB data as fallback
+        setError(null); 
       }
     } finally {
       setIsLoading(false);
@@ -279,9 +286,15 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
-        <div className="flex items-center justify-center mb-8 space-x-2 text-primary">
-           <div dangerouslySetInnerHTML={{ __html: pillIconSvg.replace('stroke="hsl(180, 100%, 25.1%)"', 'stroke="currentColor"') }} className="h-10 w-10 sm:h-12 sm:w-12" />
-          <h1 className="text-4xl sm:text-5xl font-bold ">{t.appName}</h1>
+        <div className="flex items-center justify-center mb-8 space-x-3 text-primary">
+            <Image 
+                src="/images/logo.png" 
+                alt="WellMeds Logo" 
+                width={280} // Adjust width as needed
+                height={80} // Adjust height to maintain aspect ratio
+                priority // Load the logo faster
+                className="object-contain"
+            />
         </div>
 
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">

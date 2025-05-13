@@ -17,11 +17,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
-import { mockMedicinesDB } from "@/lib/mockApi"; 
 
 const formSchema = z.object({
   medicineName: z.string().min(2, {
@@ -37,9 +36,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function AdminUploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // These states are not currently used to display messages, toasts are used instead.
-  // const [submitError, setSubmitError] = useState<string | null>(null);
-  // const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -51,13 +47,17 @@ export default function AdminUploadForm() {
     },
   });
 
-  const { isDirty, isValid } = form.formState;
+  const { isDirty, isValid, formState } = form;
+
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    console.log("AdminUploadForm: onSubmit triggered. Initial isSubmitting:", isSubmitting);
+    console.log("AdminUploadForm: onSubmit triggered. Current isSubmitting state:", isSubmitting);
+    if (isSubmitting) {
+      console.warn("AdminUploadForm: Submission attempt while already submitting. Aborting.");
+      return;
+    }
+    
     setIsSubmitting(true);
-    // setSubmitError(null); // Not displayed directly
-    // setSubmitSuccess(null); // Not displayed directly
     console.log("AdminUploadForm: isSubmitting set to true.");
 
     const medicineId = data.medicineName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, '');
@@ -69,57 +69,65 @@ export default function AdminUploadForm() {
             variant: "destructive",
         });
         setIsSubmitting(false);
-        console.log("AdminUploadForm: setIsSubmitting(false) due to invalid medicineId.");
+        console.log("AdminUploadForm: setIsSubmitting(false) due to invalid medicineId. New isSubmitting state: false");
         return;
     }
     console.log(`AdminUploadForm: Generated medicineId = ${medicineId}`);
 
     try {
       if (!db) {
-        console.error("AdminUploadForm: Firestore db instance is not available!");
+        console.error("AdminUploadForm: Firestore db instance is not available! This is a critical issue. Check firebase.ts and console for Firebase initialization errors.");
         toast({
-          title: "Database Error",
-          description: "Firestore database is not available. Please check configuration.",
+          title: "Database Configuration Error",
+          description: "Firestore database is not properly configured or available. Cannot save data.",
           variant: "destructive",
         });
         setIsSubmitting(false); 
-        console.log("AdminUploadForm: setIsSubmitting(false) due to no db instance.");
+        console.log("AdminUploadForm: setIsSubmitting(false) due to no db instance. New isSubmitting state: false");
         return;
       }
       
-      console.log("AdminUploadForm: Attempting setDoc for ID:", medicineId);
+      console.log("AdminUploadForm: Attempting setDoc for ID:", medicineId, "with data:", data);
       const medicineRef = doc(db, "medicines", medicineId);
       await setDoc(medicineRef, {
-        name: data.medicineName.trim(), // Store the original, trimmed name
+        name: data.medicineName.trim(),
         composition: data.composition.trim(),
         barcode: data.barcode?.trim() || null, 
-      }, { merge: true }); // merge:true is good practice for updates/creations
+        // Add a timestamp for easier debugging in Firestore console
+        lastUpdated: new Date().toISOString(),
+      }, { merge: true }); 
       
       console.log("AdminUploadForm: setDoc successful for ID:", medicineId);
 
-      const successMessage = `Medicine "${data.medicineName.trim()}" uploaded successfully.`;
-      // setSubmitSuccess(successMessage); // Not displayed directly
+      const successMessage = `Medicine "${data.medicineName.trim()}" uploaded/updated successfully.`;
       toast({
         title: "Upload Successful",
         description: successMessage,
       });
-      form.reset();
-      console.log("AdminUploadForm: Form reset.");
+      form.reset(); // Reset form fields
+      console.log("AdminUploadForm: Form reset. Form state isDirty:", formState.isDirty, "isValid:", formState.isValid);
 
     } catch (error: any) {
-      console.error("AdminUploadForm: Error during setDoc or subsequent operations:", error);
-      const errorMessage = `Failed to upload medicine: ${error.message || "Unknown error. Check console."}`;
-      // setSubmitError(errorMessage); // Not displayed directly
+      console.error("AdminUploadForm: Error during Firestore setDoc operation:", error.message || error);
+      let userMessage = "Failed to upload medicine. ";
+      if (error.message && error.message.toLowerCase().includes("permission denied") || error.message.toLowerCase().includes("missing or insufficient permissions")) {
+        userMessage += "This might be due to Firestore security rules. Please check your Firebase project console.";
+      } else {
+        userMessage += "Please check the console for more details and ensure your internet connection and Firebase setup are correct.";
+      }
       toast({
         title: "Upload Failed",
-        description: errorMessage,
+        description: userMessage,
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
-      console.log("AdminUploadForm: setIsSubmitting(false) in finally block. Current isSubmitting state should now be false.");
+      console.log("AdminUploadForm: setIsSubmitting(false) in finally block. New isSubmitting state: false");
     }
   };
+
+  // Log current isSubmitting state before render (for debugging)
+  // console.log("AdminUploadForm rendering, isSubmitting:", isSubmitting, "isDirty:", isDirty, "isValid:", isValid);
 
   return (
     <Form {...form}>

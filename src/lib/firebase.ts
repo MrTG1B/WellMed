@@ -33,7 +33,7 @@ if (missingVars.length > 0) {
         return `- ${envVarName}`;
     }).join('\n') +
     '\n👉 Please ensure these are set in your .env.local file and the development server is restarted.' +
-    '\nFirebase functionality will be impaired, and Firestore operations (like uploads) will likely fail.'
+    '\nFirebase functionality will be impaired, and Firestore operations (like uploads and data fetching) will likely fail.'
   );
 }
 
@@ -42,39 +42,55 @@ let db: Firestore | undefined = undefined;
 
 try {
   if (missingVars.length > 0) {
-    // Error already logged above about missing vars.
-    // Initialization might proceed but app/db could be non-functional.
     console.warn("⚠️ Firebase initialization is being attempted with incomplete configuration. Errors are highly likely.");
   }
 
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
-    console.log("Firebase App initialized.");
+    console.log("✅ Firebase App initialized successfully.");
   } else {
     app = getApps()[0];
-    console.log("Firebase App already exists.");
+    console.log("ℹ️ Firebase App already exists. Using existing instance.");
   }
 
-  // Only attempt to get Firestore if app is validly initialized or retrieved
   if (app) {
     db = getFirestore(app);
+    console.log("✅ Firestore instance (db) obtained successfully.");
   } else {
-    // This case suggests initializeApp might have failed silently if critical config was missing,
-    // or getApps() was unexpectedly empty.
-    console.error("🔴 Firebase App object is undefined. Firestore (db) cannot be initialized.");
+    console.error("🔴 Firebase App object is undefined after initialization attempt. Firestore (db) cannot be initialized.");
   }
 
-} catch (error) {
-    console.error("🔴 Firebase SDK Initialization Failed during app/db setup:", error);
-    // Ensure app and db are marked as undefined on error
+} catch (error: any) {
+    console.error("🔴 Firebase SDK Initialization Failed critically during app/db setup:", error.message || error);
     app = undefined;
     db = undefined;
-    console.error("🔴 Firestore database (db) is not available due to an SDK initialization error. Check Firebase config and ensure Firestore is enabled in your project console.");
 }
 
-// Final check for db instance
 if (!db) {
-    console.warn("⚠️ Firestore database instance (db) is undefined after initialization attempts. Operations requiring Firestore will fail. Please check your Firebase configuration, ensure Firestore is enabled in your Firebase project console, and review security rules.");
+    console.error(
+      "🔴 CRITICAL: Firestore database instance (db) is UNDEFINED after initialization attempts. \n" +
+      "   Firestore operations (reading/writing data) WILL FAIL. \n" +
+      "   Please check the following in your Firebase project console and .env.local file:\n" +
+      "   1. Environment Variables: Ensure all NEXT_PUBLIC_FIREBASE_... variables in '.env.local' are correct and the server was restarted.\n" +
+      "   2. Firestore Database: Verify that Firestore is enabled in your Firebase project (console -> Firestore Database -> Create database).\n" +
+      "   3. Database Mode: Ensure Firestore is in 'Native Mode', NOT 'Datastore Mode'.\n" +
+      "   4. Security Rules: Your Firestore security rules (console -> Firestore Database -> Rules) might be blocking access. \n" +
+      "      For initial development, you might use permissive rules like:\n" +
+      "      rules_version = '2';\n" +
+      "      service cloud.firestore {\n" +
+      "        match /databases/{database}/documents {\n" +
+      "          match /{document=**} {\n" +
+      "            allow read, write: if true; // CAUTION: Open for development, secure before production!\n" +
+      "          }\n" +
+      "        }\n" +
+      "      }\n" +
+      "      IMPORTANT: Secure these rules properly before deploying to production!\n" +
+      "   5. API Key Restrictions: In Google Cloud Console (APIs & Services -> Credentials), check if your API key has restrictions (e.g., HTTP referrers, API restrictions) that might prevent access from localhost or your app's domain.\n" +
+      "   6. Billing: Ensure your Firebase project has billing enabled if it's on a plan that requires it (though Firestore's free tier is generous)."
+    );
+} else {
+    console.log("ℹ️ Firestore (db) is available. If you still encounter Firestore connection/permission errors (like 'RPC transport errored' or 'Missing or insufficient permissions'), please double-check your Firestore Security Rules and API key restrictions in the Firebase console.");
 }
+
 
 export { app, db };

@@ -77,7 +77,7 @@ export default function MediSearchApp() {
       console.log(`performSearchLogic: Calling enhanceMedicineSearch with query: "${termToSearch}"`);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
       console.log(`performSearchLogic: enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
-      aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed'; // Default to ai_failed if source is undefined
+      aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed'; 
 
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
         aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName.trim();
@@ -93,19 +93,26 @@ export default function MediSearchApp() {
             setAiConfigError(t.errorAiNotConfigured);
             setAiConfigErrorType('key_missing');
             toast({ title: t.appName, description: t.errorAiNotConfigured, variant: "destructive" });
-        } else { // ai_failed or other unexpected source
+        } else { 
            toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
         }
-      } else { // AI enhancement effectively failed to produce a usable term
+      } else { 
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
-        aiEnhancedSearchTerm = termToSearch.trim(); // Fallback to original
+        aiEnhancedSearchTerm = termToSearch.trim(); 
         aiEnhancementSource = 'ai_failed';
       }
     } catch (aiError: any) { 
       let message = t.errorAi;
-      if (aiError?.message) message = `${t.errorAi} Details: ${aiError.message}`;
-      console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError);
-      if (aiError.cause?.message?.includes('API key not valid') || aiError.cause?.message?.includes('API_KEY_INVALID')) {
+      let errorCauseDetails = '';
+      if (aiError?.message) {
+        message = `${t.errorAi} Details: ${aiError.message}`;
+      }
+      if (aiError?.cause?.message) {
+        errorCauseDetails = ` (Cause: ${aiError.cause.message})`;
+      }
+      console.error(`AI enhancement critical failure (medisearch-app.tsx): Query: "${termToSearch}", Error: ${aiError.message || aiError}${errorCauseDetails}`, aiError);
+
+      if (aiError.cause?.message?.includes('API key not valid') || aiError.cause?.message?.includes('API_KEY_INVALID') || aiError.cause?.message?.includes('User location is not supported')) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
         message = t.errorAiNotConfigured;
@@ -137,6 +144,15 @@ export default function MediSearchApp() {
             contextBarcode: dbItem.barcode,
           }).then(aiDetails => {
             console.log(`performSearchLogic: generateMedicineDetails (DB context) response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
+            if (aiDetails.source === 'ai_unavailable') {
+                console.warn(`AI unavailable for DB item ${dbItem.name}.`);
+                setAiConfigError(t.errorAiNotConfigured);
+                setAiConfigErrorType('key_missing');
+            } else if (aiDetails.source === 'ai_failed') {
+                console.warn(`AI failed for DB item ${dbItem.name}.`);
+                setAiConfigError(t.errorAiFailed);
+                setAiConfigErrorType('api_fail');
+            }
             return { 
               id: dbItem.id,
               name: aiDetails.name && aiDetails.name !== t.infoNotAvailable ? aiDetails.name : dbItem.name, 
@@ -151,8 +167,11 @@ export default function MediSearchApp() {
           })
           .catch(err => { 
             let errMessage = t.infoNotAvailable;
+            let errorCauseDetails = '';
             if (err instanceof Error) errMessage = err.message;
-            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx):`, err);
+            if (err?.cause?.message) errorCauseDetails = ` (Cause: ${err.cause.message})`;
+            console.error(`Critical error during generateMedicineDetails promise for ${dbItem.name} (medisearch-app.tsx): ${errMessage}${errorCauseDetails}`, err);
+
             toast({
               title: `${t.errorAiDetailsShort} for ${dbItem.name}`,
               description: `${t.errorAiDetails} ${errMessage}`,
@@ -182,6 +201,14 @@ export default function MediSearchApp() {
         });
         console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, JSON.stringify(aiDetails, null, 2));
         
+        if (aiDetails.source === 'ai_unavailable') {
+            setAiConfigError(t.errorAiNotConfigured);
+            setAiConfigErrorType('key_missing');
+        } else if (aiDetails.source === 'ai_failed') {
+            setAiConfigError(t.errorAiFailed);
+            setAiConfigErrorType('api_fail');
+        }
+
         if (aiDetails.name === t.infoNotAvailable || aiDetails.name.trim() === '') {
              processedMedicines = []; 
         } else {
@@ -214,11 +241,16 @@ export default function MediSearchApp() {
 
     } catch (dataProcessingError: any) { 
       let errorMessage = t.errorData;
+      let errorCauseDetails = '';
       if (dataProcessingError?.message) {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
-      console.error("Data processing or AI detail generation failed (medisearch-app.tsx):", dataProcessingError);
-      if (dataProcessingError.cause?.message?.includes('API key not valid') || dataProcessingError.cause?.message?.includes('API_KEY_INVALID')) {
+      if (dataProcessingError?.cause?.message) {
+        errorCauseDetails = ` (Cause: ${dataProcessingError.cause.message})`;
+      }
+      console.error(`Data processing or AI detail generation failed (medisearch-app.tsx): Query: "${aiEnhancedSearchTerm}", Error: ${dataProcessingError.message || dataProcessingError}${errorCauseDetails}`, dataProcessingError);
+
+      if (dataProcessingError.cause?.message?.includes('API key not valid') || dataProcessingError.cause?.message?.includes('API_KEY_INVALID') || dataProcessingError.cause?.message?.includes('User location is not supported')) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
         errorMessage = t.errorAiNotConfigured;
@@ -302,17 +334,17 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
-        <div className="flex items-center justify-center mb-4 space-x-2">
+        <div className="flex items-center justify-center mb-4 space-x-3">
              <Image 
-                src="/images/logo.png" 
+                src="/images/logo_transparent.png" 
                 alt="WellMeds Logo" 
-                width={60} 
-                height={60} 
+                width={100} 
+                height={100} 
                 priority 
-                className="object-contain rounded-full"
+                className="object-contain"
                 data-ai-hint="logo health"
             />
-            <h1 className="text-4xl font-bold text-primary">{t.appName}</h1>
+            {/* Removed text: <h1 className="text-5xl font-bold text-primary">{t.appName}</h1> */}
         </div>
 
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">

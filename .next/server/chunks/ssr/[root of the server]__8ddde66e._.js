@@ -430,8 +430,7 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
-    const genericAiFailureMessage = "AI generation failed. Details unavailable.";
-    const genericConfigIssueMessage = "AI not configured. Details unavailable.";
+    const detailsUnavailableMessage = "Information not available";
     const name = input.contextName || input.searchTermOrName;
     let source;
     if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins || __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].plugins.length === 0) {
@@ -439,11 +438,11 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         source = input.contextName ? 'database_only' : 'ai_unavailable';
         return {
             name: name,
-            composition: input.contextComposition || genericConfigIssueMessage,
-            usage: genericConfigIssueMessage,
-            manufacturer: genericConfigIssueMessage,
-            dosage: genericConfigIssueMessage,
-            sideEffects: genericConfigIssueMessage,
+            composition: input.contextComposition || detailsUnavailableMessage,
+            usage: detailsUnavailableMessage,
+            manufacturer: detailsUnavailableMessage,
+            dosage: detailsUnavailableMessage,
+            sideEffects: detailsUnavailableMessage,
             barcode: input.contextBarcode,
             source: source
         };
@@ -452,21 +451,21 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         const result = await generateMedicineDetailsFlow(input);
         return result;
     } catch (error) {
-        let message = genericAiFailureMessage;
+        let rawErrorMessage = "Unknown AI error during flow execution.";
         if (error instanceof Error) {
-            message = error.message;
+            rawErrorMessage = error.message;
         } else if (typeof error === 'string') {
-            message = error;
+            rawErrorMessage = error;
         }
-        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error);
+        console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
         source = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: name,
-            composition: input.contextComposition || `Error: ${message}`,
-            usage: `Error: ${message}`,
-            manufacturer: `Error: ${message}`,
-            dosage: `Error: ${message}`,
-            sideEffects: `Error: ${message}`,
+            composition: input.contextComposition || detailsUnavailableMessage,
+            usage: detailsUnavailableMessage,
+            manufacturer: detailsUnavailableMessage,
+            dosage: detailsUnavailableMessage,
+            sideEffects: detailsUnavailableMessage,
             barcode: input.contextBarcode,
             source: source
         };

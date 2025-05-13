@@ -60,16 +60,15 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
   try {
     const result = await generateMedicineDetailsFlow(input);
-    // The flow itself should set the source correctly (database_ai_enhanced or ai_generated)
     return result;
   } catch (error: unknown) {
     let message = genericAiFailureMessage;
     if (error instanceof Error) {
-      message = error.message; // This will be "AI Generation Error: Original Flow Error"
+      message = error.message; 
     } else if (typeof error === 'string') {
       message = error;
     }
-    console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message);
+    console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, message, error); // Log original error
     
     source = input.contextName ? 'database_only' : 'ai_failed';
      return {
@@ -167,48 +166,54 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     inputSchema: GenerateMedicineDetailsInputSchema,
     outputSchema: GenerateMedicineDetailsOutputSchema,
   },
-  async (input) => {
+  async (input: GenerateMedicineDetailsInput) => {
+    let rawOutputFromAI: any = null;
     try {
       const {output} = await prompt(input);
+      rawOutputFromAI = output;
       
-      if (!output || !output.name || !output.composition || !output.usage || !output.manufacturer || !output.dosage || !output.sideEffects || !output.source) {
-          console.error("generateMedicineDetailsFlow: AI returned incomplete or invalid structure for input:", input, "Raw output:", output);
-           // This case should ideally be caught by Zod schema validation if output schema is strict.
-           // If AI provides partial data, we should throw to let the wrapper handle it.
-          throw new Error("AI returned incomplete or invalid data structure.");
+      console.log("generateMedicineDetailsFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
+      
+      if (!rawOutputFromAI || 
+          typeof rawOutputFromAI.name !== 'string' || rawOutputFromAI.name.trim() === '' ||
+          typeof rawOutputFromAI.composition !== 'string' || rawOutputFromAI.composition.trim() === '' ||
+          typeof rawOutputFromAI.usage !== 'string' || rawOutputFromAI.usage.trim() === '' ||
+          typeof rawOutputFromAI.manufacturer !== 'string' || rawOutputFromAI.manufacturer.trim() === '' ||
+          typeof rawOutputFromAI.dosage !== 'string' || rawOutputFromAI.dosage.trim() === '' ||
+          typeof rawOutputFromAI.sideEffects !== 'string' || rawOutputFromAI.sideEffects.trim() === '' ||
+          typeof rawOutputFromAI.source !== 'string' || !['database_ai_enhanced', 'ai_generated'].includes(rawOutputFromAI.source)
+      ) {
+        console.error(
+          "generateMedicineDetailsFlow: AI returned incomplete, invalid, or empty-stringed data for required fields. Input:", 
+          JSON.stringify(input, null, 2), 
+          "Raw Output:", 
+          JSON.stringify(rawOutputFromAI, null, 2)
+        );
+        if (rawOutputFromAI === null) {
+             throw new Error("AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
+        }
+        throw new Error("AI returned incomplete, invalid, or empty-stringed data for required fields. Check logs for raw AI output.");
       }
       
       const validatedOutput: GenerateMedicineDetailsOutput = {
-        name: output.name,
-        composition: output.composition,
-        usage: output.usage,
-        manufacturer: output.manufacturer,
-        dosage: output.dosage,
-        sideEffects: output.sideEffects,
-        barcode: output.barcode || input.contextBarcode, 
-        source: output.source, // Source should be 'database_ai_enhanced' or 'ai_generated' from AI
+        name: rawOutputFromAI.name,
+        composition: rawOutputFromAI.composition,
+        usage: rawOutputFromAI.usage,
+        manufacturer: rawOutputFromAI.manufacturer,
+        dosage: rawOutputFromAI.dosage,
+        sideEffects: rawOutputFromAI.sideEffects,
+        barcode: rawOutputFromAI.barcode || input.contextBarcode, 
+        source: rawOutputFromAI.source as GenerateMedicineDetailsOutput['source'],
       };
       
-      // Ensure barcode from context is preserved if AI doesn't return one and it's not already set
       if (input.contextBarcode && !validatedOutput.barcode) {
           validatedOutput.barcode = input.contextBarcode;
-      }
-
-      // Final check on source based on context, AI should provide 'database_ai_enhanced' or 'ai_generated'
-      if (input.contextName && validatedOutput.source !== 'database_ai_enhanced') {
-        // If contextName was provided, AI should ideally return database_ai_enhanced.
-        // If it returns ai_generated, it means it ignored context, which is an issue with the prompt or AI.
-        // For robustness, we could override, but better to fix prompt or expect AI to follow.
-        // console.warn(`generateMedicineDetailsFlow: AI returned source '${validatedOutput.source}' despite contextName being present. Expected 'database_ai_enhanced'.`);
-      } else if (!input.contextName && validatedOutput.source !== 'ai_generated') {
-        // If no contextName, AI should return ai_generated.
-        // console.warn(`generateMedicineDetailsFlow: AI returned source '${validatedOutput.source}' without contextName. Expected 'ai_generated'.`);
       }
 
       return validatedOutput;
 
     } catch (flowError: unknown) {
-        let errorMessage = "Unknown error in generateMedicineDetailsFlow";
+        let errorMessage = "AI model failed to generate valid details or an unexpected error occurred in the flow.";
         let errorStack: string | undefined;
 
         if (flowError instanceof Error) {
@@ -216,11 +221,11 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             errorStack = flowError.stack;
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
-        } else if (flowError && typeof flowError === 'object' && 'message' in flowError && typeof (flowError as any).message === 'string') {
-            errorMessage = (flowError as any).message;
+        } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
+            errorMessage = String((flowError as any).message);
         }
         
-        console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`);
+        console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
         throw new Error(`AI Generation Error: ${errorMessage}`);
     }
   }

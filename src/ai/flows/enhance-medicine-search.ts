@@ -38,7 +38,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     } else if (typeof error === 'string') {
       message = error;
     }
-    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message);
+    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error); // Log the original error too
     // Return original query as fallback
     return { correctedMedicineName: input.query }; 
   }
@@ -83,16 +83,31 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     inputSchema: EnhanceMedicineSearchInputSchema,
     outputSchema: EnhanceMedicineSearchOutputSchema,
   },
-  async input => {
+  async (input: EnhanceMedicineSearchInput) => {
+    let rawOutputFromAI: any = null;
     try {
       const {output} = await enhanceMedicineSearchPrompt(input);
-      if (!output || typeof output.correctedMedicineName !== 'string') { // More specific check
-        console.error("enhanceMedicineSearchFlow: AI returned no output or an invalid structure for input:", input, "Output:", output);
-        throw new Error("AI failed to enhance search query or return valid output structure.");
+      rawOutputFromAI = output;
+
+      console.log("enhanceMedicineSearchFlow: Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
+
+      if (!rawOutputFromAI || 
+          typeof rawOutputFromAI.correctedMedicineName !== 'string' || 
+          rawOutputFromAI.correctedMedicineName.trim() === '') {
+        console.error(
+            "enhanceMedicineSearchFlow: AI returned no output, invalid structure, or empty correctedMedicineName. Input:", 
+            JSON.stringify(input, null, 2), 
+            "Raw Output:", 
+            JSON.stringify(rawOutputFromAI, null, 2)
+        );
+        if (rawOutputFromAI === null) {
+            throw new Error("AI prompt output failed Zod schema validation or AI returned null for enhanceMedicineSearch. Raw output was null.");
+        }
+        throw new Error("AI failed to enhance search query with a valid, non-empty correctedMedicineName. Check logs for raw AI output.");
       }
-      return output;
+      return rawOutputFromAI;
     } catch (flowError: unknown) {
-      let errorMessage = "Unknown error in enhanceMedicineSearchFlow";
+      let errorMessage = "AI model failed to process search enhancement or an unexpected error occurred.";
       let errorStack: string | undefined;
 
       if (flowError instanceof Error) {
@@ -100,14 +115,12 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
           errorStack = flowError.stack;
       } else if (typeof flowError === 'string') {
           errorMessage = flowError;
-      } else if (flowError && typeof flowError === 'object' && 'message' in flowError && typeof (flowError as any).message === 'string') {
-          errorMessage = (flowError as any).message;
+      } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
+          errorMessage = String((flowError as any).message); 
       }
       
-      console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`);
-      // Throw a new, simple error to ensure serializability for Server Components
+      console.error(`enhanceMedicineSearchFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
       throw new Error(`AI Enhancement Error: ${errorMessage}`);
     }
   }
 );
-

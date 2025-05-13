@@ -7,7 +7,7 @@ import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch, type EnhanceMedicineSearchOutput } from "@/ai/flows/enhance-medicine-search";
 import { generateMedicineDetails, type GenerateMedicineDetailsOutput } from "@/ai/flows/generate-medicine-details";
-import { fetchMedicineByName } from "@/lib/mockApi";
+import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi";
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
@@ -105,6 +105,11 @@ export default function MediSearchApp() {
       let message = t.errorAi;
       if (aiError?.message) message = `${t.errorAi} Details: ${aiError.message}`;
       console.error("AI enhancement critical failure (medisearch-app.tsx):", aiError);
+      if (aiError.cause?.message?.includes('API key not valid') || aiError.cause?.message?.includes('API_KEY_INVALID')) {
+        setAiConfigError(t.errorAiNotConfigured);
+        setAiConfigErrorType('key_missing');
+        message = t.errorAiNotConfigured;
+      }
       toast({
         title: t.appName,
         description: message,
@@ -125,14 +130,13 @@ export default function MediSearchApp() {
         setLoadingMessage(t.loadingAiDetails + ` (${dbDataArray.length} item(s))`);
         const medicinePromises = dbDataArray.map(dbItem =>
           generateMedicineDetails({ 
-            searchTermOrName: dbItem.name, // Use the name from DB as the primary identifier for AI
+            searchTermOrName: dbItem.name, 
             language: selectedLanguage,
             contextName: dbItem.name,
             contextComposition: dbItem.composition,
             contextBarcode: dbItem.barcode,
           }).then(aiDetails => {
             console.log(`performSearchLogic: generateMedicineDetails (DB context) response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
-            // Prioritize AI details, fallback to DB, then to "Info not available"
             return { 
               id: dbItem.id,
               name: aiDetails.name && aiDetails.name !== t.infoNotAvailable ? aiDetails.name : dbItem.name, 
@@ -168,7 +172,7 @@ export default function MediSearchApp() {
           })
         );
         processedMedicines = await Promise.all(medicinePromises);
-      } else { // Not found in DB, try full AI generation
+      } else { 
         setLoadingMessage(t.loadingAiDetails);
         toast({ title: t.appName, description: t.notFoundInDbAiGenerating,  action: <Info className="h-5 w-5 text-primary" /> });
         console.log(`performSearchLogic: No DB data for "${aiEnhancedSearchTerm}". Calling generateMedicineDetails for pure AI generation.`);
@@ -178,9 +182,8 @@ export default function MediSearchApp() {
         });
         console.log(`performSearchLogic: generateMedicineDetails (pure AI) response:`, JSON.stringify(aiDetails, null, 2));
         
-        // If AI returns "Information not available" for name in pure AI gen, it means it couldn't identify it.
         if (aiDetails.name === t.infoNotAvailable || aiDetails.name.trim() === '') {
-             processedMedicines = []; // Effectively, no result
+             processedMedicines = []; 
         } else {
             processedMedicines = [{
               id: `ai-${aiEnhancedSearchTerm.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
@@ -197,7 +200,6 @@ export default function MediSearchApp() {
       }
       setSearchResults(processedMedicines);
 
-      // Consolidate AI error state reporting based on all AI interactions
       const anyAiUnavailableInDetails = processedMedicines.some(med => med.source === 'ai_unavailable');
       const anyAiFailedInDetails = processedMedicines.some(med => med.source === 'ai_failed');
       
@@ -216,10 +218,14 @@ export default function MediSearchApp() {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
       console.error("Data processing or AI detail generation failed (medisearch-app.tsx):", dataProcessingError);
+      if (dataProcessingError.cause?.message?.includes('API key not valid') || dataProcessingError.cause?.message?.includes('API_KEY_INVALID')) {
+        setAiConfigError(t.errorAiNotConfigured);
+        setAiConfigErrorType('key_missing');
+        errorMessage = t.errorAiNotConfigured;
+      }
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
 
-      // Fallback to DB data if AI details failed completely but DB data was available
       if (dbDataArray.length > 0 && (!searchResults || searchResults.length === 0 || searchResults.every(r => r.source === 'database_only'))) {
          setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
@@ -232,7 +238,7 @@ export default function MediSearchApp() {
             sideEffects: t.infoNotAvailable,
             source: 'database_only' as const,
         })));
-        setError(null); // Clear general error if we successfully showed DB data
+        setError(null); 
       }
     } finally {
       setIsLoading(false);
@@ -256,13 +262,13 @@ export default function MediSearchApp() {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    if (query.length > 1) { // Trigger suggestions if query length > 1
-      if (aiConfigError) { // Clear AI config error when user types
+    if (query.length > 1) { 
+      if (aiConfigError) { 
         setAiConfigError(null);
         setAiConfigErrorType(null);
       }
       debounceTimeoutRef.current = setTimeout(async () => {
-        const fetchedSuggestions = await fetchSuggestions(query); // Assuming fetchSuggestions is still from mockApi for DB based suggestions
+        const fetchedSuggestions = await fetchSuggestions(query); 
         setSuggestions(fetchedSuggestions);
         setShowSuggestions(fetchedSuggestions.length > 0);
       }, 300);
@@ -278,7 +284,6 @@ export default function MediSearchApp() {
     }
   };
 
-  // Debounce hiding suggestions to allow click
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
@@ -297,16 +302,17 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
-        <div className="flex items-center justify-center mb-8 space-x-3 text-primary">
-            <Image 
-                src="/images/logo_transparent.png" 
+        <div className="flex items-center justify-center mb-4 space-x-2">
+             <Image 
+                src="/images/logo.png" 
                 alt="WellMeds Logo" 
-                width={280} 
-                height={80} 
+                width={60} 
+                height={60} 
                 priority 
-                className="object-contain"
+                className="object-contain rounded-full"
                 data-ai-hint="logo health"
             />
+            <h1 className="text-4xl font-bold text-primary">{t.appName}</h1>
         </div>
 
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
@@ -407,3 +413,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

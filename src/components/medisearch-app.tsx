@@ -12,7 +12,7 @@ import { SearchBar } from "@/components/medisearch/SearchBar";
 import { MedicineCard } from "@/components/medisearch/MedicineCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Info, RotateCcw } from "lucide-react";
+import { Loader2, AlertCircle, Info, RotateCcw, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -20,7 +20,7 @@ export default function MediSearchApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("en");
   const [t, setT] = useState<TranslationKeys>(getTranslations("en"));
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<Medicine[] | null>(null); // Changed to array
+  const [searchResults, setSearchResults] = useState<Medicine[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
@@ -60,7 +60,7 @@ export default function MediSearchApp() {
     setError(null);
     setSearchResults(null);
     setSearchAttempted(true);
-    setShowSuggestions(false); // Hide suggestions once search starts
+    setShowSuggestions(false);
     let aiEnhancedSearchTerm = termToSearch.trim();
 
     try {
@@ -105,10 +105,10 @@ export default function MediSearchApp() {
             sideEffects: aiDetails.sideEffects,
             source: 'database_ai_enhanced' as const,
           }))
-          .catch(err => { // Handle individual AI generation failure
+          .catch(err => { 
             console.error(`AI details generation failed for ${dbItem.name}:`, err);
             toast({ title: `AI Error for ${dbItem.name}`, description: t.errorAiDetailsShort, variant: "destructive" });
-            return { // Fallback to DB data only
+            return { 
               id: dbItem.id,
               name: dbItem.name,
               composition: dbItem.composition,
@@ -146,9 +146,7 @@ export default function MediSearchApp() {
       console.error("Main AI details generation failed:", flowError);
       setError(t.errorAiDetails);
       toast({ title: t.appName, description: t.errorAiDetails, variant: "destructive" });
-      // Fallback for general AI failure after DB search, might already be handled by individual catches
       if (dbDataArray.length > 0 && (!searchResults || searchResults.every(r => r.source === 'database_only'))) {
-         // If all results are already db_only due to individual errors, no need to reset
       } else if (dbDataArray.length > 0) {
         setSearchResults(dbDataArray.map(dbItem => ({
             id: dbItem.id,
@@ -162,7 +160,7 @@ export default function MediSearchApp() {
             source: 'database_only' as const,
         })));
       }
-      setError(null); // Clear major error if showing partial data
+      setError(null); 
     } finally {
       setIsLoading(false);
       setLoadingMessage("");
@@ -190,7 +188,7 @@ export default function MediSearchApp() {
         const fetchedSuggestions = await fetchSuggestions(query);
         setSuggestions(fetchedSuggestions);
         setShowSuggestions(fetchedSuggestions.length > 0);
-      }, 300); // 300ms debounce
+      }, 300); 
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -204,7 +202,6 @@ export default function MediSearchApp() {
   };
 
   const handleInputBlur = () => {
-    // Delay hiding suggestions to allow click event on suggestion items
     setTimeout(() => {
       setShowSuggestions(false);
     }, 150);
@@ -213,9 +210,9 @@ export default function MediSearchApp() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
-      <header className="w-full max-w-4xl sticky top-0 z-50 bg-background/80 backdrop-blur-md p-4 sm:p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-center rounded-b-xl shadow-lg">
+      <header className="w-full sticky top-0 z-50 bg-background/80 backdrop-blur-md p-4 sm:p-6 md:p-8 mb-8 flex flex-col sm:flex-row justify-between items-center rounded-b-xl shadow-lg">
         <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-          <Image src="https://picsum.photos/64/64" alt="WellMeds Logo" width={48} height={48} className="rounded-lg" data-ai-hint="medical logo" />
+           <Pill className="h-10 w-10 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-bold text-primary">{t.appName}</h1>
         </div>
         <LanguageSelector
@@ -226,6 +223,17 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8">
+        <div className="flex justify-center mb-6">
+          <Image
+            src="https://picsum.photos/120/120"
+            alt="WellMeds Site Logo"
+            width={120}
+            height={120}
+            className="rounded-lg shadow-md"
+            data-ai-hint="brand logo"
+          />
+        </div>
+        
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar

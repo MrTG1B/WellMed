@@ -12,7 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import type { Language } from '@/types';
-import { getTranslations } from '@/lib/translations'; // Import getTranslations
+import { getTranslations } from '@/lib/translations'; 
 import {z} from 'genkit';
 
 const GenerateMedicineDetailsInputSchema = z.object({
@@ -38,14 +38,29 @@ export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetai
 
 
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
-  const languageToUse = input?.language || 'en';
+  // Explicit null/undefined check for 'input' itself first.
+  if (!input) {
+    console.error(`generateMedicineDetails: Critical - input argument is null or undefined.`);
+    const t_fallback_early = getTranslations('en'); // Use default 'en' if language cannot be determined
+    return {
+      name: t_fallback_early.infoNotAvailable,
+      composition: t_fallback_early.infoNotAvailable,
+      usage: t_fallback_early.infoNotAvailable,
+      manufacturer: t_fallback_early.infoNotAvailable,
+      dosage: t_fallback_early.infoNotAvailable,
+      sideEffects: t_fallback_early.infoNotAvailable,
+      source: 'ai_failed', 
+    };
+  }
+
+  const languageToUse = input.language || 'en'; // Now 'input' is guaranteed to be non-null
   const t_fallback = getTranslations(languageToUse);
 
-  if (!input || typeof input.searchTermOrName !== 'string' || (input.language && typeof input.language !== 'string')) {
-    console.error(`generateMedicineDetails: Invalid input received. Input: ${JSON.stringify(input)}`);
+  if (typeof input.searchTermOrName !== 'string' || (input.language && typeof input.language !== 'string')) {
+    console.error(`generateMedicineDetails: Invalid input properties. Input: ${JSON.stringify(input)}`);
     return {
-      name: t_fallback.infoNotAvailable,
-      composition: t_fallback.infoNotAvailable,
+      name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
+      composition: input.contextComposition || t_fallback.infoNotAvailable,
       usage: t_fallback.infoNotAvailable,
       manufacturer: t_fallback.infoNotAvailable,
       dosage: t_fallback.infoNotAvailable,
@@ -74,7 +89,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
     const source: GenerateMedicineDetailsOutput['source'] = (input && input.contextName) ? 'database_only' : 'ai_failed';
      return {
-      name: name || t_fallback.infoNotAvailable, // Ensure name is not undefined
+      name: name || t_fallback.infoNotAvailable, 
       composition: input.contextComposition || t_fallback.infoNotAvailable,
       usage: t_fallback.infoNotAvailable,
       manufacturer: t_fallback.infoNotAvailable,
@@ -105,7 +120,7 @@ Based on this information, please generate the following details for "{{contextN
 - Common side effects.
 
 The output 'name' should be "{{contextName}}".
-The output 'composition' should be "{{contextComposition}}".
+{{#if contextComposition}}The output 'composition' should be "{{contextComposition}}".{{else}}The output 'composition' should be based on your knowledge of "{{contextName}}".{{/if}}
 {{#if contextBarcode}}The output 'barcode' should be "{{contextBarcode}}".{{/if}}
 The output 'source' should be "database_ai_enhanced".
 
@@ -170,7 +185,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
   },
   async (input: GenerateMedicineDetailsInput) => {
     let rawOutputFromAI: any = null;
-    const t_fallback = getTranslations(input.language || 'en'); // For default messages if needed
+    const t_fallback = getTranslations(input.language || 'en'); 
 
     try {
       const {output} = await prompt(input);
@@ -196,7 +211,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         if (rawOutputFromAI === null) {
              console.error("generateMedicineDetailsFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
         }
-        // When AI output is invalid/incomplete, we return a structure indicating failure but with some defaults
+        
         return {
             name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input.contextComposition || t_fallback.infoNotAvailable,
@@ -252,8 +267,6 @@ const generateMedicineDetailsFlow = ai.defineFlow(
 
         console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
         
-        // Regardless of specific error, if in catch, it's an AI failure or unavailability.
-        // Return a structure indicating this, populating with context if available, or fallback.
         return {
             name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input.contextComposition || t_fallback.infoNotAvailable,
@@ -262,7 +275,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             dosage: t_fallback.infoNotAvailable,
             sideEffects: t_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
-            source: sourceForError, // ai_unavailable or ai_failed based on checks
+            source: sourceForError, 
         };
     }
   }

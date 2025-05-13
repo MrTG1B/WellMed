@@ -579,7 +579,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
  * - GenerateMedicineDetailsInput - Input type for the flow.
  * - GenerateMedicineDetailsOutput - Output type for the flow.
  */ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/ai/genkit.ts [app-rsc] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/translations.ts [app-rsc] (ecmascript)"); // Import getTranslations
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/translations.ts [app-rsc] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$module__evaluation$3e$__ = __turbopack_context__.i("[project]/node_modules/genkit/lib/index.mjs [app-rsc] (ecmascript) <module evaluation>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/genkit/lib/common.js [app-rsc] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/webpack/loaders/next-flight-loader/action-validate.js [app-rsc] (ecmascript)");
@@ -616,13 +616,27 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
-    const languageToUse = input?.language || 'en';
-    const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(languageToUse);
-    if (!input || typeof input.searchTermOrName !== 'string' || input.language && typeof input.language !== 'string') {
-        console.error(`generateMedicineDetails: Invalid input received. Input: ${JSON.stringify(input)}`);
+    // Explicit null/undefined check for 'input' itself first.
+    if (!input) {
+        console.error(`generateMedicineDetails: Critical - input argument is null or undefined.`);
+        const t_fallback_early = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])('en'); // Use default 'en' if language cannot be determined
         return {
-            name: t_fallback.infoNotAvailable,
-            composition: t_fallback.infoNotAvailable,
+            name: t_fallback_early.infoNotAvailable,
+            composition: t_fallback_early.infoNotAvailable,
+            usage: t_fallback_early.infoNotAvailable,
+            manufacturer: t_fallback_early.infoNotAvailable,
+            dosage: t_fallback_early.infoNotAvailable,
+            sideEffects: t_fallback_early.infoNotAvailable,
+            source: 'ai_failed'
+        };
+    }
+    const languageToUse = input.language || 'en'; // Now 'input' is guaranteed to be non-null
+    const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(languageToUse);
+    if (typeof input.searchTermOrName !== 'string' || input.language && typeof input.language !== 'string') {
+        console.error(`generateMedicineDetails: Invalid input properties. Input: ${JSON.stringify(input)}`);
+        return {
+            name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
+            composition: input.contextComposition || t_fallback.infoNotAvailable,
             usage: t_fallback.infoNotAvailable,
             manufacturer: t_fallback.infoNotAvailable,
             dosage: t_fallback.infoNotAvailable,
@@ -682,7 +696,7 @@ Based on this information, please generate the following details for "{{contextN
 - Common side effects.
 
 The output 'name' should be "{{contextName}}".
-The output 'composition' should be "{{contextComposition}}".
+{{#if contextComposition}}The output 'composition' should be "{{contextComposition}}".{{else}}The output 'composition' should be based on your knowledge of "{{contextName}}".{{/if}}
 {{#if contextBarcode}}The output 'barcode' should be "{{contextBarcode}}".{{/if}}
 The output 'source' should be "database_ai_enhanced".
 
@@ -744,7 +758,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
     outputSchema: GenerateMedicineDetailsOutputSchema
 }, async (input)=>{
     let rawOutputFromAI = null;
-    const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(input.language || 'en'); // For default messages if needed
+    const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(input.language || 'en');
     try {
         const { output } = await prompt(input);
         rawOutputFromAI = output;
@@ -757,7 +771,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             if (rawOutputFromAI === null) {
                 console.error("generateMedicineDetailsFlow: AI prompt output failed Zod schema validation or AI returned null. Raw output was null.");
             }
-            // When AI output is invalid/incomplete, we return a structure indicating failure but with some defaults
             return {
                 name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
                 composition: input.contextComposition || t_fallback.infoNotAvailable,
@@ -804,8 +817,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             errorMessage = String(flowError.message);
         }
         console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
-        // Regardless of specific error, if in catch, it's an AI failure or unavailability.
-        // Return a structure indicating this, populating with context if available, or fallback.
         return {
             name: input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input.contextComposition || t_fallback.infoNotAvailable,

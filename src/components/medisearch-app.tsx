@@ -338,13 +338,12 @@ export default function MediSearchApp() {
              <Image 
                 src="/images/logo_transparent.png" 
                 alt="WellMeds Logo" 
-                width={100} 
-                height={100} 
+                width={200} 
+                height={200} 
                 priority 
                 className="object-contain"
                 data-ai-hint="logo health"
             />
-            {/* Removed text: <h1 className="text-5xl font-bold text-primary">{t.appName}</h1> */}
         </div>
 
         <section className="w-full p-6 bg-card rounded-xl shadow-2xl">

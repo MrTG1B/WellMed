@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -16,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Using Textarea for potentially longer composition string
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
@@ -62,12 +61,25 @@ export default function AdminUploadForm() {
         title: "Success",
         description: `Medicine data for ID "${data.medicineId}" uploaded successfully.`,
       });
-      form.reset(); // Reset form after successful submission
+      form.reset(); 
     } catch (error) {
-      console.error("Error uploading medicine data:", error);
+      console.error("Error uploading medicine data (full error object):", error);
+      let detailedMessage = "Failed to upload medicine data. Please try again.";
+      if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        detailedMessage = `Failed to upload medicine data: ${error.message}. Check console for more details and ensure Firestore security rules allow writes to the 'medicines' collection.`;
+        if ((error as any).code) {
+          console.error("Error code:", (error as any).code);
+          detailedMessage += ` (Code: ${(error as any).code})`;
+        }
+      } else {
+         detailedMessage = "An unknown error occurred. Check console for details and ensure Firestore security rules allow writes.";
+      }
+
       toast({
         title: "Error",
-        description: "Failed to upload medicine data. Please try again.",
+        description: detailedMessage,
         variant: "destructive",
       });
     } finally {
@@ -85,10 +97,11 @@ export default function AdminUploadForm() {
             <FormItem>
               <FormLabel>Medicine ID</FormLabel>
               <FormControl>
-                <Input placeholder="Enter medicine ID (e.g., 1, 2, ParacetamolID)" {...field} disabled={isSubmitting} />
+                <Input placeholder="Enter medicine ID (e.g., Crocin, Aspirin75)" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
-                This ID links to the medicine in the system. It should match an existing ID or be a new unique ID.
+                This ID will be used as the document ID in Firestore. It should be unique.
+                 Example: Paracetamol500, Amoxicillin250.
               </FormDescription>
               <FormMessage />
             </FormItem>

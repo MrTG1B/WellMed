@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { ref, set } from "firebase/database"; // Changed from firestore
+import { ref, set } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 
@@ -52,9 +52,11 @@ export default function AdminUploadForm() {
       composition: "",
       barcode: "",
     },
+    mode: "onChange", // Ensure validation and dirty state updates on change
   });
 
-  const { isDirty, isValid } = form;
+  // Correctly access form state properties
+  const { isDirty, isValid } = form.formState;
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -99,13 +101,13 @@ export default function AdminUploadForm() {
         name: data.medicineName.trim(),
         composition: data.composition.trim(),
         barcode: data.barcode?.trim() || null, 
-        lastUpdated: currentTimestamp, // Use state for consistent timestamp
+        lastUpdated: currentTimestamp,
       };
 
       console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${medicineId}`, "Data:", medicineDataToSave);
-      const medicineRef = ref(db, `medicines/${medicineId}`); // Changed for RTDB
+      const medicineRef = ref(db, `medicines/${medicineId}`);
       
-      await set(medicineRef, medicineDataToSave); // Changed for RTDB
+      await set(medicineRef, medicineDataToSave);
       
       console.log("[AdminUploadForm] Realtime Database write successful for ID:", medicineId);
 
@@ -114,7 +116,7 @@ export default function AdminUploadForm() {
         description: `Medicine "${data.medicineName.trim()}" data saved to Realtime Database.`,
       });
       form.reset(); 
-      setCurrentTimestamp(new Date().toISOString()); // Refresh timestamp for next potential entry
+      setCurrentTimestamp(new Date().toISOString());
       console.log("[AdminUploadForm] Form reset successfully.");
 
     } catch (error: any) {

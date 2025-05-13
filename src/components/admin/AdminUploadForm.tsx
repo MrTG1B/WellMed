@@ -57,11 +57,7 @@ export default function AdminUploadForm() {
         return;
       }
 
-      // Use the medicineId directly as the document ID.
-      // It's crucial that medicineId is a string that is valid for Firestore document IDs.
-      // Firestore document IDs must not be empty, must not be longer than 1,500 bytes, 
-      // must not contain / (forward slash), and must not be solely . or ...
-      const sanitizedMedicineId = data.medicineId.replace(/\//g, '_'); // Replace slashes just in case, though regex should prevent it.
+      const sanitizedMedicineId = data.medicineId.replace(/\//g, '_'); 
       if (!sanitizedMedicineId || sanitizedMedicineId === "." || sanitizedMedicineId === "..") {
         toast({
           title: "Invalid Medicine ID",
@@ -74,8 +70,11 @@ export default function AdminUploadForm() {
       
       const medicineDocRef = doc(db, "medicines", sanitizedMedicineId);
       
-      const dataToUpload: { composition: string; barcode?: string } = {
+      const dataToUpload: { composition: string; barcode?: string; name?: string } = {
         composition: data.composition,
+        // Storing the medicineId as 'name' for easier querying/consistency if needed,
+        // though the primary lookup is by ID. This matches the field used in mockApi for initial find.
+        name: sanitizedMedicineId, 
       };
       if (data.barcode && data.barcode.trim() !== "") {
         dataToUpload.barcode = data.barcode.trim();
@@ -91,35 +90,56 @@ export default function AdminUploadForm() {
     } catch (error: any) {
       console.error("Error uploading medicine data to Firestore:", error);
       
-      let detailedMessage = `Failed to upload medicine data for ID "${data.medicineId}". `;
+      let detailedMessage = `Failed to upload medicine data for ID "${data.medicineId}". The error "transport errored" usually indicates a problem with Firebase project setup or security rules.\n\n`;
+      
       if (error.code) {
-        detailedMessage += `Error Code: ${error.code}. `;
+        detailedMessage += `Firebase Error Code: ${error.code}. `;
       }
       if (error.message) {
         detailedMessage += `Message: ${error.message}. `;
       }
 
-      detailedMessage += "\n\nCommon issues & checks:\n" +
-        "1. Firestore Security Rules: Ensure your rules allow 'write' operations on the 'medicines' collection. For testing, you might use:\n" +
-        "   rules_version = '2';\n" +
-        "   service cloud.firestore {\n" +
-        "     match /databases/{database}/documents {\n" +
-        "       match /medicines/{medicineId} {\n" +
-        "         allow read, write: if true; // CAUTION: Open access for testing\n" +
-        "       }\n" +
-        "     }\n" +
-        "   }\n" +
-        "2. Firebase Project Setup: Verify that Firestore is enabled in your Firebase project console (Databases -> Create database, ensure it's in Native mode).\n" +
-        "3. Environment Variables: Double-check that all NEXT_PUBLIC_FIREBASE_... variables in your .env.local file are correct and that you've restarted your Next.js development server after any changes.\n" +
-        "4. Network Issues: Check your internet connection and any browser console network errors related to Firestore.\n" +
-        "5. Valid Document ID: Ensure the Medicine ID ('${data.medicineId}') is a valid Firestore document ID (not empty, no slashes, not just '.' or '..').";
+      detailedMessage += "\n\n🚨 CRITICAL CHECKS TO RESOLVE 'TRANSPORT ERRORED':\n\n" +
+        "1. VERIFY FIREBASE CONSOLE SETUP:\n" +
+        "   a. Go to your Firebase Project Console (console.firebase.google.com).\n" +
+        "   b. Navigate to 'Firestore Database' (under Build).\n" +
+        "   c. **IMPORTANT**: If you see a 'Create database' button, YOU MUST CLICK IT.\n" +
+        "      - Choose 'Start in **production mode**' (you'll adjust rules next) or 'Start in **test mode**' (rules are open for 30 days - good for initial testing).\n" +
+        "      - Select a Cloud Firestore location (e.g., us-central1). This cannot be changed later.\n" +
+        "   d. If Firestore is already created, ensure it's in 'Native Mode', NOT 'Datastore Mode'.\n\n" +
+        "2. CHECK FIRESTORE SECURITY RULES:\n" +
+        "   a. In Firebase Console -> Firestore Database -> 'Rules' tab.\n" +
+        "   b. **For testing, your rules MUST allow writes.** A common test setup is:\n" +
+        "      ```\n" +
+        "      rules_version = '2';\n" +
+        "      service cloud.firestore {\n" +
+        "        match /databases/{database}/documents {\n" +
+        "          // Allow read/write access to all documents for testing\n" +
+        "          //match /{document=**} { // Too broad for long term\n" +
+        "          match /medicines/{medicineId} {\n" + // Be specific to your collection
+        "            allow read, write: if true; \n" +
+        "            // For actual deployment, use: allow read, write: if request.auth != null; (if using auth)\n" +
+        "          }\n" +
+        "        }\n" +
+        "      }\n" +
+        "      ```\n" +
+        "   c. Click 'Publish'. **Wait a few minutes for rules to apply.**\n\n" +
+        "3. VERIFY `.env.local` ENVIRONMENT VARIABLES:\n" +
+        "   a. Ensure `NEXT_PUBLIC_FIREBASE_PROJECT_ID` in your `.env.local` file EXACTLY matches the Project ID shown in your Firebase Project settings (click the gear icon ⚙️ next to 'Project Overview').\n" +
+        "   b. Double-check ALL other `NEXT_PUBLIC_FIREBASE_...` variables (apiKey, authDomain, etc.) are correctly copied from your Firebase project's Web App configuration (Project settings -> General -> Your apps -> Web app -> SDK setup and configuration -> Config).\n" +
+        "   c. **CRITICAL: You MUST restart your Next.js development server (npm run dev) after any changes to `.env.local`.**\n\n" +
+        "4. CHECK NETWORK & BROWSER:\n" +
+        "   a. Ensure you have a stable internet connection.\n" +
+        "   b. Try disabling VPNs or strict browser privacy extensions temporarily to rule them out.\n" +
+        "   c. Check your browser's console for any other network-related errors (e.g., CORS issues, though less likely for 'transport errored').\n\n" +
+        "If the problem persists after checking all these, review your Firebase project's usage and billing status.";
 
 
       toast({
-        title: "Firestore Upload Failed",
+        title: "Firestore Upload Failed - TRANSPORT ERROR",
         description: detailedMessage,
         variant: "destructive",
-        duration: 20000, 
+        duration: 60000, // Increased duration for this critical message
       });
     } finally {
       setIsSubmitting(false);
@@ -134,12 +154,12 @@ export default function AdminUploadForm() {
           name="medicineId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Medicine ID</FormLabel>
+              <FormLabel>Medicine ID (e.g., Paracetamol500)</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Paracetamol500, Amoxicillin_250mg, Crocin-Syrup" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormDescription>
-                Unique ID for the medicine (used as Firestore document ID). Allowed: letters, numbers, hyphens, underscores, periods.
+                Unique ID for the medicine (used as Firestore document ID). Allowed: letters, numbers, hyphens, underscores, periods. This will also be used as the 'name' field in Firestore.
               </FormDescription>
               <FormMessage />
             </FormItem>

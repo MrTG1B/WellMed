@@ -10,4 +10,3 @@ export type Medicine = {
 };
 
 export type Language = 'en' | 'hi' | 'bn';
-

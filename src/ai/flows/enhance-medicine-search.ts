@@ -96,6 +96,8 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     try {
       const {output} = await enhanceMedicineSearchPrompt(input);
       rawOutputFromAI = output;
+      console.log("enhanceMedicineSearchFlow - Raw AI Output:", JSON.stringify(rawOutputFromAI, null, 2));
+
 
       if (!rawOutputFromAI ||
           typeof rawOutputFromAI.correctedMedicineName !== 'string' ||
@@ -122,7 +124,7 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
           errorMessage = flowError.message;
           errorStack = flowError.stack;
 
-          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported')) {
+          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID')) {
             console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
             return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }

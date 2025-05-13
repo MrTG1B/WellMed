@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
@@ -22,13 +21,22 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (!auth) {
-      setError("Firebase Auth is not initialized. Please check the console.");
+      setError("Firebase Auth is not initialized. Please check the console for Firebase configuration errors and ensure all environment variables are set correctly.");
       setIsCheckingAuth(false);
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.push("/admin");
+        // To prevent routing before admin check, ensure user is the admin
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        if (user.email === adminEmail) {
+          router.push("/admin");
+        } else {
+          // If a non-admin user is somehow signed in, sign them out and show error or redirect
+          auth.signOut();
+          setError("Access denied. This login is for administrators only.");
+          setIsCheckingAuth(false);
+        }
       } else {
         setIsCheckingAuth(false);
       }
@@ -42,7 +50,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     if (!auth) {
-      setError("Firebase Auth is not available. Login failed.");
+      setError("Firebase Auth is not available. Login failed. Check console for Firebase initialization issues.");
       setIsLoading(false);
       return;
     }
@@ -51,13 +59,13 @@ export default function AdminLoginPage() {
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
     if (!adminEmail || !adminPassword) {
-        setError("Admin credentials are not configured in environment variables. Please set NEXT_PUBLIC_ADMIN_EMAIL and NEXT_PUBLIC_ADMIN_PASSWORD.");
+        setError("Admin credentials are not configured in environment variables. Please set NEXT_PUBLIC_ADMIN_EMAIL and NEXT_PUBLIC_ADMIN_PASSWORD in your .env.local file.");
         setIsLoading(false);
         return;
     }
 
     if (email !== adminEmail) {
-        setError("Invalid admin email.");
+        setError("Invalid admin email. This login is restricted to the configured administrator account.");
         setIsLoading(false);
         return;
     }
@@ -65,17 +73,19 @@ export default function AdminLoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle redirect
-      router.push("/admin");
+      // onAuthStateChanged will handle redirect if login is successful and user is admin
+      // router.push("/admin"); // This might be redundant due to onAuthStateChanged
     } catch (e: any) {
       console.error("Login failed:", e);
       if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
         setError("Invalid email or password.");
       } else if (e.code === 'auth/invalid-email') {
         setError("The email address is not valid.");
+      } else if (e.code === 'auth/configuration-not-found') {
+        setError("Firebase Authentication is not configured correctly in your Firebase project. Please ensure the 'Email/Password' sign-in provider is enabled in the Firebase console (Authentication > Sign-in method tab) and that the Identity Toolkit API is enabled in the Google Cloud Console for your API key.");
       }
        else {
-        setError("An unexpected error occurred during login. Please try again.");
+        setError(`An unexpected error occurred: ${e.message || 'Please try again.'}`);
       }
     } finally {
       setIsLoading(false);

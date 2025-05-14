@@ -300,7 +300,7 @@ const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$pro
         'ai_unavailable',
         'ai_failed',
         'original_query_used'
-    ]).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned.")
+    ]).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key / model issue). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned.")
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(input) {
     if (!input || typeof input.query !== 'string' || input.query.trim() === '') {
@@ -314,7 +314,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         const result = await enhanceMedicineSearchFlow(input);
         console.log("enhanceMedicineSearch (wrapper) - Flow Result:", JSON.stringify(result, null, 2));
         if (result.source === 'ai_unavailable') {
-            console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
+            console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable (model/key issue). Query: "${input.query}"`);
         }
         if (!result.correctedMedicineName || result.correctedMedicineName.trim() === '') {
             console.warn(`enhanceMedicineSearch: AI returned empty correctedMedicineName. Falling back to original query. Input: "${input.query}", AI Result: ${JSON.stringify(result)}`);
@@ -346,7 +346,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
 }
 const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'enhanceMedicineSearchPrompt',
-    model: 'googleai/gemini-pro',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: {
         schema: EnhanceMedicineSearchInputSchema
     },
@@ -494,22 +494,22 @@ const translations = {
         sourceDbAiMessage: 'Details from database, enhanced by AI.',
         sourceAiOnlyMessage: 'Details primarily AI-generated.',
         sourceDbOnlyMessage: 'Details from database.',
-        sourceAiUnavailableForDetailsMessage: (medicineName)=>`AI features for enhancing "${medicineName}" details are unavailable.`,
+        sourceAiUnavailableForDetailsMessage: (medicineName)=>`AI features for enhancing "${medicineName}" details are unavailable due to API key or model issues.`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`AI enhancement failed for "${medicineName}" details.`,
         barcodeNotAvailable: 'Not available',
         initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
         allRightsReserved: 'All rights reserved.',
         infoNotAvailable: "Information not available.",
-        errorAiNotConfiguredTitle: "AI Not Configured",
-        errorAiNotConfigured: "AI-powered search enhancement is currently unavailable because the system is not configured for AI processing.",
-        errorAiNotConfiguredDetail: "Please ensure the GEMINI_API_KEY (or GOOGLE_API_KEY) is set in your .env file and restart the server. You can obtain a key from Google AI Studio.",
+        errorAiNotConfiguredOrModelTitle: "AI Key/Model Issue",
+        errorAiNotConfiguredOrModel: "AI-powered features are currently unavailable due to an issue with the AI configuration (API Key or Model).",
+        errorAiNotConfiguredOrModelDetail: "Please ensure the GEMINI_API_KEY is correctly set in your .env file, is valid, has billing enabled, and the specified AI model is accessible. Restart the server after changes.",
         errorAiFailedTitle: "AI Processing Error",
-        errorAiFailed: "There was an error while trying to enhance your search using AI.",
-        errorAiFailedDetail: "Please check your server logs (terminal where `npm run dev` is running) for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.",
+        errorAiFailed: "There was an error while trying to use AI. Some information may be missing or incomplete.",
+        errorAiFailedDetail: "Please check your server logs for more specific error details from the AI service. This could be due to network problems or other API issues.",
         errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query.",
         errorAiModelNotFound: (modelName)=>`The AI model "${modelName}" was not found or is not accessible. Please check the model name and your API key permissions.`,
         aiCouldNotEnhance: (itemName)=>`AI could not provide further details for "${itemName}" beyond what was found in the database.`,
-        errorAiNotConfiguredForDetails: (itemName)=>`AI features for generating details for "${itemName}" are unavailable due to configuration issues.`,
+        errorAiNotConfiguredOrModelForDetails: (itemName)=>`AI features for generating details for "${itemName}" are unavailable due to API key or model configuration issues.`,
         errorAiFailedForDetails: (itemName)=>`AI failed to generate details for "${itemName}".`,
         errorAiDetailsCritical: (itemName)=>`A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`
     },
@@ -544,22 +544,22 @@ const translations = {
         sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
         sourceAiOnlyMessage: 'विवरण मुख्य रूप से एआई-जनित।',
         sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
-        sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
+        sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ एपीआई कुंजी या मॉडल समस्याओं के कारण अनुपलब्ध हैं।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
         barcodeNotAvailable: 'उपलब्ध नहीं है',
         initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
         allRightsReserved: 'सभी अधिकार सुरक्षित।',
         infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
-        errorAiNotConfiguredTitle: "एआई कॉन्फ़िगर नहीं है",
-        errorAiNotConfigured: "एआई-संचालित खोज वृद्धि वर्तमान में अनुपलब्ध है क्योंकि सिस्टम एआई प्रसंस्करण के लिए कॉन्फ़िगर नहीं किया गया है।",
-        errorAiNotConfiguredDetail: "कृपया सुनिश्चित करें कि GEMINI_API_KEY (या GOOGLE_API_KEY) आपकी .env फ़ाइल में सेट है और सर्वर को पुनरारंभ करें। आप Google AI Studio से एक कुंजी प्राप्त कर सकते हैं।",
+        errorAiNotConfiguredOrModelTitle: "एआई कुंजी/मॉडल समस्या",
+        errorAiNotConfiguredOrModel: "एआई कॉन्फ़िगरेशन (एपीआई कुंजी या मॉडल) के साथ किसी समस्या के कारण एआई-संचालित सुविधाएँ वर्तमान में अनुपलब्ध हैं।",
+        errorAiNotConfiguredOrModelDetail: "कृपया सुनिश्चित करें कि GEMINI_API_KEY आपकी .env फ़ाइल में सही ढंग से सेट है, मान्य है, बिलिंग सक्षम है, और निर्दिष्ट एआई मॉडल पहुंच योग्य है। परिवर्तनों के बाद सर्वर को पुनरारंभ करें।",
         errorAiFailedTitle: "एआई प्रसंस्करण त्रुटि",
-        errorAiFailed: "एआई का उपयोग करके आपकी खोज को बढ़ाने का प्रयास करते समय एक त्रुटि हुई।",
-        errorAiFailedDetail: "एआई सेवा से अधिक विशिष्ट त्रुटि विवरण के लिए कृपया अपने सर्वर लॉग (टर्मिनल जहां `npm run dev` चल रहा है) की जांच करें। यह एक अमान्य एपीआई कुंजी, कोटा समस्याओं, या नेटवर्क समस्याओं के कारण हो सकता है।",
+        errorAiFailed: "एआई का उपयोग करने का प्रयास करते समय एक त्रुटि हुई। कुछ जानकारी गुम या अधूरी हो सकती है।",
+        errorAiFailedDetail: "एआई सेवा से अधिक विशिष्ट त्रुटि विवरण के लिए कृपया अपने सर्वर लॉग की जांच करें। यह नेटवर्क समस्याओं या अन्य एपीआई समस्याओं के कारण हो सकता है।",
         errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।",
         errorAiModelNotFound: (modelName)=>`एआई मॉडल "${modelName}" नहीं मिला या पहुंच योग्य नहीं है। कृपया मॉडल का नाम और अपनी एपीआई कुंजी अनुमतियों की जांच करें।`,
         aiCouldNotEnhance: (itemName)=>`एआई डेटाबेस में मिली जानकारी के अतिरिक्त "${itemName}" के लिए और विवरण प्रदान नहीं कर सका।`,
-        errorAiNotConfiguredForDetails: (itemName)=>`कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
+        errorAiNotConfiguredOrModelForDetails: (itemName)=>`एपीआई कुंजी या मॉडल कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
         errorAiFailedForDetails: (itemName)=>`एआई "${itemName}" के लिए विवरण उत्पन्न करने में विफल रहा।`,
         errorAiDetailsCritical: (itemName)=>`"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`
     },
@@ -594,22 +594,22 @@ const translations = {
         sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
         sourceAiOnlyMessage: 'বিস্তারিত প্রধানত এআই-জেনারেটেড।',
         sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
-        sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি অনুপলব্ধ।`,
+        sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি API কী বা মডেল সমস্যার কারণে অনুপলব্ধ।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
         barcodeNotAvailable: 'উপলব্ধ নয়',
         initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',
         allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
         infoNotAvailable: "তথ্য উপলব্ধ নেই।",
-        errorAiNotConfiguredTitle: "এআই কনফিগার করা হয়নি",
-        errorAiNotConfigured: "এআই-চালিত অনুসন্ধান বৃদ্ধি বর্তমানে অনুপলব্ধ কারণ সিস্টেম এআই প্রক্রিয়াকরণের জন্য কনফিগার করা হয়নি।",
-        errorAiNotConfiguredDetail: "দয়া করে নিশ্চিত করুন যে GEMINI_API_KEY (বা GOOGLE_API_KEY) আপনার .env ফাইলে সেট করা আছে এবং সার্ভারটি পুনরায় চালু করুন। আপনি Google AI Studio থেকে একটি কী পেতে পারেন।",
+        errorAiNotConfiguredOrModelTitle: "এআই কী/মডেল সমস্যা",
+        errorAiNotConfiguredOrModel: "এআই কনফিগারেশন (এপিআই কী বা মডেল) এর সাথে সমস্যার কারণে এআই-চালিত বৈশিষ্ট্যগুলি বর্তমানে অনুপলব্ধ।",
+        errorAiNotConfiguredOrModelDetail: "অনুগ্রহ করে নিশ্চিত করুন যে GEMINI_API_KEY আপনার .env ফাইলে সঠিকভাবে সেট করা আছে, বৈধ, বিলিং সক্ষম করা আছে এবং নির্দিষ্ট AI মডেলটি অ্যাক্সেসযোগ্য। পরিবর্তনের পরে সার্ভারটি পুনরায় চালু করুন।",
         errorAiFailedTitle: "এআই প্রক্রিয়াকরণ ত্রুটি",
-        errorAiFailed: "এআই ব্যবহার করে আপনার অনুসন্ধান উন্নত করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে।",
-        errorAiFailedDetail: "এআই পরিষেবা থেকে আরও নির্দিষ্ট ত্রুটির বিবরণের জন্য অনুগ্রহ করে আপনার সার্ভার লগগুলি (টার্মিনাল যেখানে `npm run dev` চলছে) পরীক্ষা করুন। এটি একটি অবৈধ API কী, কোটা সমস্যা বা নেটওয়ার্ক সমস্যার কারণে হতে পারে।",
+        errorAiFailed: "এআই ব্যবহার করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে। কিছু তথ্য অনুপস্থিত বা অসম্পূর্ণ হতে পারে।",
+        errorAiFailedDetail: "এআই পরিষেবা থেকে আরও নির্দিষ্ট ত্রুটির বিবরণের জন্য অনুগ্রহ করে আপনার সার্ভার লগগুলি পরীক্ষা করুন। এটি নেটওয়ার্ক সমস্যা বা অন্যান্য API সমস্যার কারণে হতে পারে।",
         errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।",
         errorAiModelNotFound: (modelName)=>`"${modelName}" এআই মডেলটি খুঁজে পাওয়া যায়নি বা অ্যাক্সেসযোগ্য নয়। অনুগ্রহ করে মডেলের নাম এবং আপনার API কী অনুমতিগুলি পরীক্ষা করুন।`,
         aiCouldNotEnhance: (itemName)=>`ডাটাবেসে যা পাওয়া গেছে তার বাইরে এআই "${itemName}" এর জন্য আর কোনো বিবরণ দিতে পারেনি।`,
-        errorAiNotConfiguredForDetails: (itemName)=>`কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি अनुपलब्ध।`,
+        errorAiNotConfiguredOrModelForDetails: (itemName)=>`API কী বা মডেল কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি অনুপলব্ধ।`,
         errorAiFailedForDetails: (itemName)=>`এআই "${itemName}" এর জন্য বিবরণ তৈরি করতে ব্যর্থ হয়েছে।`,
         errorAiDetailsCritical: (itemName)=>`"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`
     }
@@ -696,7 +696,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         const result = await generateMedicineDetailsFlow(input);
         console.log("🚀🚀🚀🚀🚀 RETURNED from generateMedicineDetailsFlow to WRAPPER. Result:", JSON.stringify(result, null, 2));
         if (result.source === 'ai_unavailable') {
-            console.warn(`[generateMedicineDetails wrapper] Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
+            console.warn(`[generateMedicineDetails wrapper] Flow indicated AI is unavailable (model/key issue). Input: ${JSON.stringify(input)}`);
         }
         const validatedResult = {
             ...result,
@@ -742,7 +742,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
 }
 const medicineDetailsPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'generateMedicineDetailsPrompt',
-    model: 'googleai/gemini-pro',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: {
         schema: GenerateMedicineDetailsInputSchema
     },
@@ -946,7 +946,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         let errorToLog = flowError;
         if (flowError && flowError.cause instanceof Error) {
             console.error("Original Cause of Error:", flowError.cause.message, flowError.cause.stack);
-            errorToLog = flowError.cause; // Log the root cause for better clarity
+            errorToLog = flowError.cause;
         }
         console.error(`Error Type: ${errorToLog.name || 'Unknown type'}`);
         console.error(`Error Message: ${errorToLog.message || 'No message available'}`);
@@ -969,7 +969,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${errorToLog.message}`);
-                sourceForError = 'ai_failed'; // Or 'ai_unavailable' if it implies service is down
+                sourceForError = 'ai_failed';
             } else if (errorToLog.name === 'ZodError') {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${errorToLog.message}. Details:`, errorToLog.errors);
                 sourceForError = 'ai_failed';

@@ -65,7 +65,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
     console.log("🚀🚀🚀🚀🚀 RETURNED from generateMedicineDetailsFlow to WRAPPER. Result:", JSON.stringify(result, null, 2));
 
     if (result.source === 'ai_unavailable') {
-        console.warn(`[generateMedicineDetails wrapper] Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
+        console.warn(`[generateMedicineDetails wrapper] Flow indicated AI is unavailable (model/key issue). Input: ${JSON.stringify(input)}`);
     }
 
     const validatedResult = {
@@ -116,7 +116,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
 const medicineDetailsPrompt = ai.definePrompt({
   name: 'generateMedicineDetailsPrompt',
-  model: 'googleai/gemini-pro', // Changed from gemini-1.0-pro
+  model: 'googleai/gemini-1.5-flash-latest', // Updated model
   input: {schema: GenerateMedicineDetailsInputSchema},
   output: {schema: GenerateMedicineDetailsOutputSchema},
   prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
@@ -356,7 +356,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         let errorToLog = flowError;
         if (flowError && flowError.cause instanceof Error) {
           console.error("Original Cause of Error:", flowError.cause.message, flowError.cause.stack);
-          errorToLog = flowError.cause; // Log the root cause for better clarity
+          errorToLog = flowError.cause; 
         }
 
         console.error(`Error Type: ${errorToLog.name || 'Unknown type'}`);
@@ -385,8 +385,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
                  sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${errorToLog.message}`);
-                sourceForError = 'ai_failed'; // Or 'ai_unavailable' if it implies service is down
-            } else if (errorToLog.name === 'ZodError') { // Check original error name for ZodError
+                sourceForError = 'ai_failed'; 
+            } else if (errorToLog.name === 'ZodError') { 
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${errorToLog.message}. Details:`, (errorToLog as any).errors);
                 sourceForError = 'ai_failed';
             }
@@ -407,3 +407,4 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     }
   }
 );
+

@@ -25,7 +25,7 @@ export default function MediSearchApp() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [aiConfigError, setAiConfigError] = useState<string | null>(null);
-  const [aiConfigErrorType, setAiConfigErrorType] = useState<'key_missing' | 'api_fail' | null>(null);
+  const [aiConfigErrorType, setAiConfigErrorType] = useState<'key_or_model' | 'api_fail' | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
   const [searchAttempted, setSearchAttempted] = useState<boolean>(false);
 
@@ -90,9 +90,9 @@ export default function MediSearchApp() {
         } else if (aiEnhanceResponse.source === 'original_query_used') {
            toast({ title: t.appName, description: t.errorAiEnhancementSkipped, variant: "default" });
         } else if (aiEnhanceResponse.source === 'ai_unavailable') {
-            setAiConfigError(t.errorAiNotConfigured);
-            setAiConfigErrorType('key_missing');
-            toast({ title: t.appName, description: t.errorAiNotConfigured, variant: "destructive" });
+            setAiConfigError(t.errorAiNotConfiguredOrModel);
+            setAiConfigErrorType('key_or_model');
+            toast({ title: t.appName, description: t.errorAiNotConfiguredOrModel, variant: "destructive" });
         } else { 
            toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
            setAiConfigError(t.errorAiFailed);
@@ -116,14 +116,10 @@ export default function MediSearchApp() {
 
 
       if (aiError?.message) {
-          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied')) {
-              message = t.errorAiNotConfigured;
-              setAiConfigError(t.errorAiNotConfigured);
-              setAiConfigErrorType('key_missing');
-          } else if (aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found')) {
-              message = t.errorAiModelNotFound(aiError.message.includes('gemini-1.0-pro') ? 'gemini-1.0-pro' : 'the configured model');
-              setAiConfigError(message);
-              setAiConfigErrorType('api_fail');
+          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found')) {
+              message = t.errorAiNotConfiguredOrModel;
+              setAiConfigError(t.errorAiNotConfiguredOrModel);
+              setAiConfigErrorType('key_or_model');
           } else if (aiError.message.includes('server error') || aiError.message.includes('internal error') || aiError.message.includes('flow execution failed')) {
               message = t.errorAiFailed;
               setAiConfigError(t.errorAiFailed);
@@ -180,8 +176,8 @@ export default function MediSearchApp() {
                         variant: "destructive",
                     });
                      if (aiDetails.source === 'ai_unavailable' && !aiConfigError) {
-                        setAiConfigError(t.errorAiNotConfiguredForDetails(dbItem.name));
-                        setAiConfigErrorType('key_missing');
+                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.name));
+                        setAiConfigErrorType('key_or_model');
                     } else if (aiDetails.source === 'ai_failed' && !aiConfigError) {
                         setAiConfigError(t.errorAiFailedForDetails(dbItem.name));
                         setAiConfigErrorType('api_fail');
@@ -205,11 +201,16 @@ export default function MediSearchApp() {
                     description: t.errorAiDetailsCritical(dbItem.name),
                     variant: "destructive",
                 });
-                if (!aiConfigError) {
-                    setAiConfigError(t.errorAiDetailsCritical(dbItem.name));
-                    setAiConfigErrorType('api_fail');
+                if (!aiConfigError) { // Prioritize Key/Model error if not already set
+                    if(genDetailsError?.message?.toLowerCase().includes('api key') || genDetailsError?.message?.toLowerCase().includes('model not found')) {
+                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.name));
+                        setAiConfigErrorType('key_or_model');
+                    } else {
+                        setAiConfigError(t.errorAiDetailsCritical(dbItem.name));
+                        setAiConfigErrorType('api_fail');
+                    }
                 }
-                return { // Fallback if generateMedicineDetails itself throws an unhandled error
+                return { 
                     id: dbItem.id,
                     name: dbItem.name,
                     composition: dbItem.composition,
@@ -224,7 +225,6 @@ export default function MediSearchApp() {
           })
         );
       } else if (aiEnhancementSource === 'ai_enhanced' || aiEnhancementSource === 'original_query_used') { 
-          // No DB match, but AI term was generated or original used, try full AI generation
           setLoadingMessage(t.loadingAiDetails);
           console.log(`[MediSearchApp] No DB match for "${aiEnhancedSearchTerm}". Attempting full AI generation.`);
           try {
@@ -236,7 +236,7 @@ export default function MediSearchApp() {
              if (aiOnlyDetails.name && aiOnlyDetails.name !== t.infoNotAvailable && aiOnlyDetails.composition !== t.infoNotAvailable ) {
                  processedMedicines = [{ id: `ai-${Date.now()}`, ...aiOnlyDetails }];
              } else {
-                 processedMedicines = []; // AI couldn't generate meaningful basic info
+                 processedMedicines = []; 
              }
 
             if (aiOnlyDetails.source === 'ai_failed' || aiOnlyDetails.source === 'ai_unavailable') {
@@ -246,8 +246,8 @@ export default function MediSearchApp() {
                     variant: "destructive",
                 });
                  if (aiOnlyDetails.source === 'ai_unavailable' && !aiConfigError) {
-                    setAiConfigError(t.errorAiNotConfiguredForDetails(aiEnhancedSearchTerm));
-                    setAiConfigErrorType('key_missing');
+                    setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(aiEnhancedSearchTerm));
+                    setAiConfigErrorType('key_or_model');
                 } else if (aiOnlyDetails.source === 'ai_failed' && !aiConfigError) {
                     setAiConfigError(t.errorAiFailedForDetails(aiEnhancedSearchTerm));
                     setAiConfigErrorType('api_fail');
@@ -260,19 +260,23 @@ export default function MediSearchApp() {
                 description: t.errorAiDetailsCritical(aiEnhancedSearchTerm),
                 variant: "destructive",
             });
-            if (!aiConfigError) {
-                setAiConfigError(t.errorAiDetailsCritical(aiEnhancedSearchTerm));
-                setAiConfigErrorType('api_fail');
+            if (!aiConfigError) { // Prioritize Key/Model error
+                 if(aiOnlyGenError?.message?.toLowerCase().includes('api key') || aiOnlyGenError?.message?.toLowerCase().includes('model not found')) {
+                    setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(aiEnhancedSearchTerm));
+                    setAiConfigErrorType('key_or_model');
+                 } else {
+                    setAiConfigError(t.errorAiDetailsCritical(aiEnhancedSearchTerm));
+                    setAiConfigErrorType('api_fail');
+                 }
             }
           }
       }
       
       setSearchResults(processedMedicines);
 
-      // Final check on AI config error display if not already set by specific AI failures
       if (aiEnhancementSource === 'ai_unavailable' && !aiConfigError) {
-        setAiConfigError(t.errorAiNotConfigured);
-        setAiConfigErrorType('key_missing');
+        setAiConfigError(t.errorAiNotConfiguredOrModel);
+        setAiConfigErrorType('key_or_model');
       } else if (aiEnhancementSource === 'ai_failed' && !aiConfigError) {
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
@@ -309,11 +313,6 @@ export default function MediSearchApp() {
       clearTimeout(debounceTimeoutRef.current);
     }
     if (query.length > 1) {
-      if (aiConfigError) {
-        // Clear AI config error when user types, allowing new attempt
-        // setAiConfigError(null); 
-        // setAiConfigErrorType(null);
-      }
       debounceTimeoutRef.current = setTimeout(async () => {
         try {
             const fetchedSuggestions = await fetchSuggestions(query);
@@ -340,7 +339,7 @@ export default function MediSearchApp() {
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
-    }, 150); // Delay to allow click on suggestion
+    }, 150); 
   };
 
 
@@ -385,13 +384,13 @@ export default function MediSearchApp() {
 
         {aiConfigError && !isLoading && (
           <Alert variant="destructive" className="w-full max-w-lg shadow-md">
-            {aiConfigErrorType === 'key_missing' ? <KeyRound className="h-5 w-5" /> : <ServerCrash className="h-5 w-5" />}
-            <AlertTitle>{aiConfigErrorType === 'key_missing' ? t.errorAiNotConfiguredTitle : t.errorAiFailedTitle}</AlertTitle>
+            {aiConfigErrorType === 'key_or_model' ? <KeyRound className="h-5 w-5" /> : <ServerCrash className="h-5 w-5" />}
+            <AlertTitle>{aiConfigErrorType === 'key_or_model' ? t.errorAiNotConfiguredOrModelTitle : t.errorAiFailedTitle}</AlertTitle>
             <AlertDescription>
               {aiConfigError}
-              {aiConfigErrorType === 'key_missing' && (
+              {aiConfigErrorType === 'key_or_model' && (
                 <p className="mt-2 text-xs">
-                  {t.errorAiNotConfiguredDetail}
+                  {t.errorAiNotConfiguredOrModelDetail}
                 </p>
               )}
                {aiConfigErrorType === 'api_fail' && (
@@ -465,3 +464,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

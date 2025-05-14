@@ -19,7 +19,7 @@ const EnhanceMedicineSearchOutputSchema = z.object({
   correctedMedicineName: z
     .string()
     .describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
-  source: z.enum(['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used']).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned."),
+  source: z.enum(['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used']).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key / model issue). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned."),
 });
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
 
@@ -36,7 +36,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     const result = await enhanceMedicineSearchFlow(input);
     console.log("enhanceMedicineSearch (wrapper) - Flow Result:", JSON.stringify(result, null, 2));
     if (result.source === 'ai_unavailable') {
-        console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
+        console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable (model/key issue). Query: "${input.query}"`);
     }
     
     if (!result.correctedMedicineName || result.correctedMedicineName.trim() === '') {
@@ -64,7 +64,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
-  model: 'googleai/gemini-pro', // Changed from gemini-1.0-pro
+  model: 'googleai/gemini-1.5-flash-latest', // Updated model
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
@@ -160,3 +160,4 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
     }
   }
 );
+

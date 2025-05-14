@@ -712,6 +712,14 @@ body {
   margin-top: auto;
 }
 
+.mt-\[-20px\] {
+  margin-top: -20px;
+}
+
+.mt-\[-30px\] {
+  margin-top: -30px;
+}
+
 .block {
   display: block;
 }
@@ -1151,6 +1159,12 @@ body {
   margin-left: calc(.5rem * calc(1 - var(--tw-space-x-reverse)));
 }
 
+.space-x-3 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 0;
+  margin-right: calc(.75rem * var(--tw-space-x-reverse));
+  margin-left: calc(.75rem * calc(1 - var(--tw-space-x-reverse)));
+}
+
 .space-x-4 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 0;
   margin-right: calc(1rem * var(--tw-space-x-reverse));
@@ -1185,12 +1199,6 @@ body {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
-}
-
-.space-x-3 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(.75rem * var(--tw-space-x-reverse));
-  margin-left: calc(.75rem * calc(1 - var(--tw-space-x-reverse)));
 }
 
 .self-center {
@@ -1239,10 +1247,6 @@ body {
 
 .rounded-xl {
   border-radius: .75rem;
-}
-
-.rounded {
-  border-radius: .25rem;
 }
 
 .border {
@@ -1582,11 +1586,6 @@ body {
   line-height: 2.25rem;
 }
 
-.text-4xl {
-  font-size: 2.25rem;
-  line-height: 2.5rem;
-}
-
 .text-\[0\.8rem\] {
   font-size: .8rem;
 }
@@ -1609,11 +1608,6 @@ body {
 .text-xs {
   font-size: .75rem;
   line-height: 1rem;
-}
-
-.text-5xl {
-  font-size: 3rem;
-  line-height: 1;
 }
 
 .font-bold {
@@ -2742,16 +2736,16 @@ body {
     margin-top: 0;
   }
 
+  .sm\:mt-\[-30px\] {
+    margin-top: -30px;
+  }
+
+  .sm\:mt-\[-40px\] {
+    margin-top: -40px;
+  }
+
   .sm\:flex {
     display: flex;
-  }
-
-  .sm\:h-12 {
-    height: 3rem;
-  }
-
-  .sm\:w-12 {
-    width: 3rem;
   }
 
   .sm\:max-w-sm {
@@ -2809,17 +2803,20 @@ body {
     line-height: 2.5rem;
   }
 
-  .sm\:text-5xl {
-    font-size: 3rem;
-    line-height: 1;
-  }
-
   .data-\[state\=open\]\:sm\:slide-in-from-bottom-full[data-state="open"] {
     --tw-enter-translate-y: 100%;
   }
 }
 
 @media (width >= 768px) {
+  .md\:mt-\[-40px\] {
+    margin-top: -40px;
+  }
+
+  .md\:mt-\[-50px\] {
+    margin-top: -50px;
+  }
+
   .md\:block {
     display: block;
   }

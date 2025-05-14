@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Medicine } from "@/types";
@@ -23,18 +24,11 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
   const detailValueClass = "text-base text-foreground";
 
   let sourceMessage = "";
-  if (medicine.source === 'ai_generated') {
-    sourceMessage = t.sourceAiOnlyMessage;
-  } else if (medicine.source === 'database_ai_enhanced') {
-    sourceMessage = t.sourceDbAiMessage;
-  } else if (medicine.source === 'database_only') {
+  // Since AI details are removed, if a medicine is shown, it's from the DB.
+  if (medicine.source === 'database_only') {
     sourceMessage = t.sourceDbOnlyMessage;
-  } else if (medicine.source === 'ai_unavailable') {
-    sourceMessage = t.sourceAiUnavailableMessage;
-  } else if (medicine.source === 'ai_failed') {
-    sourceMessage = t.sourceAiFailedMessage;
   }
-
+  // Other source messages might not be relevant here if details are always from DB or "Not Available"
 
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
@@ -109,3 +103,4 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
+

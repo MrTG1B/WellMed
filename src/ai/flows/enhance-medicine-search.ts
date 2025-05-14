@@ -46,19 +46,25 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     return result;
   } catch (error: unknown) {
     let message = "Unknown error during AI search enhancement.";
+    let errorDetails = "";
     if (error instanceof Error) {
       message = error.message;
+      errorDetails = error.stack || String(error);
     } else if (typeof error === 'string') {
       message = error;
+      errorDetails = error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      message = String((error as any).message);
+      errorDetails = JSON.stringify(error);
     }
-    console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
+    console.error(`Critical error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, `Details: ${errorDetails}`, error);
     return { correctedMedicineName: input.query, source: 'ai_failed' };
   }
 }
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
-  model: 'googleai/gemini-pro', // Explicitly use gemini-pro
+  model: 'googleai/gemini-1.0-pro', // Updated model name
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
@@ -106,8 +112,8 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
 
       if (!rawOutputFromAI ||
           typeof rawOutputFromAI.correctedMedicineName !== 'string' ||
-          rawOutputFromAI.correctedMedicineName.trim() === '' || // Ensure not empty
-          (rawOutputFromAI.source && !['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used'].includes(rawOutputFromAI.source)) // Validate source if present
+          rawOutputFromAI.correctedMedicineName.trim() === '' || 
+          (rawOutputFromAI.source && !['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used'].includes(rawOutputFromAI.source)) 
         ) {
         console.warn(
             "enhanceMedicineSearchFlow: AI returned invalid structure, empty correctedMedicineName, or invalid source. Input:",
@@ -117,9 +123,7 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
         );
         return { correctedMedicineName: input.query, source: 'original_query_used' };
       }
-      // The prompt asks AI to set source to 'ai_enhanced'. If it's something else, it implies an issue on AI's side or schema mismatch.
-      // However, the schema for EnhanceMedicineSearchOutputSchema has source as optional.
-      // If AI provides a valid correctedMedicineName but no source, we'll assume 'ai_enhanced' based on prompt instructions.
+      
       return { 
         correctedMedicineName: rawOutputFromAI.correctedMedicineName,
         source: rawOutputFromAI.source || 'ai_enhanced' 
@@ -133,11 +137,11 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
           errorMessage = flowError.message;
           errorStack = flowError.stack;
 
-          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid')) {
-            console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
+          if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid') || errorMessage.includes('permission') || errorMessage.includes('denied')) {
+            console.error(`enhanceMedicineSearchFlow: Probable API key, permission, or configuration issue: ${errorMessage}`);
             return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }
-          if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
+          if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model') || errorMessage.includes('404 Not Found')) {
             console.error(`enhanceMedicineSearchFlow: AI model not found or configured: ${errorMessage}`);
             return { correctedMedicineName: input.query, source: 'ai_unavailable' };
           }

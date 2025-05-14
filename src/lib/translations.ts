@@ -26,7 +26,7 @@ export type TranslationKeys = {
   errorOccurred: string;
   errorAi: string;
   errorData: string;
-  errorAiDetails: (medicineName: string, source: string) => string;
+  errorAiDetails: (itemName: string, source: string) => string;
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
   sourceDbAiMessage: string;
@@ -45,6 +45,11 @@ export type TranslationKeys = {
   errorAiFailed: string;
   errorAiFailedDetail: string;
   errorAiEnhancementSkipped: string;
+  errorAiModelNotFound: (modelName: string) => string;
+  aiCouldNotEnhance: (itemName: string) => string;
+  errorAiNotConfiguredForDetails: (itemName: string) => string;
+  errorAiFailedForDetails: (itemName: string) => string;
+  errorAiDetailsCritical: (itemName: string) => string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -73,7 +78,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorOccurred: 'An Error Occurred',
     errorAi: 'AI search enhancement failed or was skipped. Using original query.',
     errorData: 'Failed to fetch medicine data from database.',
-    errorAiDetails: (medicineName: string, source: string) => `AI could not generate full details for "${medicineName}". Status: ${source}. Displaying available data.`,
+    errorAiDetails: (itemName: string, source: string) => `AI could not generate full details for "${itemName}". Status: ${source}. Displaying available data.`,
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
     clearSearchButton: 'Clear Search',
     sourceDbAiMessage: 'Details from database, enhanced by AI.',
@@ -92,6 +97,11 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiFailed: "There was an error while trying to enhance your search using AI.",
     errorAiFailedDetail: "Please check your server logs (terminal where `npm run dev` is running) for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.",
     errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query.",
+    errorAiModelNotFound: (modelName: string) => `The AI model "${modelName}" was not found or is not accessible. Please check the model name and your API key permissions.`,
+    aiCouldNotEnhance: (itemName: string) => `AI could not provide further details for "${itemName}" beyond what was found in the database.`,
+    errorAiNotConfiguredForDetails: (itemName: string) => `AI features for generating details for "${itemName}" are unavailable due to configuration issues.`,
+    errorAiFailedForDetails: (itemName: string) => `AI failed to generate details for "${itemName}".`,
+    errorAiDetailsCritical: (itemName: string) => `A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`,
   },
   hi: {
     appName: 'वेलमेड्स',
@@ -118,7 +128,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorOccurred: 'एक त्रुटि हुई',
     errorAi: 'एआई खोज वृद्धि विफल रही या छोड़ दी गई। मूल क्वेरी का उपयोग किया जा रहा है।',
     errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
-    errorAiDetails: (medicineName: string, source: string) => `एआई "${medicineName}" के लिए पूर्ण विवरण उत्पन्न नहीं कर सका। स्थिति: ${source}। उपलब्ध डेटा प्रदर्शित किया जा रहा है।`,
+    errorAiDetails: (itemName: string, source: string) => `एआई "${itemName}" के लिए पूर्ण विवरण उत्पन्न नहीं कर सका। स्थिति: ${source}। उपलब्ध डेटा प्रदर्शित किया जा रहा है।`,
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
     clearSearchButton: 'खोज साफ़ करें',
     sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
@@ -137,6 +147,11 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiFailed: "एआई का उपयोग करके आपकी खोज को बढ़ाने का प्रयास करते समय एक त्रुटि हुई।",
     errorAiFailedDetail: "एआई सेवा से अधिक विशिष्ट त्रुटि विवरण के लिए कृपया अपने सर्वर लॉग (टर्मिनल जहां `npm run dev` चल रहा है) की जांच करें। यह एक अमान्य एपीआई कुंजी, कोटा समस्याओं, या नेटवर्क समस्याओं के कारण हो सकता है।",
     errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।",
+    errorAiModelNotFound: (modelName: string) => `एआई मॉडल "${modelName}" नहीं मिला या पहुंच योग्य नहीं है। कृपया मॉडल का नाम और अपनी एपीआई कुंजी अनुमतियों की जांच करें।`,
+    aiCouldNotEnhance: (itemName: string) => `एआई डेटाबेस में मिली जानकारी के अतिरिक्त "${itemName}" के लिए और विवरण प्रदान नहीं कर सका।`,
+    errorAiNotConfiguredForDetails: (itemName: string) => `कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
+    errorAiFailedForDetails: (itemName: string) => `एआई "${itemName}" के लिए विवरण उत्पन्न करने में विफल रहा।`,
+    errorAiDetailsCritical: (itemName: string) => `"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`,
   },
   bn: {
     appName: 'ওয়েলমেডস',
@@ -163,7 +178,7 @@ export const translations: Record<Language, TranslationKeys> = {
     errorOccurred: 'একটি ত্রুটি ঘটেছে',
     errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে বা এড়িয়ে যাওয়া হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
     errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
-    errorAiDetails: (medicineName: string, source: string) => `এআই "${medicineName}" এর জন্য সম্পূর্ণ বিবরণ তৈরি করতে পারেনি। স্থিতি: ${source}। উপলব্ধ ডেটা দেখানো হচ্ছে।`,
+    errorAiDetails: (itemName: string, source: string) => `এআই "${itemName}" এর জন্য সম্পূর্ণ বিবরণ তৈরি করতে পারেনি। স্থিতি: ${source}। উপলব্ধ ডেটা দেখানো হচ্ছে।`,
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
     clearSearchButton: 'অনুসন্ধান সাফ করুন',
     sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
@@ -182,8 +197,12 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiFailed: "এআই ব্যবহার করে আপনার অনুসন্ধান উন্নত করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে।",
     errorAiFailedDetail: "এআই পরিষেবা থেকে আরও নির্দিষ্ট ত্রুটির বিবরণের জন্য অনুগ্রহ করে আপনার সার্ভার লগগুলি (টার্মিনাল যেখানে `npm run dev` চলছে) পরীক্ষা করুন। এটি একটি অবৈধ API কী, কোটা সমস্যা বা নেটওয়ার্ক সমস্যার কারণে হতে পারে।",
     errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।",
+    errorAiModelNotFound: (modelName: string) => `"${modelName}" এআই মডেলটি খুঁজে পাওয়া যায়নি বা অ্যাক্সেসযোগ্য নয়। অনুগ্রহ করে মডেলের নাম এবং আপনার API কী অনুমতিগুলি পরীক্ষা করুন।`,
+    aiCouldNotEnhance: (itemName: string) => `ডাটাবেসে যা পাওয়া গেছে তার বাইরে এআই "${itemName}" এর জন্য আর কোনো বিবরণ দিতে পারেনি।`,
+    errorAiNotConfiguredForDetails: (itemName: string) => `কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি अनुपलब्ध।`,
+    errorAiFailedForDetails: (itemName: string) => `এআই "${itemName}" এর জন্য বিবরণ তৈরি করতে ব্যর্থ হয়েছে।`,
+    errorAiDetailsCritical: (itemName: string) => `"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`,
   },
 };
 
 export const getTranslations = (lang: Language): TranslationKeys => translations[lang];
-

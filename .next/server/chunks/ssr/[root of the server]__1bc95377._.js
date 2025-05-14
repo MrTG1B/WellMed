@@ -322,12 +322,18 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         return result;
     } catch (error) {
         let message = "Unknown error during AI search enhancement.";
+        let errorDetails = "";
         if (error instanceof Error) {
             message = error.message;
+            errorDetails = error.stack || String(error);
         } else if (typeof error === 'string') {
             message = error;
+            errorDetails = error;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+            message = String(error.message);
+            errorDetails = JSON.stringify(error);
         }
-        console.error(`Error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, error);
+        console.error(`Critical error in enhanceMedicineSearch wrapper for query "${input.query}":`, message, `Details: ${errorDetails}`, error);
         return {
             correctedMedicineName: input.query,
             source: 'ai_failed'
@@ -336,7 +342,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
 }
 const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'enhanceMedicineSearchPrompt',
-    model: 'googleai/gemini-pro',
+    model: 'googleai/gemini-1.0-pro',
     input: {
         schema: EnhanceMedicineSearchInputSchema
     },
@@ -387,17 +393,13 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
             'ai_unavailable',
             'ai_failed',
             'original_query_used'
-        ].includes(rawOutputFromAI.source) // Validate source if present
-        ) {
+        ].includes(rawOutputFromAI.source)) {
             console.warn("enhanceMedicineSearchFlow: AI returned invalid structure, empty correctedMedicineName, or invalid source. Input:", JSON.stringify(input, null, 2), "Raw Output:", JSON.stringify(rawOutputFromAI, null, 2));
             return {
                 correctedMedicineName: input.query,
                 source: 'original_query_used'
             };
         }
-        // The prompt asks AI to set source to 'ai_enhanced'. If it's something else, it implies an issue on AI's side or schema mismatch.
-        // However, the schema for EnhanceMedicineSearchOutputSchema has source as optional.
-        // If AI provides a valid correctedMedicineName but no source, we'll assume 'ai_enhanced' based on prompt instructions.
         return {
             correctedMedicineName: rawOutputFromAI.correctedMedicineName,
             source: rawOutputFromAI.source || 'ai_enhanced'
@@ -408,14 +410,14 @@ const enhanceMedicineSearchFlow = __TURBOPACK__imported__module__$5b$project$5d2
         if (flowError instanceof Error) {
             errorMessage = flowError.message;
             errorStack = flowError.stack;
-            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid')) {
-                console.error(`enhanceMedicineSearchFlow: Probable API key or configuration issue: ${errorMessage}`);
+            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid') || errorMessage.includes('permission') || errorMessage.includes('denied')) {
+                console.error(`enhanceMedicineSearchFlow: Probable API key, permission, or configuration issue: ${errorMessage}`);
                 return {
                     correctedMedicineName: input.query,
                     source: 'ai_unavailable'
                 };
             }
-            if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
+            if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model') || errorMessage.includes('404 Not Found')) {
                 console.error(`enhanceMedicineSearchFlow: AI model not found or configured: ${errorMessage}`);
                 return {
                     correctedMedicineName: input.query,
@@ -482,7 +484,7 @@ const translations = {
         errorOccurred: 'An Error Occurred',
         errorAi: 'AI search enhancement failed or was skipped. Using original query.',
         errorData: 'Failed to fetch medicine data from database.',
-        errorAiDetails: (medicineName, source)=>`AI could not generate full details for "${medicineName}". Status: ${source}. Displaying available data.`,
+        errorAiDetails: (itemName, source)=>`AI could not generate full details for "${itemName}". Status: ${source}. Displaying available data.`,
         searchWithAiResult: (correctedName)=>`AI suggested: "${correctedName}". Searching with this term.`,
         clearSearchButton: 'Clear Search',
         sourceDbAiMessage: 'Details from database, enhanced by AI.',
@@ -500,7 +502,12 @@ const translations = {
         errorAiFailedTitle: "AI Processing Error",
         errorAiFailed: "There was an error while trying to enhance your search using AI.",
         errorAiFailedDetail: "Please check your server logs (terminal where `npm run dev` is running) for more specific error details from the AI service. This could be due to an invalid API key, quota issues, or network problems.",
-        errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query."
+        errorAiEnhancementSkipped: "AI search enhancement was skipped (possibly due to AI unavailability). Using your original query.",
+        errorAiModelNotFound: (modelName)=>`The AI model "${modelName}" was not found or is not accessible. Please check the model name and your API key permissions.`,
+        aiCouldNotEnhance: (itemName)=>`AI could not provide further details for "${itemName}" beyond what was found in the database.`,
+        errorAiNotConfiguredForDetails: (itemName)=>`AI features for generating details for "${itemName}" are unavailable due to configuration issues.`,
+        errorAiFailedForDetails: (itemName)=>`AI failed to generate details for "${itemName}".`,
+        errorAiDetailsCritical: (itemName)=>`A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`
     },
     hi: {
         appName: 'वेलमेड्स',
@@ -527,7 +534,7 @@ const translations = {
         errorOccurred: 'एक त्रुटि हुई',
         errorAi: 'एआई खोज वृद्धि विफल रही या छोड़ दी गई। मूल क्वेरी का उपयोग किया जा रहा है।',
         errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
-        errorAiDetails: (medicineName, source)=>`एआई "${medicineName}" के लिए पूर्ण विवरण उत्पन्न नहीं कर सका। स्थिति: ${source}। उपलब्ध डेटा प्रदर्शित किया जा रहा है।`,
+        errorAiDetails: (itemName, source)=>`एआई "${itemName}" के लिए पूर्ण विवरण उत्पन्न नहीं कर सका। स्थिति: ${source}। उपलब्ध डेटा प्रदर्शित किया जा रहा है।`,
         searchWithAiResult: (correctedName)=>`एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
         clearSearchButton: 'खोज साफ़ करें',
         sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
@@ -545,7 +552,12 @@ const translations = {
         errorAiFailedTitle: "एआई प्रसंस्करण त्रुटि",
         errorAiFailed: "एआई का उपयोग करके आपकी खोज को बढ़ाने का प्रयास करते समय एक त्रुटि हुई।",
         errorAiFailedDetail: "एआई सेवा से अधिक विशिष्ट त्रुटि विवरण के लिए कृपया अपने सर्वर लॉग (टर्मिनल जहां `npm run dev` चल रहा है) की जांच करें। यह एक अमान्य एपीआई कुंजी, कोटा समस्याओं, या नेटवर्क समस्याओं के कारण हो सकता है।",
-        errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।"
+        errorAiEnhancementSkipped: "एआई खोज वृद्धि छोड़ दी गई थी (संभवतः एआई अनुपलब्धता के कारण)। आपकी मूल क्वेरी का उपयोग किया जा रहा है।",
+        errorAiModelNotFound: (modelName)=>`एआई मॉडल "${modelName}" नहीं मिला या पहुंच योग्य नहीं है। कृपया मॉडल का नाम और अपनी एपीआई कुंजी अनुमतियों की जांच करें।`,
+        aiCouldNotEnhance: (itemName)=>`एआई डेटाबेस में मिली जानकारी के अतिरिक्त "${itemName}" के लिए और विवरण प्रदान नहीं कर सका।`,
+        errorAiNotConfiguredForDetails: (itemName)=>`कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
+        errorAiFailedForDetails: (itemName)=>`एआई "${itemName}" के लिए विवरण उत्पन्न करने में विफल रहा।`,
+        errorAiDetailsCritical: (itemName)=>`"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`
     },
     bn: {
         appName: 'ওয়েলমেডস',
@@ -572,7 +584,7 @@ const translations = {
         errorOccurred: 'একটি ত্রুটি ঘটেছে',
         errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে বা এড়িয়ে যাওয়া হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
         errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
-        errorAiDetails: (medicineName, source)=>`এআই "${medicineName}" এর জন্য সম্পূর্ণ বিবরণ তৈরি করতে পারেনি। স্থিতি: ${source}। উপলব্ধ ডেটা দেখানো হচ্ছে।`,
+        errorAiDetails: (itemName, source)=>`এআই "${itemName}" এর জন্য সম্পূর্ণ বিবরণ তৈরি করতে পারেনি। স্থিতি: ${source}। উপলব্ধ ডেটা দেখানো হচ্ছে।`,
         searchWithAiResult: (correctedName)=>`এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
         clearSearchButton: 'অনুসন্ধান সাফ করুন',
         sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
@@ -590,7 +602,12 @@ const translations = {
         errorAiFailedTitle: "এআই প্রক্রিয়াকরণ ত্রুটি",
         errorAiFailed: "এআই ব্যবহার করে আপনার অনুসন্ধান উন্নত করার চেষ্টা করার সময় একটি ত্রুটি ঘটেছে।",
         errorAiFailedDetail: "এআই পরিষেবা থেকে আরও নির্দিষ্ট ত্রুটির বিবরণের জন্য অনুগ্রহ করে আপনার সার্ভার লগগুলি (টার্মিনাল যেখানে `npm run dev` চলছে) পরীক্ষা করুন। এটি একটি অবৈধ API কী, কোটা সমস্যা বা নেটওয়ার্ক সমস্যার কারণে হতে পারে।",
-        errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।"
+        errorAiEnhancementSkipped: "এআই অনুসন্ধান বৃদ্ধি এড়িয়ে যাওয়া হয়েছে (সম্ভবত এআই অনুপলব্ধতার কারণে)। আপনার আসল ক্যোয়ারী ব্যবহার করা হচ্ছে।",
+        errorAiModelNotFound: (modelName)=>`"${modelName}" এআই মডেলটি খুঁজে পাওয়া যায়নি বা অ্যাক্সেসযোগ্য নয়। অনুগ্রহ করে মডেলের নাম এবং আপনার API কী অনুমতিগুলি পরীক্ষা করুন।`,
+        aiCouldNotEnhance: (itemName)=>`ডাটাবেসে যা পাওয়া গেছে তার বাইরে এআই "${itemName}" এর জন্য আর কোনো বিবরণ দিতে পারেনি।`,
+        errorAiNotConfiguredForDetails: (itemName)=>`কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি अनुपलब्ध।`,
+        errorAiFailedForDetails: (itemName)=>`এআই "${itemName}" এর জন্য বিবরণ তৈরি করতে ব্যর্থ হয়েছে।`,
+        errorAiDetailsCritical: (itemName)=>`"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`
     }
 };
 const getTranslations = (lang)=>translations[lang];
@@ -681,15 +698,21 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         return validatedResult;
     } catch (error) {
         let rawErrorMessage = "Unknown AI error during flow execution in wrapper.";
+        let errorDetails = "";
         if (error instanceof Error) {
             rawErrorMessage = error.message;
+            errorDetails = error.stack || String(error);
         } else if (typeof error === 'string') {
             rawErrorMessage = error;
+            errorDetails = error;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+            rawErrorMessage = String(error.message);
+            errorDetails = JSON.stringify(error);
         }
-        // More prominent logging for wrapper catch
         console.error(`!!!!!!!! ERROR IN generateMedicineDetails WRAPPER !!!!!!!!`);
         console.error(`Input: ${JSON.stringify(input)}`);
         console.error(`Message: ${rawErrorMessage}`);
+        console.error(`Details: ${errorDetails}`);
         console.error(`Full Error Object:`, error);
         console.error(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
         const source = input.contextName && input.contextComposition ? 'database_only' : 'ai_failed';
@@ -707,7 +730,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
 }
 const medicineDetailsPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'generateMedicineDetailsPrompt',
-    model: 'googleai/gemini-pro',
+    model: 'googleai/gemini-1.0-pro',
     input: {
         schema: GenerateMedicineDetailsInputSchema
     },
@@ -792,7 +815,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         console.log("[generateMedicineDetailsFlow] Attempting AI prompt call.");
         console.log("[generateMedicineDetailsFlow] Input to AI prompt:", JSON.stringify(input, null, 2));
         console.log("******************************************************************");
-        const { output } = await medicineDetailsPrompt(input); // Call to AI
+        const { output } = await medicineDetailsPrompt(input);
         rawOutputFromAI = output;
         console.log("******************************************************************");
         console.log("[generateMedicineDetailsFlow] AI Prompt Call Completed.");
@@ -812,7 +835,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 source: sourceForFailure
             };
         }
-        // If we reach here, rawOutputFromAI is not null/undefined and has at least name/composition strings.
         console.log("[generateMedicineDetailsFlow] Raw AI Output (BEFORE further validation):", JSON.stringify(rawOutputFromAI, null, 2));
         let finalSource;
         let finalName;
@@ -823,19 +845,16 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         let finalSideEffects;
         let finalBarcode;
         if (input.contextName && input.contextComposition) {
-            // DB Context Path
-            finalName = input.contextName; // Must use DB context name
-            finalComposition = input.contextComposition; // Must use DB context composition
+            finalName = input.contextName;
+            finalComposition = input.contextComposition;
             if (rawOutputFromAI.source === 'database_ai_enhanced') {
                 finalSource = 'database_ai_enhanced';
-                // Use AI's version of details if provided (non-empty string), else fallback
                 finalUsage = rawOutputFromAI.usage && rawOutputFromAI.usage.trim() !== '' ? rawOutputFromAI.usage.trim() : t_flow_fallback.infoNotAvailable;
                 finalManufacturer = rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '' ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
                 finalDosage = rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '' ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
                 finalSideEffects = rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '' ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
-                finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined; // Prefer AI barcode if new, else DB, else undefined
-                // Check if any actual enhancement occurred beyond just name/composition/barcode from context
-                const anyDetailEnhanced = finalUsage !== t_flow_fallback.infoNotAvailable && (input.contextComposition ? !input.contextComposition.includes(finalUsage) : true) || finalManufacturer !== t_flow_fallback.infoNotAvailable || finalDosage !== t_flow_fallback.infoNotAvailable || finalSideEffects !== t_flow_fallback.infoNotAvailable || finalBarcode && finalBarcode !== input.contextBarcode;
+                finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
+                const anyDetailEnhanced = finalUsage !== t_flow_fallback.infoNotAvailable || finalManufacturer !== t_flow_fallback.infoNotAvailable || finalDosage !== t_flow_fallback.infoNotAvailable || finalSideEffects !== t_flow_fallback.infoNotAvailable || finalBarcode && finalBarcode !== input.contextBarcode;
                 if (!anyDetailEnhanced && finalUsage === t_flow_fallback.infoNotAvailable && finalManufacturer === t_flow_fallback.infoNotAvailable && finalDosage === t_flow_fallback.infoNotAvailable && finalSideEffects === t_flow_fallback.infoNotAvailable) {
                     console.log("[generateMedicineDetailsFlow] AI reported 'database_ai_enhanced' but provided no new textual details beyond context or fallbacks for usage, manufacturer, dosage, sideEffects. Downgrading to 'database_only'.");
                     finalSource = 'database_only';
@@ -850,8 +869,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 finalBarcode = input.contextBarcode;
             }
         } else {
-            // AI Generated Path (no DB context for name/composition)
-            // Name and composition MUST come from AI here if it's 'ai_generated'
             if (rawOutputFromAI.source === 'ai_generated' && rawOutputFromAI.name.trim() !== '' && rawOutputFromAI.composition.trim() !== '') {
                 finalSource = 'ai_generated';
                 finalName = rawOutputFromAI.name.trim();
@@ -865,7 +882,6 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 console.warn(`[generateMedicineDetailsFlow] In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated' with non-empty name/composition. Raw AI output: ${JSON.stringify(rawOutputFromAI)}. Falling back to ai_failed.`);
                 finalSource = 'ai_failed';
                 finalName = input.searchTermOrName || t_flow_fallback.infoNotAvailable;
-                // If AI gave a name despite other issues, try to use it.
                 if (rawOutputFromAI.name && rawOutputFromAI.name.trim() !== '') finalName = rawOutputFromAI.name.trim();
                 finalComposition = rawOutputFromAI.composition && rawOutputFromAI.composition.trim() !== '' ? rawOutputFromAI.composition.trim() : t_flow_fallback.infoNotAvailable;
                 finalUsage = t_flow_fallback.infoNotAvailable;
@@ -895,15 +911,16 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         console.error(`Error Message: ${flowError.message || 'No message available'}`);
         console.error(`Error Stack: ${flowError.stack || 'No stack trace available'}`);
         if (flowError.cause) console.error("Error Cause:", flowError.cause);
-        console.error(`Full Error Object:`, flowError);
+        if (flowError.response && flowError.response.data) console.error("Error Response Data:", flowError.response.data);
+        console.error(`Full Error Object:`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
         console.error(`Raw AI Output (if available from before error): ${rawOutputFromAI === null ? "NULL_VALUE" : rawOutputFromAI === undefined ? "UNDEFINED_VALUE" : JSON.stringify(rawOutputFromAI, null, 2)}`);
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         let sourceForError = input.contextName && input.contextComposition ? 'database_only' : 'ai_failed';
         if (flowError.message) {
-            if (flowError.message.includes('API key not valid') || flowError.message.includes('User location is not supported') || flowError.message.includes('API_KEY_INVALID') || flowError.message.includes('API key is invalid')) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key or configuration issue: ${flowError.message}`);
+            if (flowError.message.includes('API key not valid') || flowError.message.includes('User location is not supported') || flowError.message.includes('API_KEY_INVALID') || flowError.message.includes('API key is invalid') || flowError.message.includes('permission') || flowError.message.includes('denied')) {
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${flowError.message}`);
                 sourceForError = 'ai_unavailable';
-            } else if (flowError.message.includes('model not found') || flowError.message.includes('Could not find model')) {
+            } else if (flowError.message.includes('model not found') || flowError.message.includes('Could not find model') || flowError.message.includes('404 Not Found')) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${flowError.message}`);
                 sourceForError = 'ai_unavailable';
             } else if (flowError.message.includes('Billing account not found') || flowError.message.includes('billing issues')) {
@@ -911,7 +928,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 sourceForError = 'ai_unavailable';
             } else if (flowError.message.toLowerCase().includes("failed to fetch")) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${flowError.message}`);
-                sourceForError = 'ai_failed'; // Or 'ai_unavailable' if it implies service is down
+                sourceForError = 'ai_failed';
             } else if (flowError.name === 'ZodError') {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${flowError.message}. Details:`, flowError.errors);
                 sourceForError = 'ai_failed';

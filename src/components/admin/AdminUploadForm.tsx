@@ -25,7 +25,7 @@ import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   medicineId: z.string()
-    .trim() // Added trim
+    .trim()
     .min(2, {
       message: "Medicine ID must be at least 2 characters after trimming.",
     }).max(50, {
@@ -34,7 +34,7 @@ const formSchema = z.object({
       message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores (after trimming)."
     }),
   composition: z.string()
-    .trim() // Added trim
+    .trim()
     .min(5, {
     message: "Composition must be at least 5 characters after trimming.",
   }),
@@ -44,7 +44,7 @@ const formSchema = z.object({
       message: "Medicine Display Name, if provided, must be at least 2 characters after trimming.",
     })
     .optional(),
-  barcode: z.string().trim().optional(), // Added trim here too for consistency
+  barcode: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -68,11 +68,8 @@ export default function AdminUploadForm() {
   const watchedComposition = watch("composition");
 
   useEffect(() => {
-    // Automatically populate medicineName from composition
-    // but only if composition is not empty, to allow manual clearing of medicineName
-    if (watchedComposition) {
-      setValue("medicineName", watchedComposition, { shouldValidate: true, shouldDirty: true });
-    }
+    // Automatically populate medicineName from composition or clear it if composition is empty
+    setValue("medicineName", watchedComposition || "", { shouldValidate: true, shouldDirty: true });
   }, [watchedComposition, setValue]);
 
 
@@ -82,7 +79,6 @@ export default function AdminUploadForm() {
     }
     setIsSubmitting(true);
 
-    // data from react-hook-form with zodResolver should already be trimmed if .trim() is in schema
     const newMedicineId = data.medicineId; 
     const finalMedicineName = data.medicineName && data.medicineName.length > 0 
                             ? data.medicineName 
@@ -115,11 +111,10 @@ export default function AdminUploadForm() {
             idConflict = true;
           }
           const existingMedicine = medicinesData[existingKey];
-          // Compare compositions case-insensitively
           if (existingMedicine.composition && existingMedicine.composition.toLowerCase() === newComposition.toLowerCase()) {
             compositionConflict = true;
           }
-          if (newBarcode && existingMedicine.barcode && existingMedicine.barcode === newBarcode) {
+          if (newBarcode && newBarcode.length > 0 && existingMedicine.barcode && existingMedicine.barcode === newBarcode) {
             barcodeConflict = true;
           }
         }
@@ -132,7 +127,7 @@ export default function AdminUploadForm() {
       if (compositionConflict) {
         warningMessages.push(`A medicine with composition "${newComposition}" already exists.`);
       }
-      if (barcodeConflict && newBarcode) {
+      if (barcodeConflict && newBarcode && newBarcode.length > 0) {
         warningMessages.push(`A medicine with barcode "${newBarcode}" already exists.`);
       }
 
@@ -149,7 +144,7 @@ export default function AdminUploadForm() {
       const medicineDataToSave = {
         name: finalMedicineName,
         composition: newComposition, 
-        barcode: newBarcode || null, 
+        barcode: (newBarcode && newBarcode.length > 0) ? newBarcode : null, 
         lastUpdated: new Date().toISOString(),
       };
 

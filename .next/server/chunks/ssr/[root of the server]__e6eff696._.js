@@ -547,7 +547,7 @@ function AdminUploadForm() {
         },
         mode: "onChange"
     });
-    const { isDirty, isValid, watch, setValue } = form;
+    const { formState: { isDirty, isValid }, watch, setValue, getValues, formState } = form;
     const watchedComposition = watch("composition");
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         // Automatically populate medicineName from composition or clear it if composition is empty
@@ -564,10 +564,10 @@ function AdminUploadForm() {
             return;
         }
         setIsSubmitting(true);
-        const newMedicineId = data.medicineId;
-        const finalMedicineName = data.medicineName && data.medicineName.length > 0 ? data.medicineName : newMedicineId;
-        const newComposition = data.composition;
-        const newBarcode = data.barcode;
+        const newMedicineId = data.medicineId.trim();
+        const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 ? data.medicineName.trim() : data.composition.trim(); // Use composition if medicineName is empty
+        const newComposition = data.composition.trim();
+        const newBarcode = data.barcode?.trim();
         try {
             if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["db"]) {
                 console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available.");
@@ -650,6 +650,10 @@ function AdminUploadForm() {
             setIsSubmitting(false);
         }
     };
+    // Debugging logs
+    console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isDirty =", isDirty, "isValid =", isValid);
+    console.log("AdminUploadForm RENDER: Form values:", getValues());
+    console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Form"], {
         ...form,
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -665,7 +669,7 @@ function AdminUploadForm() {
                                     children: "Medicine ID"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 188,
+                                    lineNumber: 194,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -674,35 +678,35 @@ function AdminUploadForm() {
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 190,
+                                        lineNumber: 196,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 189,
+                                    lineNumber: 195,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "Unique ID for the medicine (alphanumeric, hyphens, underscores)."
+                                    children: "Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 192,
+                                    lineNumber: 198,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 195,
+                                    lineNumber: 201,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 187,
+                            lineNumber: 193,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 183,
+                    lineNumber: 189,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
@@ -714,7 +718,7 @@ function AdminUploadForm() {
                                     children: "Composition"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 204,
+                                    lineNumber: 210,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -724,35 +728,35 @@ function AdminUploadForm() {
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 206,
+                                        lineNumber: 212,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 205,
+                                    lineNumber: 211,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "Active ingredients and strengths. Used as default display name."
+                                    children: "Active ingredients and strengths. Used as default display name. Min 5 chars."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 212,
+                                    lineNumber: 218,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 215,
+                                    lineNumber: 221,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 203,
+                            lineNumber: 209,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 199,
+                    lineNumber: 205,
                     columnNumber: 10
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
@@ -764,44 +768,44 @@ function AdminUploadForm() {
                                     children: "Medicine Display Name (Optional)"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 224,
+                                    lineNumber: 230,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
-                                        placeholder: "e.g., Paracetamol 500mg Tablets",
+                                        placeholder: "Defaults to composition if left blank",
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 226,
+                                        lineNumber: 232,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 225,
+                                    lineNumber: 231,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "User-friendly name. Defaults to composition, then ID if blank."
+                                    children: "User-friendly name. Defaults to composition if blank. If provided, min 2 chars."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 228,
+                                    lineNumber: 234,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 231,
+                                    lineNumber: 237,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 223,
+                            lineNumber: 229,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 219,
+                    lineNumber: 225,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormField"], {
@@ -813,7 +817,7 @@ function AdminUploadForm() {
                                     children: "Barcode (Optional)"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 240,
+                                    lineNumber: 246,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -822,40 +826,40 @@ function AdminUploadForm() {
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 242,
+                                        lineNumber: 248,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 241,
+                                    lineNumber: 247,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormDescription"], {
                                     children: "The EAN or UPC barcode number."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 244,
+                                    lineNumber: 250,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 247,
+                                    lineNumber: 253,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 239,
+                            lineNumber: 245,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 235,
+                    lineNumber: 241,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                     type: "submit",
-                    disabled: isSubmitting || !isDirty || !isValid,
+                    disabled: isSubmitting || !isValid,
                     className: "w-full",
                     children: isSubmitting ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
                         children: [
@@ -863,7 +867,7 @@ function AdminUploadForm() {
                                 className: "mr-2 h-4 w-4 animate-spin"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                lineNumber: 254,
+                                lineNumber: 260,
                                 columnNumber: 15
                             }, this),
                             "Submitting..."
@@ -871,18 +875,18 @@ function AdminUploadForm() {
                     }, void 0, true) : "Upload Medicine"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 251,
+                    lineNumber: 257,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-            lineNumber: 182,
+            lineNumber: 188,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-        lineNumber: 181,
+        lineNumber: 187,
         columnNumber: 5
     }, this);
 }

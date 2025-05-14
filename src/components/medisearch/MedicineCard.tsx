@@ -53,7 +53,12 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-primary flex items-center">
           <Pill className="mr-2 h-7 w-7 flex-shrink-0" />
-          <span className="break-words">{medicine.name}</span>
+          <span className="break-words">
+            {medicine.name}
+            {!medicine.id.startsWith('ai-') && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">({medicine.id})</span>
+            )}
+          </span>
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           {t.resultsTitle}

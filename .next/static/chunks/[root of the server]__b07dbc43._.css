@@ -712,6 +712,10 @@ body {
   margin-top: auto;
 }
 
+.ml-2 {
+  margin-left: .5rem;
+}
+
 .block {
   display: block;
 }

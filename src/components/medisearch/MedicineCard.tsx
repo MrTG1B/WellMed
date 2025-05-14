@@ -22,13 +22,14 @@ interface MedicineCardProps {
 export function MedicineCard({ medicine, t }: MedicineCardProps) {
   const detailItemClass = "text-sm font-medium text-foreground/80";
   const detailValueClass = "text-base text-foreground";
+  const multiLineDetailValueClass = `${detailValueClass} whitespace-pre-line`;
 
   let sourceMessage = "";
   switch (medicine.source) {
     case 'database_ai_enhanced':
       sourceMessage = t.sourceDbAiMessage;
       break;
-    case 'ai_generated': // This case might not occur if we only enhance DB items for now
+    case 'ai_generated': 
       sourceMessage = t.sourceAiOnlyMessage;
       break;
     case 'database_only': 
@@ -41,9 +42,8 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       sourceMessage = t.sourceAiFailedForDetailsMessage(medicine.name);
       break;
     default:
-      // If source is somehow undefined or unexpected, provide a generic DB message or nothing
       if (medicine.name && medicine.composition && medicine.usage === t.infoNotAvailable) {
-        sourceMessage = t.sourceDbOnlyMessage; // Fallback if details look like only DB
+        sourceMessage = t.sourceDbOnlyMessage; 
       }
   }
 
@@ -70,26 +70,26 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           <h3 className={detailItemClass + " flex items-center"}>
             <Stethoscope className="mr-2 h-4 w-4 text-primary" /> {t.usageLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.usage}</p>
+          <p className={multiLineDetailValueClass}>{medicine.usage}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
             <Factory className="mr-2 h-4 w-4 text-primary" /> {t.manufacturerLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.manufacturer}</p>
+          <p className={multiLineDetailValueClass}>{medicine.manufacturer}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-syringe mr-2 text-primary"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 15 4-4"/><path d="m5 19-3 3"/><path d="m12 12 4.5 4.5"/></svg>
             {t.dosageLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.dosage}</p>
+          <p className={multiLineDetailValueClass}>{medicine.dosage}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
             <AlertTriangle className="mr-2 h-4 w-4 text-primary" /> {t.sideEffectsLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.sideEffects}</p>
+          <p className={multiLineDetailValueClass}>{medicine.sideEffects}</p>
         </div>
         {medicine.barcode && (
           <div>
@@ -121,4 +121,3 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
-

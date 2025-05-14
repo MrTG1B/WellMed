@@ -1227,6 +1227,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 function MedicineCard({ medicine, t }) {
     const detailItemClass = "text-sm font-medium text-foreground/80";
     const detailValueClass = "text-base text-foreground";
+    const multiLineDetailValueClass = `${detailValueClass} whitespace-pre-line`;
     let sourceMessage = "";
     switch(medicine.source){
         case 'database_ai_enhanced':
@@ -1245,9 +1246,8 @@ function MedicineCard({ medicine, t }) {
             sourceMessage = t.sourceAiFailedForDetailsMessage(medicine.name);
             break;
         default:
-            // If source is somehow undefined or unexpected, provide a generic DB message or nothing
             if (medicine.name && medicine.composition && medicine.usage === t.infoNotAvailable) {
-                sourceMessage = t.sourceDbOnlyMessage; // Fallback if details look like only DB
+                sourceMessage = t.sourceDbOnlyMessage;
             }
     }
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -1344,7 +1344,7 @@ function MedicineCard({ medicine, t }) {
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                className: detailValueClass,
+                                className: multiLineDetailValueClass,
                                 children: medicine.usage
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
@@ -1378,7 +1378,7 @@ function MedicineCard({ medicine, t }) {
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                className: detailValueClass,
+                                className: multiLineDetailValueClass,
                                 children: medicine.manufacturer
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
@@ -1464,7 +1464,7 @@ function MedicineCard({ medicine, t }) {
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                className: detailValueClass,
+                                className: multiLineDetailValueClass,
                                 children: medicine.dosage
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
@@ -1498,7 +1498,7 @@ function MedicineCard({ medicine, t }) {
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                className: detailValueClass,
+                                className: multiLineDetailValueClass,
                                 children: medicine.sideEffects
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",

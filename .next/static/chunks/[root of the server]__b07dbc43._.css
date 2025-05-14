@@ -1207,6 +1207,10 @@ body {
   white-space: nowrap;
 }
 
+.whitespace-pre-line {
+  white-space: pre-line;
+}
+
 .rounded-\[2px\] {
   border-radius: 2px;
 }

@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates detailed medicine information using AI.
@@ -51,7 +52,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       dosage: t_fallback.infoNotAvailable,
       sideEffects: t_fallback.infoNotAvailable,
       barcode: input?.contextBarcode,
-      source: 'ai_failed', // Or 'database_only' if context was present but overall input invalid.
+      source: 'ai_failed', 
     };
   }
   
@@ -59,21 +60,17 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
   try {
     console.log(`generateMedicineDetails (wrapper): Calling flow with input:`, JSON.stringify(input, null, 2));
-    const result = await generateMedicineDetailsFlow(input); // This now returns a more robust result
+    const result = await generateMedicineDetailsFlow(input); 
     console.log(`generateMedicineDetails (wrapper): Flow returned result:`, JSON.stringify(result, null, 2));
     
     if (result.source === 'ai_unavailable') {
         console.warn(`generateMedicineDetails (wrapper): Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
     }
     
-    // The flow now handles fallbacks for individual fields if AI returns empty strings.
-    // The wrapper's role is mainly to catch broader flow execution errors.
-    // We still ensure essential fields have some value.
     const validatedResult = {
-        ...result, // result already contains best-effort fields from the flow
+        ...result, 
         name: result.name || nameForFallback || t_fallback.infoNotAvailable,
         composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable,
-        // usage, manufacturer, dosage, sideEffects should come from flow, possibly as t_fallback.infoNotAvailable if AI failed for them
     };
     return validatedResult;
 
@@ -113,24 +110,27 @@ Identifier (Name/ID): "{{contextName}}"
 {{#if contextComposition}}Composition: "{{contextComposition}}"{{/if}}
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
 
-Based on this information, particularly the composition "{{contextComposition}}", please generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
-- Typical usage or indications (based on "{{contextComposition}}").
-- Common manufacturer(s) of medicines with "{{contextComposition}}" (if multiple, list prominent ones).
-- General dosage guidelines (for a medicine with "{{contextComposition}}").
-- Common side effects (associated with "{{contextComposition}}").
+Your primary task is to use the provided 'Composition: "{{contextComposition}}"' to generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
+- usage: Typical usage or indications for a medicine with this composition.
+- manufacturer: Common manufacturer(s) of medicines with this composition. If multiple, list prominent ones.
+- dosage: General dosage guidelines for a medicine with this composition.
+- sideEffects: Common side effects associated with this composition.
 
-The output 'name' should be "{{contextName}}".
-The output 'composition' should be "{{contextComposition}}".
-{{#if contextBarcode}}The output 'barcode' should be "{{contextBarcode}}".{{else}}If a barcode for a medicine with composition "{{contextComposition}}" is commonly known or found, provide it; otherwise, omit or leave the 'barcode' field empty.{{/if}}
-The output 'source' should be "database_ai_enhanced".
+CRITICALLY, the output 'source' field MUST be "database_ai_enhanced".
+The output 'name' field MUST be "{{contextName}}".
+The output 'composition' field MUST be "{{contextComposition}}".
+{{#if contextBarcode}}The output 'barcode' field SHOULD be "{{contextBarcode}}".{{else}}If a common barcode is known for a medicine with this composition, provide it; otherwise, you can omit the 'barcode' field or leave it empty.{{/if}}
+
+If you cannot find specific information for any of the generated fields (usage, manufacturer, dosage, sideEffects) based on the composition, provide the most general information you can or LEAVE THE SPECIFIC FIELD EMPTY. The system will handle fallbacks if fields are empty. Do NOT use the phrase 'Information not available' yourself.
 
 Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
-  usage: "Used to treat pain and fever."
-  manufacturer: "Various generic manufacturers, GSK"
-  dosage: "1-2 tablets every 4-6 hours."
-  sideEffects: "Rare, may include allergic reactions."
+  usage: "Used to treat pain and fever, such as headaches, muscle aches, arthritis, backache, toothaches, colds, and fevers."
+  manufacturer: "Various (e.g., GSK, Mallinckrodt, Aurobindo)"
+  dosage: "For adults, 1 to 2 tablets (500mg to 1000mg) every 4 to 6 hours as needed. Do not exceed 4000mg in 24 hours."
+  sideEffects: "Generally well-tolerated. Rare side effects may include allergic reactions, skin rash, or liver damage with overdose."
+  barcode: "123456789012" 
   source: "database_ai_enhanced"
 
 {{else}}
@@ -149,31 +149,23 @@ Then, provide the following details for that identified medicine in {{language}}
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
 If "{{searchTermOrName}}" seems to be a composition, describe a common medicine with that composition.
-If you cannot confidently identify a specific medicine from "{{searchTermOrName}}", clearly state that you are providing general information based on the term or that no specific medicine could be identified. In such cases, try your best to populate the fields, using "Not specifically identified based on '{{searchTermOrName}}'" or similar for name/composition if needed.
-The output 'source' should be "ai_generated".
+If you cannot confidently identify a specific medicine from "{{searchTermOrName}}", use "Not specifically identified based on '{{searchTermOrName}}'" or similar for name/composition if needed.
+The output 'source' field MUST be "ai_generated".
+LEAVE FIELDS EMPTY if information cannot be found. Do NOT use the phrase 'Information not available' yourself.
 
 Example for searchTermOrName="Amoxicillin", language="en":
   name: "Amoxicillin"
   composition: "Amoxicillin Trihydrate (e.g., 250mg or 500mg capsules)"
-  usage: "Used to treat a wide variety of bacterial infections."
-  manufacturer: "Various generic manufacturers, Sandoz, Teva"
-  dosage: "Typically 250mg to 500mg three times a day."
-  sideEffects: "Nausea, diarrhea, rash."
-  source: "ai_generated"
-
-Example for searchTermOrName="painkiller for headache", language="hi":
-  name: "सामान्य दर्दनाशक (जैसे, पैरासिटामोल, आइबुप्रोफेन)"
-  composition: "विभिन्न (जैसे, पैरासिटामोल, आइबुप्रोफेन)"
-  usage: "सिरदर्द से राहत के लिए।"
-  manufacturer: "विभिन्न"
-  dosage: "उत्पाद-विशिष्ट निर्देशों का पालन करें।"
-  sideEffects: "विशिष्ट दर्दनाशक के आधार पर भिन्न होता है।"
+  usage: "Used to treat a wide variety of bacterial infections including those of the ear, nose, throat, skin, and urinary tract."
+  manufacturer: "Various generic manufacturers (e.g., Sandoz, Teva, Hikma)"
+  dosage: "Typically 250mg to 500mg three times a day for adults, or as prescribed by a doctor. Dosage for children varies by weight."
+  sideEffects: "Common: Nausea, diarrhea, rash. Less common: Vomiting, headache. Seek medical attention for severe allergic reactions."
+  barcode: ""
   source: "ai_generated"
 {{/if}}
 
 Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects) is in {{language}}.
-For any field (usage, manufacturer, dosage, sideEffects) where specific information is not found or cannot be reliably determined, you MUST return the phrase 'Information not available' (or its equivalent in the target {{language}}) for that specific field. DO NOT return an empty string or omit the field. If name or composition cannot be determined (especially in the 'ai_generated' path), use a similar clear statement.
-The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated'. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response; these are handled by the calling logic if AI fails or is unavailable.
+The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated', as specified above. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response.
 `,
 });
 
@@ -191,19 +183,12 @@ const generateMedicineDetailsFlow = ai.defineFlow(
       console.log("generateMedicineDetailsFlow: Calling AI prompt with input:", JSON.stringify(input, null, 2));
       const {output} = await medicineDetailsPrompt(input);
       rawOutputFromAI = output;
-      // Log the raw output from AI immediately after receiving it
       console.log("generateMedicineDetailsFlow - Raw AI Output BEFORE validation:", JSON.stringify(rawOutputFromAI, null, 2));
 
 
-      // Basic validation for critical structure from AI
-      if (!rawOutputFromAI ||
-          typeof rawOutputFromAI.name !== 'string' || // Name must be a string (even if it's a fallback like "Not identified")
-          typeof rawOutputFromAI.composition !== 'string' || // Composition must be a string
-          typeof rawOutputFromAI.source !== 'string' || 
-          !['database_ai_enhanced', 'ai_generated'].includes(rawOutputFromAI.source)
-      ) {
+      if (!rawOutputFromAI || typeof rawOutputFromAI.name !== 'string' || typeof rawOutputFromAI.composition !== 'string') {
         console.warn(
-          "generateMedicineDetailsFlow: AI returned invalid basic structure (name, composition, or source). Input:",
+          "generateMedicineDetailsFlow: AI returned invalid basic structure (missing name or composition). Input:",
           JSON.stringify(input, null, 2),
           "Raw Output:",
           JSON.stringify(rawOutputFromAI, null, 2)
@@ -222,28 +207,69 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         };
       }
 
-      // Construct validated output, applying field-level fallbacks if AI provided empty strings
-      // for fields it was supposed to generate.
-      const finalName = (input.contextName && input.contextName.trim() !== '') 
-                        ? input.contextName 
-                        : (rawOutputFromAI.name && rawOutputFromAI.name.trim() !== '' ? rawOutputFromAI.name : input.searchTermOrName || t_flow_fallback.infoNotAvailable);
-      
-      const finalComposition = (input.contextComposition && input.contextComposition.trim() !== '')
-                               ? input.contextComposition
-                               : (rawOutputFromAI.composition && rawOutputFromAI.composition.trim() !== '' ? rawOutputFromAI.composition : t_flow_fallback.infoNotAvailable);
+      let finalSource: GenerateMedicineDetailsOutput['source'];
+      let finalName: string;
+      let finalComposition: string;
+      let finalUsage: string;
+      let finalManufacturer: string;
+      let finalDosage: string;
+      let finalSideEffects: string;
+      let finalBarcode: string | undefined;
 
-      const finalUsage = (typeof rawOutputFromAI.usage === 'string' && rawOutputFromAI.usage.trim() !== '') 
-                         ? rawOutputFromAI.usage 
-                         : t_flow_fallback.infoNotAvailable;
-      const finalManufacturer = (typeof rawOutputFromAI.manufacturer === 'string' && rawOutputFromAI.manufacturer.trim() !== '') 
-                                ? rawOutputFromAI.manufacturer 
-                                : t_flow_fallback.infoNotAvailable;
-      const finalDosage = (typeof rawOutputFromAI.dosage === 'string' && rawOutputFromAI.dosage.trim() !== '') 
-                          ? rawOutputFromAI.dosage 
-                          : t_flow_fallback.infoNotAvailable;
-      const finalSideEffects = (typeof rawOutputFromAI.sideEffects === 'string' && rawOutputFromAI.sideEffects.trim() !== '') 
-                               ? rawOutputFromAI.sideEffects 
-                               : t_flow_fallback.infoNotAvailable;
+      if (input.contextName && input.contextComposition) {
+        // DB Context Path
+        finalName = input.contextName;
+        finalComposition = input.contextComposition;
+        
+        if (rawOutputFromAI.source === 'database_ai_enhanced') {
+          finalSource = 'database_ai_enhanced';
+          finalUsage = (rawOutputFromAI.usage && rawOutputFromAI.usage.trim() !== '') ? rawOutputFromAI.usage.trim() : t_flow_fallback.infoNotAvailable;
+          finalManufacturer = (rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '') ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
+          finalDosage = (rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '') ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
+          finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
+          finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined; // Prefer AI barcode, then context, then undefined
+
+          // Check if any detail was actually provided by AI beyond just echoing context/empty
+          const anyDetailEnhanced = [finalUsage, finalManufacturer, finalDosage, finalSideEffects].some(detail => detail !== t_flow_fallback.infoNotAvailable) || (finalBarcode && finalBarcode !== input.contextBarcode);
+          if (!anyDetailEnhanced) {
+            console.log("generateMedicineDetailsFlow: AI reported 'database_ai_enhanced' but provided no new details. Treating as 'database_only'.");
+            // finalSource = 'database_only'; // Optionally downgrade if AI claims enhancement but gives nothing new. Let's stick with AI claim for now.
+          }
+        } else {
+          console.warn(`generateMedicineDetailsFlow: In DB context path, AI returned source '${rawOutputFromAI.source}' instead of expected 'database_ai_enhanced'. Falling back to database_only.`);
+          finalSource = 'database_only';
+          finalUsage = t_flow_fallback.infoNotAvailable;
+          finalManufacturer = t_flow_fallback.infoNotAvailable;
+          finalDosage = t_flow_fallback.infoNotAvailable;
+          finalSideEffects = t_flow_fallback.infoNotAvailable;
+          finalBarcode = input.contextBarcode;
+        }
+      } else {
+        // AI Generated Path (no DB context for name/composition)
+        if (rawOutputFromAI.source === 'ai_generated' && rawOutputFromAI.name.trim() !== '' && rawOutputFromAI.composition.trim() !== '') {
+          finalSource = 'ai_generated';
+          finalName = rawOutputFromAI.name.trim();
+          finalComposition = rawOutputFromAI.composition.trim();
+          finalUsage = (rawOutputFromAI.usage && rawOutputFromAI.usage.trim() !== '') ? rawOutputFromAI.usage.trim() : t_flow_fallback.infoNotAvailable;
+          finalManufacturer = (rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '') ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
+          finalDosage = (rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '') ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
+          finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
+          finalBarcode = rawOutputFromAI.barcode?.trim() || undefined;
+        } else {
+          console.warn(`generateMedicineDetailsFlow: In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated'. Falling back to ai_failed.`);
+          finalSource = 'ai_failed';
+          finalName = input.searchTermOrName || t_flow_fallback.infoNotAvailable;
+          // If AI failed to provide name/composition, use fallback for those too.
+          finalComposition = (rawOutputFromAI.composition && rawOutputFromAI.composition.trim() !== '') ? rawOutputFromAI.composition.trim() : t_flow_fallback.infoNotAvailable;
+          if (finalName === t_flow_fallback.infoNotAvailable && rawOutputFromAI.name.trim() !== '') finalName = rawOutputFromAI.name.trim();
+
+          finalUsage = t_flow_fallback.infoNotAvailable;
+          finalManufacturer = t_flow_fallback.infoNotAvailable;
+          finalDosage = t_flow_fallback.infoNotAvailable;
+          finalSideEffects = t_flow_fallback.infoNotAvailable;
+          finalBarcode = undefined;
+        }
+      }
       
       const validatedOutput: GenerateMedicineDetailsOutput = {
         name: finalName,
@@ -252,8 +278,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         manufacturer: finalManufacturer,
         dosage: finalDosage,
         sideEffects: finalSideEffects,
-        barcode: rawOutputFromAI.barcode || input.contextBarcode, // Prefer AI barcode, then context
-        source: rawOutputFromAI.source as GenerateMedicineDetailsOutput['source'], 
+        barcode: finalBarcode,
+        source: finalSource, 
       };
       
       console.log("generateMedicineDetailsFlow - Validated Output to be returned:", JSON.stringify(validatedOutput, null, 2));
@@ -263,7 +289,6 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         let errorMessage = "AI model failed to generate valid details or an unexpected error occurred in the flow.";
         let errorStack: string | undefined;
         let sourceForError: GenerateMedicineDetailsOutput['source'] = (input.contextName && input.contextComposition) ? 'database_only' : 'ai_failed';
-
 
         if (flowError instanceof Error) {
             errorMessage = flowError.message;
@@ -280,7 +305,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
                  sourceForError = 'ai_unavailable';
             } else if (errorMessage.toLowerCase().includes("failed to fetch")) {
                 console.error(`generateMedicineDetailsFlow: Network issue or AI service unreachable: ${errorMessage}`, flowError);
-                sourceForError = 'ai_failed'; // Could be temporary, treat as general AI failure
+                sourceForError = 'ai_failed'; 
             }
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
@@ -303,3 +328,6 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     }
   }
 );
+
+
+      

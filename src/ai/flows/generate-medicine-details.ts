@@ -13,7 +13,7 @@
 
 import {ai} from '@/ai/genkit';
 import type { Language } from '@/types';
-import { getTranslations } from '@/lib/translations'; 
+import { getTranslations } from '@/lib/translations';
 import {z} from 'genkit';
 
 const GenerateMedicineDetailsInputSchema = z.object({
@@ -52,23 +52,23 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       dosage: t_fallback.infoNotAvailable,
       sideEffects: t_fallback.infoNotAvailable,
       barcode: input?.contextBarcode,
-      source: 'ai_failed', 
+      source: 'ai_failed',
     };
   }
-  
+
   const nameForFallback = input.contextName || input.searchTermOrName;
 
   try {
-    console.log(`generateMedicineDetails (wrapper): Calling flow with input:`, JSON.stringify(input, null, 2));
-    const result = await generateMedicineDetailsFlow(input); 
-    console.log(`generateMedicineDetails (wrapper): Flow returned result:`, JSON.stringify(result, null, 2));
-    
+    // console.log(`generateMedicineDetails (wrapper): Calling flow with input:`, JSON.stringify(input, null, 2));
+    const result = await generateMedicineDetailsFlow(input);
+    // console.log(`generateMedicineDetails (wrapper): Flow returned result:`, JSON.stringify(result, null, 2));
+
     if (result.source === 'ai_unavailable') {
         console.warn(`generateMedicineDetails (wrapper): Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
     }
-    
+
     const validatedResult = {
-        ...result, 
+        ...result,
         name: result.name || nameForFallback || t_fallback.infoNotAvailable,
         composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable,
     };
@@ -82,10 +82,10 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       rawErrorMessage = error;
     }
     console.error(`Error in generateMedicineDetails wrapper for input ${JSON.stringify(input)}:`, rawErrorMessage, error);
-    
+
     const source: GenerateMedicineDetailsOutput['source'] = (input.contextName && input.contextComposition) ? 'database_only' : 'ai_failed';
      return {
-      name: nameForFallback || t_fallback.infoNotAvailable, 
+      name: nameForFallback || t_fallback.infoNotAvailable,
       composition: input.contextComposition || t_fallback.infoNotAvailable,
       usage: t_fallback.infoNotAvailable,
       manufacturer: t_fallback.infoNotAvailable,
@@ -130,7 +130,7 @@ Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500
   manufacturer: "Various (e.g., GSK, Mallinckrodt, Aurobindo)"
   dosage: "For adults, 1 to 2 tablets (500mg to 1000mg) every 4 to 6 hours as needed. Do not exceed 4000mg in 24 hours."
   sideEffects: "Generally well-tolerated. Rare side effects may include allergic reactions, skin rash, or liver damage with overdose."
-  barcode: "123456789012" 
+  barcode: "123456789012"
   source: "database_ai_enhanced"
 
 {{else}}
@@ -177,23 +177,23 @@ const generateMedicineDetailsFlow = ai.defineFlow(
   },
   async (input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> => {
     let rawOutputFromAI: GenerateMedicineDetailsOutput | null = null;
-    const t_flow_fallback = getTranslations(input.language || 'en'); 
+    const t_flow_fallback = getTranslations(input.language || 'en');
 
     try {
-      console.log("generateMedicineDetailsFlow: Calling AI prompt with input:", JSON.stringify(input, null, 2));
-      const {output} = await medicineDetailsPrompt(input);
+      console.log("[generateMedicineDetailsFlow] Input to AI prompt:", JSON.stringify(input, null, 2));
+      const {output} = await medicineDetailsPrompt(input); // Call to AI
       rawOutputFromAI = output;
-      console.log("generateMedicineDetailsFlow - Raw AI Output BEFORE validation:", JSON.stringify(rawOutputFromAI, null, 2));
+      console.log("[generateMedicineDetailsFlow] Raw AI Output (BEFORE validation):", JSON.stringify(rawOutputFromAI, null, 2));
 
 
       if (!rawOutputFromAI || typeof rawOutputFromAI.name !== 'string' || typeof rawOutputFromAI.composition !== 'string') {
         console.warn(
-          "generateMedicineDetailsFlow: AI returned invalid basic structure (missing name or composition). Input:",
+          "[generateMedicineDetailsFlow] AI returned invalid basic structure (missing name or composition). Input:",
           JSON.stringify(input, null, 2),
           "Raw Output:",
           JSON.stringify(rawOutputFromAI, null, 2)
         );
-        
+
         const sourceForFailure: GenerateMedicineDetailsOutput['source'] = input.contextName ? 'database_only' : 'ai_failed';
         return {
             name: input.contextName || input.searchTermOrName || t_flow_fallback.infoNotAvailable,
@@ -220,23 +220,23 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         // DB Context Path
         finalName = input.contextName;
         finalComposition = input.contextComposition;
-        
+
         if (rawOutputFromAI.source === 'database_ai_enhanced') {
           finalSource = 'database_ai_enhanced';
           finalUsage = (rawOutputFromAI.usage && rawOutputFromAI.usage.trim() !== '') ? rawOutputFromAI.usage.trim() : t_flow_fallback.infoNotAvailable;
           finalManufacturer = (rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '') ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
           finalDosage = (rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '') ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
           finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
-          finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined; // Prefer AI barcode, then context, then undefined
+          finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
 
-          // Check if any detail was actually provided by AI beyond just echoing context/empty
-          const anyDetailEnhanced = [finalUsage, finalManufacturer, finalDosage, finalSideEffects].some(detail => detail !== t_flow_fallback.infoNotAvailable) || (finalBarcode && finalBarcode !== input.contextBarcode);
-          if (!anyDetailEnhanced) {
-            console.log("generateMedicineDetailsFlow: AI reported 'database_ai_enhanced' but provided no new details. Treating as 'database_only'.");
-            // finalSource = 'database_only'; // Optionally downgrade if AI claims enhancement but gives nothing new. Let's stick with AI claim for now.
+          const anyDetailEnhanced = [finalUsage, finalManufacturer, finalDosage, finalSideEffects].some(detail => detail !== t_flow_fallback.infoNotAvailable && detail.trim() !== '') || (finalBarcode && finalBarcode !== input.contextBarcode);
+          if (!anyDetailEnhanced && finalUsage === t_flow_fallback.infoNotAvailable && finalManufacturer === t_flow_fallback.infoNotAvailable && finalDosage === t_flow_fallback.infoNotAvailable && finalSideEffects === t_flow_fallback.infoNotAvailable ) {
+            console.log("[generateMedicineDetailsFlow] AI reported 'database_ai_enhanced' but provided no new details beyond context or fallbacks. Downgrading to 'database_only'.");
+            finalSource = 'database_only';
           }
+
         } else {
-          console.warn(`generateMedicineDetailsFlow: In DB context path, AI returned source '${rawOutputFromAI.source}' instead of expected 'database_ai_enhanced'. Falling back to database_only.`);
+          console.warn(`[generateMedicineDetailsFlow] In DB context path, AI returned source '${rawOutputFromAI.source}' instead of expected 'database_ai_enhanced'. Raw AI output: ${JSON.stringify(rawOutputFromAI)}. Falling back to database_only.`);
           finalSource = 'database_only';
           finalUsage = t_flow_fallback.infoNotAvailable;
           finalManufacturer = t_flow_fallback.infoNotAvailable;
@@ -256,10 +256,9 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
           finalBarcode = rawOutputFromAI.barcode?.trim() || undefined;
         } else {
-          console.warn(`generateMedicineDetailsFlow: In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated'. Falling back to ai_failed.`);
+          console.warn(`[generateMedicineDetailsFlow] In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated'. Raw AI output: ${JSON.stringify(rawOutputFromAI)}. Falling back to ai_failed.`);
           finalSource = 'ai_failed';
           finalName = input.searchTermOrName || t_flow_fallback.infoNotAvailable;
-          // If AI failed to provide name/composition, use fallback for those too.
           finalComposition = (rawOutputFromAI.composition && rawOutputFromAI.composition.trim() !== '') ? rawOutputFromAI.composition.trim() : t_flow_fallback.infoNotAvailable;
           if (finalName === t_flow_fallback.infoNotAvailable && rawOutputFromAI.name.trim() !== '') finalName = rawOutputFromAI.name.trim();
 
@@ -270,7 +269,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalBarcode = undefined;
         }
       }
-      
+
       const validatedOutput: GenerateMedicineDetailsOutput = {
         name: finalName,
         composition: finalComposition,
@@ -279,42 +278,48 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         dosage: finalDosage,
         sideEffects: finalSideEffects,
         barcode: finalBarcode,
-        source: finalSource, 
+        source: finalSource,
       };
-      
-      console.log("generateMedicineDetailsFlow - Validated Output to be returned:", JSON.stringify(validatedOutput, null, 2));
+
+      console.log("[generateMedicineDetailsFlow] Validated Output to be returned:", JSON.stringify(validatedOutput, null, 2));
       return validatedOutput;
 
-    } catch (flowError: unknown) {
+    } catch (flowError: any) { // Typed as 'any' for easier access to properties
+        console.error(
+          `[generateMedicineDetailsFlow] CRITICAL ERROR during AI prompt execution or output processing. Input: ${JSON.stringify(input)}`,
+          `Error Type: ${flowError.name || 'Unknown type'}`,
+          `Error Message: ${flowError.message || 'No message'}`,
+          `Error Stack: ${flowError.stack || 'No stack trace'}`,
+          `Full Error Object:`, flowError,
+          `Raw AI Output (if assignment occurred before error): ${JSON.stringify(rawOutputFromAI, null, 2)}`
+        );
+
         let errorMessage = "AI model failed to generate valid details or an unexpected error occurred in the flow.";
-        let errorStack: string | undefined;
         let sourceForError: GenerateMedicineDetailsOutput['source'] = (input.contextName && input.contextComposition) ? 'database_only' : 'ai_failed';
 
-        if (flowError instanceof Error) {
+        if (flowError.message) {
             errorMessage = flowError.message;
-            errorStack = flowError.stack;
-
-            if (errorMessage.includes('API key not valid') || errorMessage.includes('User location is not supported') || errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key is invalid')) {
-              console.error(`generateMedicineDetailsFlow: Probable API key or configuration issue: ${errorMessage}`, flowError);
+            if (flowError.message.includes('API key not valid') || flowError.message.includes('User location is not supported') || flowError.message.includes('API_KEY_INVALID') || flowError.message.includes('API key is invalid')) {
+              console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key or configuration issue: ${flowError.message}`);
               sourceForError = 'ai_unavailable';
-            } else if (errorMessage.includes('model not found') || errorMessage.includes('Could not find model')) {
-              console.error(`generateMedicineDetailsFlow: AI model not found or configured: ${errorMessage}`, flowError);
+            } else if (flowError.message.includes('model not found') || flowError.message.includes('Could not find model')) {
+              console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${flowError.message}`);
               sourceForError = 'ai_unavailable';
-            } else if (errorMessage.includes('Billing account not found') || errorMessage.includes('billing issues')) {
-                 console.error(`generateMedicineDetailsFlow: Billing issue: ${errorMessage}`);
+            } else if (flowError.message.includes('Billing account not found') || flowError.message.includes('billing issues')) {
+                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${flowError.message}`);
                  sourceForError = 'ai_unavailable';
-            } else if (errorMessage.toLowerCase().includes("failed to fetch")) {
-                console.error(`generateMedicineDetailsFlow: Network issue or AI service unreachable: ${errorMessage}`, flowError);
-                sourceForError = 'ai_failed'; 
+            } else if (flowError.message.toLowerCase().includes("failed to fetch")) { // Network errors
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${flowError.message}`);
+                sourceForError = 'ai_failed';
+            } else if (flowError.name === 'ZodError') { // Zod validation errors
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${flowError.message}. Details:`, flowError.errors);
+                errorMessage = "AI returned data in an unexpected format. " + flowError.message; // Keep more specific error message for Zod
+                sourceForError = 'ai_failed';
             }
         } else if (typeof flowError === 'string') {
             errorMessage = flowError;
-        } else if (flowError && typeof flowError === 'object' && 'message' in flowError) {
-            errorMessage = String((flowError as any).message);
         }
 
-        console.error(`generateMedicineDetailsFlow: Error for input ${JSON.stringify(input)} - Message: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}\nRaw AI Output (if available): ${JSON.stringify(rawOutputFromAI, null, 2)}\nOriginal Error Object:`, flowError);
-        
         return {
             name: input.contextName || input.searchTermOrName || t_flow_fallback.infoNotAvailable,
             composition: input.contextComposition || t_flow_fallback.infoNotAvailable,
@@ -323,11 +328,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             dosage: t_flow_fallback.infoNotAvailable,
             sideEffects: t_flow_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
-            source: sourceForError, 
+            source: sourceForError,
         };
     }
   }
 );
-
-
-      

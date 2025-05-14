@@ -41,9 +41,13 @@ export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetai
 export async function generateMedicineDetails(input: GenerateMedicineDetailsInput): Promise<GenerateMedicineDetailsOutput> {
   const languageToUse = input.language || 'en';
   const t_fallback = getTranslations(languageToUse);
-
+  console.log("******************************************************************");
+  console.log("[generateMedicineDetails wrapper] Input to wrapper:", JSON.stringify(input, null, 2));
+  console.log("******************************************************************");
   if (!input || (typeof input.searchTermOrName !== 'string' || input.searchTermOrName.trim() === '') && (!input.contextName || !input.contextComposition)) {
     console.warn(`[generateMedicineDetails wrapper] Invalid or empty input. Input: ${JSON.stringify(input)}`);
+    console.log('name:', input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable);
+    console.log('composition:', input?.contextComposition || t_fallback.infoNotAvailable);
     return {
       name: input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable,
       composition: input?.contextComposition || t_fallback.infoNotAvailable,

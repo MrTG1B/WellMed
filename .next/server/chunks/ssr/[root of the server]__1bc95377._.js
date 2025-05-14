@@ -671,8 +671,13 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
     const languageToUse = input.language || 'en';
     const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(languageToUse);
+    console.log("******************************************************************");
+    console.log("[generateMedicineDetails wrapper] Input to wrapper:", JSON.stringify(input, null, 2));
+    console.log("******************************************************************");
     if (!input || (typeof input.searchTermOrName !== 'string' || input.searchTermOrName.trim() === '') && (!input.contextName || !input.contextComposition)) {
         console.warn(`[generateMedicineDetails wrapper] Invalid or empty input. Input: ${JSON.stringify(input)}`);
+        console.log('name:', input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable);
+        console.log('composition:', input?.contextComposition || t_fallback.infoNotAvailable);
         return {
             name: input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input?.contextComposition || t_fallback.infoNotAvailable,

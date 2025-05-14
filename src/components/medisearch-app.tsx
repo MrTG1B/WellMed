@@ -6,7 +6,6 @@ import Image from "next/image";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch, type EnhanceMedicineSearchOutput } from "@/ai/flows/enhance-medicine-search";
-// Removed: import { generateMedicineDetails, type GenerateMedicineDetailsOutput } from "@/ai/flows/generate-medicine-details";
 import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi";
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
@@ -93,40 +92,56 @@ export default function MediSearchApp() {
             setAiConfigError(t.errorAiNotConfigured);
             setAiConfigErrorType('key_missing');
             toast({ title: t.appName, description: t.errorAiNotConfigured, variant: "destructive" });
-        } else {
+        } else { // 'ai_failed' or unexpected value
            toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
+           setAiConfigError(t.errorAiFailed);
+           setAiConfigErrorType('api_fail');
         }
-      } else {
+      } else { // AI enhancement returned nothing valid or failed to produce a corrected name
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
         aiEnhancedSearchTerm = termToSearch.trim();
-        aiEnhancementSource = 'ai_failed';
+        aiEnhancementSource = 'ai_failed'; // Mark as failed if no valid corrected name
+        setAiConfigError(t.errorAiFailed);
+        setAiConfigErrorType('api_fail');
       }
     } catch (aiError: any) {
       let message = t.errorAi;
       let errorCauseDetails = '';
-      if (aiError?.message) {
-        message = `${t.errorAi} Details: ${aiError.message}`;
+       if (aiError?.message) {
+          // Prefer the message from the error object if available and more specific
+          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported')) {
+              message = t.errorAiNotConfigured;
+              setAiConfigError(t.errorAiNotConfigured);
+              setAiConfigErrorType('key_missing');
+          } else if (aiError.message.includes('server error') || aiError.message.includes('internal error') || aiError.message.includes('flow execution failed')) {
+              // Generic AI server-side failure
+              message = t.errorAiFailed;
+              setAiConfigError(t.errorAiFailed);
+              setAiConfigErrorType('api_fail');
+          } else {
+             message = `${t.errorAi} Details: ${aiError.message}`;
+          }
       }
-      if (aiError?.cause?.message) {
+      if (aiError?.cause?.message) { // Sometimes the root cause is nested
         errorCauseDetails = ` (Cause: ${aiError.cause.message})`;
+        if (aiError.cause.message.includes('API key not valid') || aiError.cause.message.includes('API_KEY_INVALID') || aiError.cause.message.includes('User location is not supported')) {
+            message = t.errorAiNotConfigured; // Overwrite generic message if cause is specific
+            setAiConfigError(t.errorAiNotConfigured);
+            setAiConfigErrorType('key_missing');
+        }
       }
       console.error(`AI enhancement critical failure (medisearch-app.tsx): Query: "${termToSearch}", Error: ${aiError.message || aiError}${errorCauseDetails}`, aiError);
-
-      if (aiError.cause?.message?.includes('API key not valid') || aiError.cause?.message?.includes('API_KEY_INVALID') || aiError.cause?.message?.includes('User location is not supported')) {
-        setAiConfigError(t.errorAiNotConfigured);
-        setAiConfigErrorType('key_missing');
-        message = t.errorAiNotConfigured;
-      } else {
-        setAiConfigError(t.errorAiFailed);
-        setAiConfigErrorType('api_fail');
-      }
       toast({
         title: t.appName,
         description: message,
         variant: "destructive"
       });
-      aiEnhancedSearchTerm = termToSearch.trim();
-      aiEnhancementSource = 'ai_failed';
+      aiEnhancedSearchTerm = termToSearch.trim(); // Fallback to original term
+      aiEnhancementSource = 'ai_failed'; // Ensure this is set
+      if (!aiConfigErrorType) { // If not already set by more specific checks
+          setAiConfigError(message); // Use the determined message
+          setAiConfigErrorType('api_fail'); // Default to api_fail if not key_missing
+      }
     }
 
     setLoadingMessage(t.loadingData);
@@ -143,23 +158,21 @@ export default function MediSearchApp() {
           name: dbItem.name,
           composition: dbItem.composition || t.infoNotAvailable,
           barcode: dbItem.barcode,
-          usage: t.infoNotAvailable, // AI part removed
-          manufacturer: t.infoNotAvailable, // AI part removed
-          dosage: t.infoNotAvailable, // AI part removed
-          sideEffects: t.infoNotAvailable, // AI part removed
-          source: 'database_only' as const, // Source is now always database_only if found
+          usage: t.infoNotAvailable, 
+          manufacturer: t.infoNotAvailable, 
+          dosage: t.infoNotAvailable, 
+          sideEffects: t.infoNotAvailable, 
+          source: 'database_only' as const, 
         }));
       }
-      // If not found in DB, processedMedicines remains empty, leading to "No results" message.
       
       setSearchResults(processedMedicines);
 
-      // Handle overall AI status based on search enhancement outcome
-      if (aiEnhancementSource === 'ai_unavailable') {
+      if (aiEnhancementSource === 'ai_unavailable' && !aiConfigError) {
         setAiConfigError(t.errorAiNotConfigured);
         setAiConfigErrorType('key_missing');
-      } else if (aiEnhancementSource === 'ai_failed') {
-        setAiConfigError(t.errorAiFailed); // This might overwrite a more specific config error from enhance search
+      } else if (aiEnhancementSource === 'ai_failed' && !aiConfigError) {
+        setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
 
@@ -237,19 +250,19 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
-        <div className="flex items-center justify-center mb-1 mt-[-20px] sm:mt-[-30px] md:mt-[-40px] space-x-3">
+        <div className="flex items-center justify-center"> {/* Removed negative margins and mb-1, space-x-3 */}
              <Image
                 src="/images/logo_transparent.png"
                 alt="WellMeds Logo"
-                width={280} // Increased size
-                height={280} // Increased size
+                width={320} 
+                height={320} 
                 priority
                 className="object-contain"
                 data-ai-hint="logo health"
             />
         </div>
 
-        <section className="w-full p-6 bg-card rounded-xl shadow-2xl mt-[-30px] sm:mt-[-40px] md:mt-[-50px]">
+        <section className="w-full p-6 bg-card rounded-xl shadow-2xl"> {/* Removed negative margins */}
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
             searchQuery={searchQuery}

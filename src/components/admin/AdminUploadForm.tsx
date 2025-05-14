@@ -50,11 +50,6 @@ export default function AdminUploadForm() {
   const [currentTimestamp, setCurrentTimestamp] = useState<string>('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    setCurrentTimestamp(new Date().toISOString());
-  }, []);
-
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,7 +61,18 @@ export default function AdminUploadForm() {
     mode: "onChange",
   });
 
-  const { isDirty, isValid } = form.formState;
+  const { isDirty, isValid, watch, setValue } = form;
+  const watchedComposition = watch("composition");
+
+  useEffect(() => {
+    setCurrentTimestamp(new Date().toISOString());
+  }, []);
+
+  useEffect(() => {
+    if (watchedComposition) {
+      setValue("medicineName", watchedComposition, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [watchedComposition, setValue]);
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -84,10 +90,10 @@ export default function AdminUploadForm() {
     
     const finalMedicineName = trimmedMedicineName && trimmedMedicineName.length > 0 
                             ? trimmedMedicineName 
-                            : newMedicineId; // Use medicineId if name is undefined, empty, or just whitespace
+                            : newMedicineId; 
 
-    const newComposition = data.composition.trim().toLowerCase(); // For conflict checking
-    const originalComposition = data.composition.trim(); // For storing
+    const newComposition = data.composition.trim().toLowerCase(); 
+    const originalComposition = data.composition.trim(); 
     const newBarcode = data.barcode?.trim();
 
     try {
@@ -103,7 +109,6 @@ export default function AdminUploadForm() {
         return;
       }
 
-      // Check for existing data
       const medicinesRef = ref(db, 'medicines');
       const snapshot = await get(medicinesRef);
       let idConflict = false;
@@ -212,23 +217,7 @@ export default function AdminUploadForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="medicineName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Medicine Display Name (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
-              </FormControl>
-              <FormDescription>
-                The user-friendly name of the medicine (Optional, uses Medicine ID if blank).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
+         <FormField
           control={form.control}
           name="composition"
           render={({ field }) => (
@@ -242,7 +231,23 @@ export default function AdminUploadForm() {
                 />
               </FormControl>
               <FormDescription>
-                The active ingredients and their strengths.
+                The active ingredients and their strengths. This will also be used as the default display name.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="medicineName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Medicine Display Name (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
+              </FormControl>
+              <FormDescription>
+                The user-friendly name of the medicine. Defaults to composition if blank. (Uses Medicine ID if this is also blank).
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -278,4 +283,3 @@ export default function AdminUploadForm() {
     </Form>
   );
 }
-

@@ -64,7 +64,7 @@ export default function AdminUploadForm() {
     mode: "onChange", // Validate on change to provide immediate feedback
   });
 
-  const { isDirty, isValid, watch, setValue } = form;
+  const { formState: { isDirty, isValid }, watch, setValue, getValues, formState } = form;
   const watchedComposition = watch("composition");
 
   useEffect(() => {
@@ -79,12 +79,12 @@ export default function AdminUploadForm() {
     }
     setIsSubmitting(true);
 
-    const newMedicineId = data.medicineId; 
-    const finalMedicineName = data.medicineName && data.medicineName.length > 0 
-                            ? data.medicineName 
-                            : newMedicineId; 
-    const newComposition = data.composition;
-    const newBarcode = data.barcode;
+    const newMedicineId = data.medicineId.trim(); 
+    const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 
+                            ? data.medicineName.trim()
+                            : data.composition.trim(); // Use composition if medicineName is empty
+    const newComposition = data.composition.trim();
+    const newBarcode = data.barcode?.trim();
 
     try {
       if (!db) {
@@ -177,6 +177,12 @@ export default function AdminUploadForm() {
     }
   };
 
+  // Debugging logs
+  console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isDirty =", isDirty, "isValid =", isValid);
+  console.log("AdminUploadForm RENDER: Form values:", getValues());
+  console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -190,7 +196,7 @@ export default function AdminUploadForm() {
                 <Input placeholder="e.g., paracetamol-500" {...field} />
               </FormControl>
               <FormDescription>
-                Unique ID for the medicine (alphanumeric, hyphens, underscores).
+                Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -210,7 +216,7 @@ export default function AdminUploadForm() {
                 />
               </FormControl>
               <FormDescription>
-                Active ingredients and strengths. Used as default display name.
+                Active ingredients and strengths. Used as default display name. Min 5 chars.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -223,10 +229,10 @@ export default function AdminUploadForm() {
             <FormItem>
               <FormLabel>Medicine Display Name (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
+                <Input placeholder="Defaults to composition if left blank" {...field} />
               </FormControl>
               <FormDescription>
-                User-friendly name. Defaults to composition, then ID if blank.
+                User-friendly name. Defaults to composition if blank. If provided, min 2 chars.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -248,7 +254,7 @@ export default function AdminUploadForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting || !isDirty || !isValid } className="w-full">
+        <Button type="submit" disabled={isSubmitting || !isValid } className="w-full">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

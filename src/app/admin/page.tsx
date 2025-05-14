@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4 pt-8 sm:p-6 md:p-8 bg-background text-foreground">
-      <header className="w-full max-w-4xl mb-8 flex justify-between items-center">
+      <header className="w-full max-w-5xl mb-8 flex justify-between items-center">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary">
           Admin Dashboard
         </h1>
@@ -110,8 +110,8 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      <main className="w-full max-w-4xl grid gap-8 md:grid-cols-2">
-        <Card className="shadow-xl">
+      <main className="w-full max-w-5xl grid gap-8 md:grid-cols-3">
+        <Card className="shadow-xl md:col-span-1">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center">
               Upload New Medicine Data
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl">
+        <Card className="shadow-xl md:col-span-2">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center flex items-center justify-center">
               <List className="mr-2 h-6 w-6" />

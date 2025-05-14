@@ -116,7 +116,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
 const medicineDetailsPrompt = ai.definePrompt({
   name: 'generateMedicineDetailsPrompt',
-  model: 'googleai/gemini-1.0-pro',
+  model: 'googleai/gemini-pro', // Changed from gemini-1.0-pro
   input: {schema: GenerateMedicineDetailsInputSchema},
   output: {schema: GenerateMedicineDetailsOutputSchema},
   prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
@@ -212,7 +212,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         dosage: t_api_key_fallback.infoNotAvailable,
         sideEffects: t_api_key_fallback.infoNotAvailable,
         barcode: input.contextBarcode,
-        source: 'ai_unavailable', // Explicitly 'ai_unavailable' due to missing key
+        source: 'ai_unavailable', 
       };
     } else {
       console.log("[generateMedicineDetailsFlow] GEMINI_API_KEY appears to be set in the environment.");
@@ -352,35 +352,42 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.error("!!!!!!!!!!!!!!!!! CRITICAL ERROR IN generateMedicineDetailsFlow CATCH BLOCK !!!!!!!!!!!!!!!!!!");
         console.error(`Input that caused error: ${JSON.stringify(input)}`);
-        console.error(`Error Type: ${flowError.name || 'Unknown type'}`);
-        console.error(`Error Message: ${flowError.message || 'No message available'}`);
-        console.error(`Error Stack: ${flowError.stack || 'No stack trace available'}`);
-        if (flowError.cause) console.error("Error Cause:", flowError.cause);
-        if (flowError.response && flowError.response.data) console.error("Error Response Data:", flowError.response.data);
+        
+        let errorToLog = flowError;
+        if (flowError && flowError.cause instanceof Error) {
+          console.error("Original Cause of Error:", flowError.cause.message, flowError.cause.stack);
+          errorToLog = flowError.cause; // Log the root cause for better clarity
+        }
 
-        console.error(`Full Error Object:`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
+        console.error(`Error Type: ${errorToLog.name || 'Unknown type'}`);
+        console.error(`Error Message: ${errorToLog.message || 'No message available'}`);
+        console.error(`Error Stack: ${errorToLog.stack || 'No stack trace available'}`);
+
+        if (errorToLog.response && errorToLog.response.data) console.error("Error Response Data (from original error):", errorToLog.response.data);
+        
+        console.error(`Full Error Object (potentially wrapped):`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
         console.error(`Raw AI Output (if available from before error): ${rawOutputFromAI === null ? "NULL_VALUE" : rawOutputFromAI === undefined ? "UNDEFINED_VALUE" : JSON.stringify(rawOutputFromAI, null, 2)}`);
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
 
         let sourceForError: GenerateMedicineDetailsOutput['source'] = (input.contextName && input.contextComposition) ? 'database_only' : 'ai_failed';
 
-        if (flowError.message) {
-            const lowerMessage = flowError.message.toLowerCase();
+        if (errorToLog.message) {
+            const lowerMessage = errorToLog.message.toLowerCase();
             if (lowerMessage.includes('api key not valid') || lowerMessage.includes('user location is not supported') || lowerMessage.includes('api_key_invalid') || lowerMessage.includes('api key is invalid') || lowerMessage.includes('permission') || lowerMessage.includes('denied')) {
-              console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${flowError.message}`);
+              console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${errorToLog.message}`);
               sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes('model not found') || lowerMessage.includes('could not find model') || lowerMessage.includes('404 not found')) {
-              console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${flowError.message}`);
+              console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${errorToLog.message}`);
               sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes('billing account not found') || lowerMessage.includes('billing issues')) {
-                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${flowError.message}`);
+                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${errorToLog.message}`);
                  sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${flowError.message}`);
-                sourceForError = 'ai_failed';
-            } else if (flowError.name === 'ZodError') {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${flowError.message}. Details:`, flowError.errors);
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${errorToLog.message}`);
+                sourceForError = 'ai_failed'; // Or 'ai_unavailable' if it implies service is down
+            } else if (errorToLog.name === 'ZodError') { // Check original error name for ZodError
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${errorToLog.message}. Details:`, (errorToLog as any).errors);
                 sourceForError = 'ai_failed';
             }
         }

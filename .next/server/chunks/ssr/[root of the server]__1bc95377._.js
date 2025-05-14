@@ -225,40 +225,45 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$dotenv$2f$li
 ;
 ;
 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$dotenv$2f$lib$2f$main$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["config"])(); // Ensures .env variables are loaded
-const plugins = [];
+const genkitPlugins = []; // Renamed to avoid conflict with 'plugins' from genkit
 let apiKeyFound = false;
 let apiKeyEnvVarName = '';
-// Prioritize GEMINI_API_KEY, then GOOGLE_API_KEY
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const googleApiKey = process.env.GOOGLE_API_KEY; // Kept for backward compatibility or alternative naming
 let apiKeyToUse = undefined;
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const googleApiKey = process.env.GOOGLE_API_KEY;
 if (geminiApiKey && geminiApiKey.trim() !== "") {
     apiKeyToUse = geminiApiKey;
     apiKeyEnvVarName = 'GEMINI_API_KEY';
     apiKeyFound = true;
-    console.log(`Genkit: Found GEMINI_API_KEY.`);
+    console.log(`Genkit: Found ${apiKeyEnvVarName}.`);
 } else if (googleApiKey && googleApiKey.trim() !== "") {
     apiKeyToUse = googleApiKey;
     apiKeyEnvVarName = 'GOOGLE_API_KEY';
     apiKeyFound = true;
-    console.log(`Genkit: GEMINI_API_KEY not found or empty, using GOOGLE_API_KEY.`);
+    console.log(`Genkit: ${apiKeyEnvVarName} found (GEMINI_API_KEY was not).`);
 }
 if (apiKeyFound && apiKeyToUse) {
-    plugins.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$genkit$2d$ai$2f$googleai$2f$lib$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["googleAI"])({
-        apiKey: apiKeyToUse
-    }));
-    console.log(`Genkit: Initializing Google AI plugin using ${apiKeyEnvVarName}.`);
+    try {
+        genkitPlugins.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$genkit$2d$ai$2f$googleai$2f$lib$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["googleAI"])({
+            apiKey: apiKeyToUse
+        }));
+        console.log(`Genkit: Google AI plugin added to plugins list using ${apiKeyEnvVarName}. Will be initialized by genkit().`);
+    } catch (e) {
+        console.error(`Genkit: CRITICAL ERROR preparing Google AI plugin with ${apiKeyEnvVarName}: ${e.message}`, e);
+    }
 } else {
-    console.warn('⚠️ Genkit Initialization Warning: Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set or is empty in the environment variables.\n' + '   AI-powered features will use fallbacks or may not be fully functional.\n' + '   If you intend to use Google AI, please ensure GEMINI_API_KEY (or GOOGLE_API_KEY) is set in your .env file.\n' + '   You can obtain an API key from Google AI Studio (https://aistudio.google.com/app/apikey).');
+    console.warn('Genkit: Neither GEMINI_API_KEY nor GOOGLE_API_KEY was found. Google AI plugin will not be configured.');
 }
 const ai = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$genkit$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["genkit"])({
-    plugins: plugins
+    plugins: genkitPlugins
 });
-const googleAiPluginAdded = plugins.some((p)=>p.name === 'google-ai');
-if (googleAiPluginAdded) {
-    console.log("Genkit: Google AI plugin initialized successfully. Prompts are configured to use 'googleai/gemini-pro' by default in flows unless overridden.");
-} else {
-    console.warn('⚠️ Genkit initialized without the Google AI plugin (likely due to missing GEMINI_API_KEY or GOOGLE_API_KEY). ' + 'AI-dependent flows will use fallbacks or may not function as expected.');
+// The previous check using ai.registry.findPlugin has been removed as it was causing a TypeError.
+// If the Google AI plugin was successfully added to genkitPlugins and an API key is valid,
+// Genkit will attempt to use it. Errors during AI operations will indicate any issues.
+if (genkitPlugins.length > 0 && apiKeyFound) {
+    console.log("Genkit: Attempting to initialize with Google AI plugin. Subsequent AI call errors will indicate if this failed (e.g., invalid API key, model access issues).");
+} else if (!apiKeyFound) {
+    console.warn("Genkit: Google AI plugin not configured due to missing API key. AI-powered features will use fallbacks or may not be fully functional.");
 }
 }}),
 "[project]/src/ai/flows/enhance-medicine-search.ts [app-rsc] (ecmascript)": ((__turbopack_context__) => {
@@ -311,7 +316,6 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
         if (result.source === 'ai_unavailable') {
             console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
         }
-        // Ensure correctedMedicineName is not empty; if AI returns empty, fallback to original.
         if (!result.correctedMedicineName || result.correctedMedicineName.trim() === '') {
             console.warn(`enhanceMedicineSearch: AI returned empty correctedMedicineName. Falling back to original query. Input: "${input.query}", AI Result: ${JSON.stringify(result)}`);
             return {
@@ -342,7 +346,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ enhanceMedicineSearch(i
 }
 const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'enhanceMedicineSearchPrompt',
-    model: 'googleai/gemini-1.0-pro',
+    model: 'googleai/gemini-pro',
     input: {
         schema: EnhanceMedicineSearchInputSchema
     },
@@ -738,7 +742,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
 }
 const medicineDetailsPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
     name: 'generateMedicineDetailsPrompt',
-    model: 'googleai/gemini-1.0-pro',
+    model: 'googleai/gemini-pro',
     input: {
         schema: GenerateMedicineDetailsInputSchema
     },
@@ -939,31 +943,35 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.error("!!!!!!!!!!!!!!!!! CRITICAL ERROR IN generateMedicineDetailsFlow CATCH BLOCK !!!!!!!!!!!!!!!!!!");
         console.error(`Input that caused error: ${JSON.stringify(input)}`);
-        console.error(`Error Type: ${flowError.name || 'Unknown type'}`);
-        console.error(`Error Message: ${flowError.message || 'No message available'}`);
-        console.error(`Error Stack: ${flowError.stack || 'No stack trace available'}`);
-        if (flowError.cause) console.error("Error Cause:", flowError.cause);
-        if (flowError.response && flowError.response.data) console.error("Error Response Data:", flowError.response.data);
-        console.error(`Full Error Object:`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
+        let errorToLog = flowError;
+        if (flowError && flowError.cause instanceof Error) {
+            console.error("Original Cause of Error:", flowError.cause.message, flowError.cause.stack);
+            errorToLog = flowError.cause; // Log the root cause for better clarity
+        }
+        console.error(`Error Type: ${errorToLog.name || 'Unknown type'}`);
+        console.error(`Error Message: ${errorToLog.message || 'No message available'}`);
+        console.error(`Error Stack: ${errorToLog.stack || 'No stack trace available'}`);
+        if (errorToLog.response && errorToLog.response.data) console.error("Error Response Data (from original error):", errorToLog.response.data);
+        console.error(`Full Error Object (potentially wrapped):`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
         console.error(`Raw AI Output (if available from before error): ${rawOutputFromAI === null ? "NULL_VALUE" : rawOutputFromAI === undefined ? "UNDEFINED_VALUE" : JSON.stringify(rawOutputFromAI, null, 2)}`);
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         let sourceForError = input.contextName && input.contextComposition ? 'database_only' : 'ai_failed';
-        if (flowError.message) {
-            const lowerMessage = flowError.message.toLowerCase();
+        if (errorToLog.message) {
+            const lowerMessage = errorToLog.message.toLowerCase();
             if (lowerMessage.includes('api key not valid') || lowerMessage.includes('user location is not supported') || lowerMessage.includes('api_key_invalid') || lowerMessage.includes('api key is invalid') || lowerMessage.includes('permission') || lowerMessage.includes('denied')) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${flowError.message}`);
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${errorToLog.message}`);
                 sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes('model not found') || lowerMessage.includes('could not find model') || lowerMessage.includes('404 not found')) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${flowError.message}`);
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${errorToLog.message}`);
                 sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes('billing account not found') || lowerMessage.includes('billing issues')) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${flowError.message}`);
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${errorToLog.message}`);
                 sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${flowError.message}`);
-                sourceForError = 'ai_failed';
-            } else if (flowError.name === 'ZodError') {
-                console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${flowError.message}. Details:`, flowError.errors);
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${errorToLog.message}`);
+                sourceForError = 'ai_failed'; // Or 'ai_unavailable' if it implies service is down
+            } else if (errorToLog.name === 'ZodError') {
+                console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${errorToLog.message}. Details:`, errorToLog.errors);
                 sourceForError = 'ai_failed';
             }
         }

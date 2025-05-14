@@ -5,53 +5,46 @@ import { config } from 'dotenv';
 
 config(); // Ensures .env variables are loaded
 
-const plugins = [];
+const genkitPlugins = []; // Renamed to avoid conflict with 'plugins' from genkit
 let apiKeyFound = false;
 let apiKeyEnvVarName = '';
-
-// Prioritize GEMINI_API_KEY, then GOOGLE_API_KEY
-const geminiApiKey = process.env.GEMINI_API_KEY;
-const googleApiKey = process.env.GOOGLE_API_KEY; // Kept for backward compatibility or alternative naming
-
 let apiKeyToUse: string | undefined = undefined;
+
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const googleApiKey = process.env.GOOGLE_API_KEY;
 
 if (geminiApiKey && geminiApiKey.trim() !== "") {
   apiKeyToUse = geminiApiKey;
   apiKeyEnvVarName = 'GEMINI_API_KEY';
   apiKeyFound = true;
-  console.log(`Genkit: Found GEMINI_API_KEY.`);
+  console.log(`Genkit: Found ${apiKeyEnvVarName}.`);
 } else if (googleApiKey && googleApiKey.trim() !== "") {
   apiKeyToUse = googleApiKey;
   apiKeyEnvVarName = 'GOOGLE_API_KEY';
   apiKeyFound = true;
-  console.log(`Genkit: GEMINI_API_KEY not found or empty, using GOOGLE_API_KEY.`);
+  console.log(`Genkit: ${apiKeyEnvVarName} found (GEMINI_API_KEY was not).`);
 }
 
 if (apiKeyFound && apiKeyToUse) {
-  plugins.push(googleAI({ apiKey: apiKeyToUse }));
-  console.log(`Genkit: Initializing Google AI plugin using ${apiKeyEnvVarName}.`);
+  try {
+    genkitPlugins.push(googleAI({ apiKey: apiKeyToUse }));
+    console.log(`Genkit: Google AI plugin added to plugins list using ${apiKeyEnvVarName}. Will be initialized by genkit().`);
+  } catch (e: any) {
+    console.error(`Genkit: CRITICAL ERROR preparing Google AI plugin with ${apiKeyEnvVarName}: ${e.message}`, e);
+  }
 } else {
-  console.warn(
-    '⚠️ Genkit Initialization Warning: Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set or is empty in the environment variables.\n' +
-    '   AI-powered features will use fallbacks or may not be fully functional.\n' +
-    '   If you intend to use Google AI, please ensure GEMINI_API_KEY (or GOOGLE_API_KEY) is set in your .env file.\n' +
-    '   You can obtain an API key from Google AI Studio (https://aistudio.google.com/app/apikey).'
-  );
+  console.warn('Genkit: Neither GEMINI_API_KEY nor GOOGLE_API_KEY was found. Google AI plugin will not be configured.');
 }
 
 export const ai = genkit({
-  plugins: plugins,
-  // Removed logLevel: 'debug' as it's not a valid option for genkit() in v1.x
-  // For verbose logging, Genkit CLI might have flags, or you can use console.log within flows.
+  plugins: genkitPlugins,
 });
 
-const googleAiPluginAdded = plugins.some(p => p.name === 'google-ai');
-
-if (googleAiPluginAdded) {
-  console.log("Genkit: Google AI plugin initialized successfully. Prompts are configured to use 'googleai/gemini-pro' by default in flows unless overridden.");
-} else {
-    console.warn(
-        '⚠️ Genkit initialized without the Google AI plugin (likely due to missing GEMINI_API_KEY or GOOGLE_API_KEY). ' +
-        'AI-dependent flows will use fallbacks or may not function as expected.'
-    );
+// The previous check using ai.registry.findPlugin has been removed as it was causing a TypeError.
+// If the Google AI plugin was successfully added to genkitPlugins and an API key is valid,
+// Genkit will attempt to use it. Errors during AI operations will indicate any issues.
+if (genkitPlugins.length > 0 && apiKeyFound) {
+    console.log("Genkit: Attempting to initialize with Google AI plugin. Subsequent AI call errors will indicate if this failed (e.g., invalid API key, model access issues).");
+} else if (!apiKeyFound) {
+    console.warn("Genkit: Google AI plugin not configured due to missing API key. AI-powered features will use fallbacks or may not be fully functional.");
 }

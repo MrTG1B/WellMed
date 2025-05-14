@@ -28,7 +28,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     console.warn(`enhanceMedicineSearch: Invalid or empty input query. Input: ${JSON.stringify(input)}`);
     return {
       correctedMedicineName: input?.query || "", 
-      source: 'original_query_used', // Treat as if AI was skipped for empty/invalid query
+      source: 'original_query_used', 
     };
   }
 
@@ -38,7 +38,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
     if (result.source === 'ai_unavailable') {
         console.warn(`enhanceMedicineSearch: Flow indicated AI is unavailable. Query: "${input.query}"`);
     }
-    // Ensure correctedMedicineName is not empty; if AI returns empty, fallback to original.
+    
     if (!result.correctedMedicineName || result.correctedMedicineName.trim() === '') {
         console.warn(`enhanceMedicineSearch: AI returned empty correctedMedicineName. Falling back to original query. Input: "${input.query}", AI Result: ${JSON.stringify(result)}`);
         return { correctedMedicineName: input.query, source: 'original_query_used' };
@@ -64,7 +64,7 @@ export async function enhanceMedicineSearch(input: EnhanceMedicineSearchInput): 
 
 const enhanceMedicineSearchPrompt = ai.definePrompt({
   name: 'enhanceMedicineSearchPrompt',
-  model: 'googleai/gemini-1.0-pro', // Updated model name
+  model: 'googleai/gemini-pro', // Changed from gemini-1.0-pro
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
   prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.

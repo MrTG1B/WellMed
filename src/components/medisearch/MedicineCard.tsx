@@ -52,8 +52,8 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-primary flex items-center">
-          <Pill className="mr-2 h-7 w-7" />
-          {medicine.name}
+          <Pill className="mr-2 h-7 w-7 flex-shrink-0" />
+          <span className="break-words">{medicine.name}</span>
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           {t.resultsTitle}

@@ -1295,13 +1295,20 @@ function MedicineCard({ medicine, t }) {
                         className: "text-2xl font-semibold text-primary flex items-center",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$pill$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Pill$3e$__["Pill"], {
-                                className: "mr-2 h-7 w-7"
+                                className: "mr-2 h-7 w-7 flex-shrink-0"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
                                 lineNumber: 55,
                                 columnNumber: 11
                             }, this),
-                            medicine.name
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                className: "break-words",
+                                children: medicine.name
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 56,
+                                columnNumber: 11
+                            }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
@@ -1901,7 +1908,7 @@ function MediSearchApp() {
             console.error(`[MediSearchApp] Error Stack: ${aiError?.stack || 'No stack'}`);
             console.error(`[MediSearchApp] Full Error Object:`, aiError);
             if (aiError?.message) {
-                if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found')) {
+                if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest')) {
                     message = t.errorAiNotConfiguredOrModel;
                     setAiConfigError(t.errorAiNotConfiguredOrModel);
                     setAiConfigErrorType('key_or_model');
@@ -2322,7 +2329,7 @@ function MediSearchApp() {
                         columnNumber: 11
                     }, this),
                     !isLoading && !error && searchResults && searchResults.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
-                        className: "jsx-43121facdd97142e" + " " + "w-full mt-0 animate-fadeIn space-y-6",
+                        className: "jsx-43121facdd97142e" + " " + "w-full mt-0 animate-fadeIn space-y-6 flex flex-col items-center",
                         children: searchResults.map((medicine)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$medisearch$2f$MedicineCard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["MedicineCard"], {
                                 medicine: medicine,
                                 t: t

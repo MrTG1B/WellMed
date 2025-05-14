@@ -116,7 +116,7 @@ export default function MediSearchApp() {
 
 
       if (aiError?.message) {
-          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found')) {
+          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest') ) {
               message = t.errorAiNotConfiguredOrModel;
               setAiConfigError(t.errorAiNotConfiguredOrModel);
               setAiConfigErrorType('key_or_model');
@@ -425,7 +425,7 @@ export default function MediSearchApp() {
         )}
 
         {!isLoading && !error && searchResults && searchResults.length > 0 && (
-          <section className="w-full mt-0 animate-fadeIn space-y-6">
+          <section className="w-full mt-0 animate-fadeIn space-y-6 flex flex-col items-center">
             {searchResults.map(medicine => (
               <MedicineCard key={medicine.id} medicine={medicine} t={t} />
             ))}

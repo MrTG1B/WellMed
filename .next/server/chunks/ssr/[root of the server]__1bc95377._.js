@@ -669,15 +669,12 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     ]).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.')
 });
 async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails(input) {
+    console.log("🚀🚀🚀🚀🚀 ENTERING generateMedicineDetails WRAPPER 🚀🚀🚀🚀🚀");
     const languageToUse = input.language || 'en';
     const t_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(languageToUse);
-    console.log("******************************************************************");
-    console.log("[generateMedicineDetails wrapper] Input to wrapper:", JSON.stringify(input, null, 2));
-    console.log("******************************************************************");
+    console.log("[generateMedicineDetails wrapper] Input received:", JSON.stringify(input, null, 2));
     if (!input || (typeof input.searchTermOrName !== 'string' || input.searchTermOrName.trim() === '') && (!input.contextName || !input.contextComposition)) {
-        console.warn(`[generateMedicineDetails wrapper] Invalid or empty input. Input: ${JSON.stringify(input)}`);
-        console.log('name:', input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable);
-        console.log('composition:', input?.contextComposition || t_fallback.infoNotAvailable);
+        console.warn(`[generateMedicineDetails wrapper] DETECTED INVALID OR EMPTY INPUT. Input: ${JSON.stringify(input)}`);
         return {
             name: input?.contextName || input?.searchTermOrName || t_fallback.infoNotAvailable,
             composition: input?.contextComposition || t_fallback.infoNotAvailable,
@@ -691,7 +688,9 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
     }
     const nameForFallback = input.contextName || input.searchTermOrName || t_fallback.infoNotAvailable;
     try {
+        console.log("🚀🚀🚀🚀🚀 CALLING generateMedicineDetailsFlow FROM WRAPPER 🚀🚀🚀🚀🚀");
         const result = await generateMedicineDetailsFlow(input);
+        console.log("🚀🚀🚀🚀🚀 RETURNED from generateMedicineDetailsFlow to WRAPPER. Result:", JSON.stringify(result, null, 2));
         if (result.source === 'ai_unavailable') {
             console.warn(`[generateMedicineDetails wrapper] Flow indicated AI is unavailable. Input: ${JSON.stringify(input)}`);
         }
@@ -700,6 +699,7 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             name: result.name || nameForFallback,
             composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable
         };
+        console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with validated result:", JSON.stringify(validatedResult, null, 2));
         return validatedResult;
     } catch (error) {
         let rawErrorMessage = "Unknown AI error during flow execution in wrapper.";
@@ -714,14 +714,15 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             rawErrorMessage = String(error.message);
             errorDetails = JSON.stringify(error);
         }
-        console.error(`!!!!!!!! ERROR IN generateMedicineDetails WRAPPER !!!!!!!!`);
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.error("!!!!!!!! CATCH IN generateMedicineDetails WRAPPER !!!!!!!");
         console.error(`Input: ${JSON.stringify(input)}`);
         console.error(`Message: ${rawErrorMessage}`);
         console.error(`Details: ${errorDetails}`);
         console.error(`Full Error Object:`, error);
-        console.error(`!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`);
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         const source = input.contextName && input.contextComposition ? 'database_only' : 'ai_failed';
-        return {
+        const fallbackResult = {
             name: nameForFallback,
             composition: input.contextComposition || t_fallback.infoNotAvailable,
             usage: t_fallback.infoNotAvailable,
@@ -731,6 +732,8 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             barcode: input.contextBarcode,
             source: source
         };
+        console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with fallback due to CATCH:", JSON.stringify(fallbackResult, null, 2));
+        return fallbackResult;
     }
 }
 const medicineDetailsPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$genkit$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ai"].definePrompt({
@@ -813,17 +816,40 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
     inputSchema: GenerateMedicineDetailsInputSchema,
     outputSchema: GenerateMedicineDetailsOutputSchema
 }, async (input)=>{
+    console.log("🔷🔷🔷🔷🔷 ENTERING generateMedicineDetailsFlow (ai.defineFlow) 🔷🔷🔷🔷🔷");
+    console.log("[generateMedicineDetailsFlow] Input to flow:", JSON.stringify(input, null, 2));
+    if (!process.env.GEMINI_API_KEY) {
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.error("CRITICAL ERROR: GEMINI_API_KEY is NOT SET or accessible in generateMedicineDetailsFlow environment!");
+        console.error("This flow WILL FAIL to contact Google AI services.");
+        console.error("Please ensure GEMINI_API_KEY is correctly set in your .env file and the server is restarted.");
+        console.error("Also, check that src/ai/genkit.ts is correctly initializing the googleAI plugin.");
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        const t_api_key_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(input.language || 'en');
+        return {
+            name: input.contextName || input.searchTermOrName || t_api_key_fallback.infoNotAvailable,
+            composition: input.contextComposition || t_api_key_fallback.infoNotAvailable,
+            usage: t_api_key_fallback.infoNotAvailable,
+            manufacturer: t_api_key_fallback.infoNotAvailable,
+            dosage: t_api_key_fallback.infoNotAvailable,
+            sideEffects: t_api_key_fallback.infoNotAvailable,
+            barcode: input.contextBarcode,
+            source: 'ai_unavailable'
+        };
+    } else {
+        console.log("[generateMedicineDetailsFlow] GEMINI_API_KEY appears to be set in the environment.");
+    }
     let rawOutputFromAI = null;
     const t_flow_fallback = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$translations$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["getTranslations"])(input.language || 'en');
     try {
         console.log("******************************************************************");
-        console.log("[generateMedicineDetailsFlow] Attempting AI prompt call.");
-        console.log("[generateMedicineDetailsFlow] Input to AI prompt:", JSON.stringify(input, null, 2));
+        console.log("[generateMedicineDetailsFlow] Attempting AI prompt call with medicineDetailsPrompt.");
+        console.log("[generateMedicineDetailsFlow] Input being sent to AI prompt object:", JSON.stringify(input, null, 2));
         console.log("******************************************************************");
         const { output } = await medicineDetailsPrompt(input);
         rawOutputFromAI = output;
         console.log("******************************************************************");
-        console.log("[generateMedicineDetailsFlow] AI Prompt Call Completed.");
+        console.log("[generateMedicineDetailsFlow] AI Prompt Call Completed (or at least didn't throw an immediate error to this catch block).");
         console.log("[generateMedicineDetailsFlow] Value of rawOutputFromAI immediately after assignment:", rawOutputFromAI === null ? "NULL_VALUE" : rawOutputFromAI === undefined ? "UNDEFINED_VALUE" : JSON.stringify(rawOutputFromAI, null, 2));
         console.log("******************************************************************");
         if (!rawOutputFromAI || typeof rawOutputFromAI.name !== 'string' || typeof rawOutputFromAI.composition !== 'string') {
@@ -907,6 +933,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             source: finalSource
         };
         console.log("[generateMedicineDetailsFlow] Validated Output to be returned:", JSON.stringify(validatedOutput, null, 2));
+        console.log("🔷🔷🔷🔷🔷 EXITING generateMedicineDetailsFlow (ai.defineFlow) - SUCCESS PATH 🔷🔷🔷🔷🔷");
         return validatedOutput;
     } catch (flowError) {
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -922,16 +949,17 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         let sourceForError = input.contextName && input.contextComposition ? 'database_only' : 'ai_failed';
         if (flowError.message) {
-            if (flowError.message.includes('API key not valid') || flowError.message.includes('User location is not supported') || flowError.message.includes('API_KEY_INVALID') || flowError.message.includes('API key is invalid') || flowError.message.includes('permission') || flowError.message.includes('denied')) {
+            const lowerMessage = flowError.message.toLowerCase();
+            if (lowerMessage.includes('api key not valid') || lowerMessage.includes('user location is not supported') || lowerMessage.includes('api_key_invalid') || lowerMessage.includes('api key is invalid') || lowerMessage.includes('permission') || lowerMessage.includes('denied')) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Probable API key, permission, or configuration issue: ${flowError.message}`);
                 sourceForError = 'ai_unavailable';
-            } else if (flowError.message.includes('model not found') || flowError.message.includes('Could not find model') || flowError.message.includes('404 Not Found')) {
+            } else if (lowerMessage.includes('model not found') || lowerMessage.includes('could not find model') || lowerMessage.includes('404 not found')) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: AI model not found or configured: ${flowError.message}`);
                 sourceForError = 'ai_unavailable';
-            } else if (flowError.message.includes('Billing account not found') || flowError.message.includes('billing issues')) {
+            } else if (lowerMessage.includes('billing account not found') || lowerMessage.includes('billing issues')) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Billing issue: ${flowError.message}`);
                 sourceForError = 'ai_unavailable';
-            } else if (flowError.message.toLowerCase().includes("failed to fetch")) {
+            } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${flowError.message}`);
                 sourceForError = 'ai_failed';
             } else if (flowError.name === 'ZodError') {
@@ -939,7 +967,7 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 sourceForError = 'ai_failed';
             }
         }
-        return {
+        const errorFallbackResult = {
             name: input.contextName || input.searchTermOrName || t_flow_fallback.infoNotAvailable,
             composition: input.contextComposition || t_flow_fallback.infoNotAvailable,
             usage: t_flow_fallback.infoNotAvailable,
@@ -949,6 +977,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             barcode: input.contextBarcode,
             source: sourceForError
         };
+        console.log("🔷🔷🔷🔷🔷 EXITING generateMedicineDetailsFlow (ai.defineFlow) - CATCH PATH 🔷🔷🔷🔷🔷", JSON.stringify(errorFallbackResult, null, 2));
+        return errorFallbackResult;
     }
 });
 ;

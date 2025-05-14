@@ -24,12 +24,19 @@ import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  medicineId: z.string().min(2, {
-    message: "Medicine ID must be at least 2 characters.",
-  }).max(50, {
-    message: "Medicine ID must be at most 50 characters."
-  }).regex(/^[a-zA-Z0-9-_]+$/, {
-    message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores."
+  medicineId: z.string()
+    .trim() // Added trim
+    .min(2, {
+      message: "Medicine ID must be at least 2 characters after trimming.",
+    }).max(50, {
+      message: "Medicine ID must be at most 50 characters after trimming."
+    }).regex(/^[a-zA-Z0-9-_]+$/, {
+      message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores (after trimming)."
+    }),
+  composition: z.string()
+    .trim() // Added trim
+    .min(5, {
+    message: "Composition must be at least 5 characters after trimming.",
   }),
   medicineName: z.string()
     .trim()
@@ -37,38 +44,32 @@ const formSchema = z.object({
       message: "Medicine Display Name, if provided, must be at least 2 characters after trimming.",
     })
     .optional(),
-  composition: z.string().min(5, {
-    message: "Composition must be at least 5 characters.",
-  }),
-  barcode: z.string().optional(),
+  barcode: z.string().trim().optional(), // Added trim here too for consistency
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function AdminUploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentTimestamp, setCurrentTimestamp] = useState<string>('');
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       medicineId: "",
-      medicineName: "",
       composition: "",
+      medicineName: "",
       barcode: "",
     },
-    mode: "onChange",
+    mode: "onChange", // Validate on change to provide immediate feedback
   });
 
   const { isDirty, isValid, watch, setValue } = form;
   const watchedComposition = watch("composition");
 
   useEffect(() => {
-    setCurrentTimestamp(new Date().toISOString());
-  }, []);
-
-  useEffect(() => {
+    // Automatically populate medicineName from composition
+    // but only if composition is not empty, to allow manual clearing of medicineName
     if (watchedComposition) {
       setValue("medicineName", watchedComposition, { shouldValidate: true, shouldDirty: true });
     }
@@ -76,36 +77,28 @@ export default function AdminUploadForm() {
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    console.log("[AdminUploadForm] onSubmit triggered. Initial isSubmitting:", isSubmitting);
     if (isSubmitting) {
-      console.warn("[AdminUploadForm] Submission attempt while already submitting. Aborting.");
       return;
     }
-    
     setIsSubmitting(true);
-    console.log("[AdminUploadForm] isSubmitting set to true.");
 
-    const newMedicineId = data.medicineId.trim();
-    const trimmedMedicineName = data.medicineName?.trim();
-    
-    const finalMedicineName = trimmedMedicineName && trimmedMedicineName.length > 0 
-                            ? trimmedMedicineName 
+    // data from react-hook-form with zodResolver should already be trimmed if .trim() is in schema
+    const newMedicineId = data.medicineId; 
+    const finalMedicineName = data.medicineName && data.medicineName.length > 0 
+                            ? data.medicineName 
                             : newMedicineId; 
-
-    const newComposition = data.composition.trim().toLowerCase(); 
-    const originalComposition = data.composition.trim(); 
-    const newBarcode = data.barcode?.trim();
+    const newComposition = data.composition;
+    const newBarcode = data.barcode;
 
     try {
       if (!db) {
-        console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available. Critical configuration issue.");
+        console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available.");
         toast({
           title: "Database Error",
           description: "Firebase Realtime Database is not configured. Cannot save data.",
           variant: "destructive",
         });
         setIsSubmitting(false); 
-        console.log("[AdminUploadForm] isSubmitting set to false (no db instance).");
         return;
       }
 
@@ -122,7 +115,8 @@ export default function AdminUploadForm() {
             idConflict = true;
           }
           const existingMedicine = medicinesData[existingKey];
-          if (existingMedicine.composition && existingMedicine.composition.toLowerCase() === newComposition) {
+          // Compare compositions case-insensitively
+          if (existingMedicine.composition && existingMedicine.composition.toLowerCase() === newComposition.toLowerCase()) {
             compositionConflict = true;
           }
           if (newBarcode && existingMedicine.barcode && existingMedicine.barcode === newBarcode) {
@@ -136,7 +130,7 @@ export default function AdminUploadForm() {
         warningMessages.push(`Medicine ID "${newMedicineId}" already exists.`);
       }
       if (compositionConflict) {
-        warningMessages.push(`A medicine with composition "${originalComposition}" already exists.`);
+        warningMessages.push(`A medicine with composition "${newComposition}" already exists.`);
       }
       if (barcodeConflict && newBarcode) {
         warningMessages.push(`A medicine with barcode "${newBarcode}" already exists.`);
@@ -149,42 +143,34 @@ export default function AdminUploadForm() {
           variant: "destructive",
         });
         setIsSubmitting(false);
-        console.log("[AdminUploadForm] isSubmitting set to false due to data conflict.");
         return;
       }
       
       const medicineDataToSave = {
         name: finalMedicineName,
-        composition: originalComposition, 
+        composition: newComposition, 
         barcode: newBarcode || null, 
         lastUpdated: new Date().toISOString(),
       };
 
-      console.log("[AdminUploadForm] Attempting to write to Firebase Realtime Database. Path:", `medicines/${newMedicineId}`, "Data:", medicineDataToSave);
       const medicineRef = ref(db, `medicines/${newMedicineId}`);
-      
       await set(medicineRef, medicineDataToSave);
       
-      console.log("[AdminUploadForm] Realtime Database write successful for ID:", newMedicineId);
-
       toast({
         title: "Upload Successful",
-        description: `Medicine "${finalMedicineName}" (ID: ${newMedicineId}) data saved to Realtime Database.`,
+        description: `Medicine "${finalMedicineName}" (ID: ${newMedicineId}) data saved.`,
       });
       form.reset(); 
-      setCurrentTimestamp(new Date().toISOString());
-      console.log("[AdminUploadForm] Form reset successfully.");
 
     } catch (error: any) {
       console.error("[AdminUploadForm] Realtime Database write FAILED. Error:", error.message || error, error);
-      let userMessage = "Failed to upload medicine to Realtime Database. ";
-      if (error.message?.toLowerCase().includes("permission_denied") || error.message?.toLowerCase().includes("permission denied")) {
-        userMessage += "This is likely a Realtime Database security rules issue. Please check your Firebase project console (Realtime Database -> Rules).";
-      } else if (error.message?.toLowerCase().includes("network error") || error.message?.toLowerCase().includes("disconnected")) {
-        userMessage += "Network or connection error with database. Please check your internet connection and Firebase setup.";
-      }
-       else {
-        userMessage += "An unexpected error occurred. Check console for details and Firebase setup.";
+      let userMessage = "Failed to upload medicine. ";
+      if (error.message?.toLowerCase().includes("permission_denied")) {
+        userMessage += "Database permission denied. Check security rules.";
+      } else if (error.message?.toLowerCase().includes("network error")) {
+        userMessage += "Network error. Check connection and Firebase setup.";
+      } else {
+        userMessage += "An unexpected error occurred. Check console.";
       }
       toast({
         title: "Upload Failed",
@@ -192,9 +178,7 @@ export default function AdminUploadForm() {
         variant: "destructive",
       });
     } finally {
-      console.log("[AdminUploadForm] Entering finally block.");
       setIsSubmitting(false);
-      console.log("[AdminUploadForm] isSubmitting set to false in finally block.");
     }
   };
 
@@ -211,7 +195,7 @@ export default function AdminUploadForm() {
                 <Input placeholder="e.g., paracetamol-500" {...field} />
               </FormControl>
               <FormDescription>
-                Enter a unique ID for the medicine (e.g., lowercase, hyphens). This will be its key in the database.
+                Unique ID for the medicine (alphanumeric, hyphens, underscores).
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -231,7 +215,7 @@ export default function AdminUploadForm() {
                 />
               </FormControl>
               <FormDescription>
-                The active ingredients and their strengths. This will also be used as the default display name.
+                Active ingredients and strengths. Used as default display name.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -247,7 +231,7 @@ export default function AdminUploadForm() {
                 <Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} />
               </FormControl>
               <FormDescription>
-                The user-friendly name of the medicine. Defaults to composition if blank. (Uses Medicine ID if this is also blank).
+                User-friendly name. Defaults to composition, then ID if blank.
               </FormDescription>
               <FormMessage />
             </FormItem>

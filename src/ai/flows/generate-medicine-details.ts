@@ -27,10 +27,10 @@ export type GenerateMedicineDetailsInput = z.infer<typeof GenerateMedicineDetail
 const GenerateMedicineDetailsOutputSchema = z.object({
   name: z.string().describe('The common name of the medicine.'),
   composition: z.string().describe('The typical composition/active ingredients of the medicine.'),
-  usage: z.string().describe('Typical usage or indications for the medicine.'),
-  manufacturer: z.string().describe('Common manufacturer(s) of the medicine. If multiple, list prominent ones.'),
-  dosage: z.string().describe('General dosage guidelines for the medicine.'),
-  sideEffects: z.string().describe('Common side effects associated with the medicine.'),
+  usage: z.string().describe('Typical usage or indications for the medicine. Should be concise and use bullet points if multiple (e.g., "- Point 1\n- Point 2").'),
+  manufacturer: z.string().describe('List a few common manufacturers of the medicine, specifically in India. (e.g., "- Cipla\n- Sun Pharma").'),
+  dosage: z.string().describe('General dosage guidelines for the medicine. Should be concise and use bullet points if multiple (e.g., "- Adults: 1 tablet\n- Children: Half tablet").'),
+  sideEffects: z.string().describe('Common side effects associated with the medicine. Should be concise and use bullet points if multiple (e.g., "- Nausea\n- Headache").'),
   barcode: z.string().optional().describe('The barcode of the medicine, if applicable or provided in context.'),
   source: z.enum(['database_ai_enhanced', 'ai_generated', 'database_only', 'ai_unavailable', 'ai_failed']).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.'),
 });
@@ -116,7 +116,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
 
 const medicineDetailsPrompt = ai.definePrompt({
   name: 'generateMedicineDetailsPrompt',
-  model: 'googleai/gemini-1.5-flash-latest', // Updated model
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: GenerateMedicineDetailsInputSchema},
   output: {schema: GenerateMedicineDetailsOutputSchema},
   prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
@@ -128,10 +128,10 @@ Composition: "{{contextComposition}}"
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
 
 Your primary task is to use the provided 'Composition: "{{contextComposition}}"' to generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
-- usage: Typical usage or indications for a medicine with this composition.
-- manufacturer: Common manufacturer(s) of medicines with this composition. If multiple, list prominent ones.
-- dosage: General dosage guidelines for a medicine with this composition.
-- sideEffects: Common side effects associated with this composition.
+- usage: Provide typical usage/indications as concise bullet points (e.g., "- For pain relief\n- Reduces fever").
+- manufacturer: List a few common INDIAN manufacturers as bullet points (e.g., "- Cipla\n- Sun Pharma\n- Dr. Reddy's").
+- dosage: Provide general dosage guidelines as concise bullet points (e.g., "- Adults: 1 tablet, 2-3 times a day\n- Children (6-12 years): Half tablet, 2 times a day").
+- sideEffects: List common side effects as concise bullet points (e.g., "- Nausea\n- Headache\n- Dizziness").
 
 CRITICALLY, the output 'source' field MUST be "database_ai_enhanced".
 The output 'name' field MUST be "{{contextName}}".
@@ -143,10 +143,10 @@ If you cannot find specific information for any of the generated fields (usage, 
 Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
-  usage: "Used to treat pain and fever, such as headaches, muscle aches, arthritis, backache, toothaches, colds, and fevers."
-  manufacturer: "Various (e.g., GSK, Mallinckrodt, Aurobindo)"
-  dosage: "For adults, 1 to 2 tablets (500mg to 1000mg) every 4 to 6 hours as needed. Do not exceed 4000mg in 24 hours."
-  sideEffects: "Generally well-tolerated. Rare side effects may include allergic reactions, skin rash, or liver damage with overdose."
+  usage: "- For relief from fever\n- To reduce mild to moderate pain"
+  manufacturer: "- GSK India\n- Cipla Ltd.\n- Ipca Laboratories Ltd."
+  dosage: "- Adults: 1 to 2 tablets every 4-6 hours\n- Max: 8 tablets in 24 hours"
+  sideEffects: "- Nausea (rare)\n- Allergic reactions (very rare)"
   barcode: "123456789012"
   source: "database_ai_enhanced"
 
@@ -158,10 +158,10 @@ First, try to identify the most likely specific medicine based on "{{searchTermO
 Then, provide the following details for that identified medicine in {{language}}:
 - Common name (this should be your identified medicine name).
 - Typical composition/active ingredients.
-- Typical usage or indications.
-- Common manufacturer(s) (if multiple, list prominent ones).
-- General dosage guidelines.
-- Common side effects.
+- Typical usage or indications as concise bullet points (e.g., "- For pain relief\n- Reduces fever").
+- Common INDIAN manufacturers as bullet points (e.g., "- Cipla\n- Sun Pharma\n- Dr. Reddy's").
+- General dosage guidelines as concise bullet points (e.g., "- Adults: 1 tablet, 2-3 times a day\n- Children (6-12 years): Half tablet, 2 times a day").
+- Common side effects as concise bullet points (e.g., "- Nausea\n- Headache\n- Dizziness").
 - Barcode (if identifiable and applicable, otherwise omit or leave empty).
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
@@ -173,10 +173,10 @@ PROVIDE AN EMPTY STRING for any detail field if information cannot be found. Do 
 Example for searchTermOrName="Amoxicillin", language="en":
   name: "Amoxicillin"
   composition: "Amoxicillin Trihydrate (e.g., 250mg or 500mg capsules)"
-  usage: "Used to treat a wide variety of bacterial infections including those of the ear, nose, throat, skin, and urinary tract."
-  manufacturer: "Various generic manufacturers (e.g., Sandoz, Teva, Hikma)"
-  dosage: "Typically 250mg to 500mg three times a day for adults, or as prescribed by a doctor. Dosage for children varies by weight."
-  sideEffects: "Common: Nausea, diarrhea, rash. Less common: Vomiting, headache. Seek medical attention for severe allergic reactions."
+  usage: "- Treats bacterial infections\n- Used for ear, nose, throat infections"
+  manufacturer: "- Cipla Ltd.\n- Mankind Pharma\n- Alkem Laboratories"
+  dosage: "- Adults: 250mg to 500mg every 8 hours\n- Children: Dosage based on weight"
+  sideEffects: "- Diarrhea\n- Nausea\n- Rash"
   barcode: ""
   source: "ai_generated"
 {{/if}}

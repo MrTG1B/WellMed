@@ -659,10 +659,10 @@ const GenerateMedicineDetailsInputSchema = __TURBOPACK__imported__module__$5b$pr
 const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].object({
     name: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The common name of the medicine.'),
     composition: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The typical composition/active ingredients of the medicine.'),
-    usage: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('Typical usage or indications for the medicine. Should be concise and use bullet points if multiple (e.g., "- Point 1\n- Point 2").'),
-    manufacturer: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('List a few common manufacturers of the medicine, specifically in India. (e.g., "- Cipla\n- Sun Pharma").'),
-    dosage: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('General dosage guidelines for the medicine. Should be concise and use bullet points if multiple (e.g., "- Adults: 1 tablet\n- Children: Half tablet").'),
-    sideEffects: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('Common side effects associated with the medicine. Should be concise and use bullet points if multiple (e.g., "- Nausea\n- Headache").'),
+    usage: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("Typical usage or indications for the medicine. Each point MUST start with '• ' (a bullet character followed by a space) and be on its own new line. For example:\n• For pain relief\n• Reduces fever"),
+    manufacturer: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("List a few common manufacturers of the medicine, specifically in India. Each point MUST start with '• ' (a bullet character followed by a space) and be on its own new line. For example:\n• Cipla\n• Sun Pharma"),
+    dosage: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("General dosage guidelines for the medicine. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. For example:\n• Adults: 1 tablet\n• Children: Half tablet"),
+    sideEffects: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("Common side effects associated with the medicine. Each point MUST start with '• ' (a bullet character followed by a space) and be on its own new line. For example:\n• Nausea\n• Headache"),
     barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The barcode of the medicine, if applicable or provided in context.'),
     source: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].enum([
         'database_ai_enhanced',
@@ -750,6 +750,7 @@ const medicineDetailsPrompt = __TURBOPACK__imported__module__$5b$project$5d2f$sr
         schema: GenerateMedicineDetailsOutputSchema
     },
     prompt: `You are a highly knowledgeable pharmaceutical AI assistant. Your goal is to provide comprehensive and accurate medicine details in the specified language: {{language}}.
+Format all lists (usage, manufacturer, dosage, sideEffects) with each item on a NEW LINE, starting with '• ' (a bullet character followed by a space).
 
 {{#if contextComposition}}
 The user has provided context for a medicine:
@@ -758,10 +759,10 @@ Composition: "{{contextComposition}}"
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
 
 Your primary task is to use the provided 'Composition: "{{contextComposition}}"' to generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
-- usage: Provide typical usage/indications as concise bullet points (e.g., "- For pain relief\n- Reduces fever").
-- manufacturer: List a few common INDIAN manufacturers as bullet points (e.g., "- Cipla\n- Sun Pharma\n- Dr. Reddy's").
-- dosage: Provide general dosage guidelines as concise bullet points (e.g., "- Adults: 1 tablet, 2-3 times a day\n- Children (6-12 years): Half tablet, 2 times a day").
-- sideEffects: List common side effects as concise bullet points (e.g., "- Nausea\n- Headache\n- Dizziness").
+- usage: Provide typical usage/indications. Each point MUST start with '• ' and be on its own new line. (e.g., "• For pain relief\n• Reduces fever").
+- manufacturer: List a few common INDIAN manufacturers. Each point MUST start with '• ' and be on its own new line. (e.g., "• Cipla\n• Sun Pharma\n• Dr. Reddy's").
+- dosage: Provide general dosage guidelines. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. (e.g., "• Adults: 1 tablet, 2-3 times a day\n• Children (6-12 years): Half tablet, 2 times a day\n• Do not exceed recommended dose").
+- sideEffects: List common side effects. Each point MUST start with '• ' and be on its own new line. (e.g., "• Nausea\n• Headache\n• Dizziness").
 
 CRITICALLY, the output 'source' field MUST be "database_ai_enhanced".
 The output 'name' field MUST be "{{contextName}}".
@@ -773,10 +774,10 @@ If you cannot find specific information for any of the generated fields (usage, 
 Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
-  usage: "- For relief from fever\n- To reduce mild to moderate pain"
-  manufacturer: "- GSK India\n- Cipla Ltd.\n- Ipca Laboratories Ltd."
-  dosage: "- Adults: 1 to 2 tablets every 4-6 hours\n- Max: 8 tablets in 24 hours"
-  sideEffects: "- Nausea (rare)\n- Allergic reactions (very rare)"
+  usage: "• For relief from fever\n• To reduce mild to moderate pain"
+  manufacturer: "• GSK India\n• Cipla Ltd.\n• Ipca Laboratories Ltd."
+  dosage: "• Adults: 1 to 2 tablets every 4-6 hours\n• Max: 8 tablets in 24 hours"
+  sideEffects: "• Nausea (rare)\n• Allergic reactions (very rare)"
   barcode: "123456789012"
   source: "database_ai_enhanced"
 
@@ -788,10 +789,10 @@ First, try to identify the most likely specific medicine based on "{{searchTermO
 Then, provide the following details for that identified medicine in {{language}}:
 - Common name (this should be your identified medicine name).
 - Typical composition/active ingredients.
-- Typical usage or indications as concise bullet points (e.g., "- For pain relief\n- Reduces fever").
-- Common INDIAN manufacturers as bullet points (e.g., "- Cipla\n- Sun Pharma\n- Dr. Reddy's").
-- General dosage guidelines as concise bullet points (e.g., "- Adults: 1 tablet, 2-3 times a day\n- Children (6-12 years): Half tablet, 2 times a day").
-- Common side effects as concise bullet points (e.g., "- Nausea\n- Headache\n- Dizziness").
+- Typical usage or indications. Each point MUST start with '• ' and be on its own new line. (e.g., "• For pain relief\n• Reduces fever").
+- Common INDIAN manufacturers. Each point MUST start with '• ' and be on its own new line. (e.g., "• Cipla\n• Sun Pharma\n• Dr. Reddy's").
+- General dosage guidelines. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. (e.g., "• Adults: 1 tablet, 2-3 times a day\n• Children (6-12 years): Half tablet, 2 times a day").
+- Common side effects. Each point MUST start with '• ' and be on its own new line. (e.g., "• Nausea\n• Headache\n• Dizziness").
 - Barcode (if identifiable and applicable, otherwise omit or leave empty).
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
@@ -803,10 +804,10 @@ PROVIDE AN EMPTY STRING for any detail field if information cannot be found. Do 
 Example for searchTermOrName="Amoxicillin", language="en":
   name: "Amoxicillin"
   composition: "Amoxicillin Trihydrate (e.g., 250mg or 500mg capsules)"
-  usage: "- Treats bacterial infections\n- Used for ear, nose, throat infections"
-  manufacturer: "- Cipla Ltd.\n- Mankind Pharma\n- Alkem Laboratories"
-  dosage: "- Adults: 250mg to 500mg every 8 hours\n- Children: Dosage based on weight"
-  sideEffects: "- Diarrhea\n- Nausea\n- Rash"
+  usage: "• Treats bacterial infections\n• Used for ear, nose, throat infections"
+  manufacturer: "• Cipla Ltd.\n• Mankind Pharma\n• Alkem Laboratories"
+  dosage: "• Adults: 250mg to 500mg every 8 hours\n• Children: Dosage based on weight"
+  sideEffects: "• Diarrhea\n• Nausea\n• Rash"
   barcode: ""
   source: "ai_generated"
 {{/if}}

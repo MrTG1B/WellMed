@@ -24,11 +24,29 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
   const detailValueClass = "text-base text-foreground";
 
   let sourceMessage = "";
-  // Since AI details are removed, if a medicine is shown, it's from the DB.
-  if (medicine.source === 'database_only') {
-    sourceMessage = t.sourceDbOnlyMessage;
+  switch (medicine.source) {
+    case 'database_ai_enhanced':
+      sourceMessage = t.sourceDbAiMessage;
+      break;
+    case 'ai_generated': // This case might not occur if we only enhance DB items for now
+      sourceMessage = t.sourceAiOnlyMessage;
+      break;
+    case 'database_only': 
+      sourceMessage = t.sourceDbOnlyMessage;
+      break;
+    case 'ai_unavailable':
+      sourceMessage = t.sourceAiUnavailableForDetailsMessage(medicine.name);
+      break;
+    case 'ai_failed':
+      sourceMessage = t.sourceAiFailedForDetailsMessage(medicine.name);
+      break;
+    default:
+      // If source is somehow undefined or unexpected, provide a generic DB message or nothing
+      if (medicine.name && medicine.composition && medicine.usage === t.infoNotAvailable) {
+        sourceMessage = t.sourceDbOnlyMessage; // Fallback if details look like only DB
+      }
   }
-  // Other source messages might not be relevant here if details are always from DB or "Not Available"
+
 
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">

@@ -22,20 +22,18 @@ export type TranslationKeys = {
   barcodeLabel: string;
   loadingAi: string;
   loadingData: string;
-  // loadingAiDetails: string; // Removed
+  loadingAiDetails: string;
   errorOccurred: string;
   errorAi: string;
   errorData: string;
-  // errorAiDetails: string; // Removed
-  // errorAiDetailsShort: string; // Removed
+  errorAiDetails: (medicineName: string, source: string) => string;
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
-  // sourceDbAiMessage: string; // No longer relevant for card
-  // sourceAiOnlyMessage: string; // No longer relevant for card
+  sourceDbAiMessage: string;
+  sourceAiOnlyMessage: string; 
   sourceDbOnlyMessage: string;
-  // sourceAiUnavailableMessage: string; // No longer relevant for card details
-  // sourceAiFailedMessage: string; // No longer relevant for card details
-  // notFoundInDbAiGenerating: string; // Removed
+  sourceAiUnavailableForDetailsMessage: (medicineName: string) => string;
+  sourceAiFailedForDetailsMessage: (medicineName: string) => string;
   barcodeNotAvailable: string;
   initialHelperText: string;
   allRightsReserved: string;
@@ -71,20 +69,18 @@ export const translations: Record<Language, TranslationKeys> = {
     barcodeLabel: 'Barcode',
     loadingAi: 'Enhancing search with AI...',
     loadingData: 'Searching database...',
-    // loadingAiDetails: 'Generating details with AI...', // Removed
+    loadingAiDetails: 'Generating details with AI...',
     errorOccurred: 'An Error Occurred',
     errorAi: 'AI search enhancement failed or was skipped. Using original query.',
     errorData: 'Failed to fetch medicine data from database.',
-    // errorAiDetails: 'AI failed to generate complete details.', // Removed
-    // errorAiDetailsShort: 'AI details failed.', // Removed
+    errorAiDetails: (medicineName: string, source: string) => `AI could not generate full details for "${medicineName}". Status: ${source}. Displaying available data.`,
     searchWithAiResult: (correctedName: string) => `AI suggested: "${correctedName}". Searching with this term.`,
     clearSearchButton: 'Clear Search',
-    // sourceDbAiMessage: 'Details from database, enhanced by AI.', // No longer relevant for card
-    // sourceAiOnlyMessage: 'Medicine not in database. Details primarily AI-generated.', // No longer relevant for card
-    sourceDbOnlyMessage: 'Details from database.', // Simplified
-    // sourceAiUnavailableMessage: 'AI features are not available. Details might be incomplete.', // No longer relevant for card details
-    // sourceAiFailedMessage: 'AI generation failed for this medicine. Details might be incomplete.', // No longer relevant for card details
-    // notFoundInDbAiGenerating: 'Medicine not found in database. Attempting to generate details with AI.', // Removed
+    sourceDbAiMessage: 'Details from database, enhanced by AI.',
+    sourceAiOnlyMessage: 'Details primarily AI-generated.',
+    sourceDbOnlyMessage: 'Details from database.',
+    sourceAiUnavailableForDetailsMessage: (medicineName: string) => `AI features for enhancing "${medicineName}" details are unavailable.`,
+    sourceAiFailedForDetailsMessage: (medicineName: string) => `AI enhancement failed for "${medicineName}" details.`,
     barcodeNotAvailable: 'Not available',
     initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
     allRightsReserved: 'All rights reserved.',
@@ -118,15 +114,18 @@ export const translations: Record<Language, TranslationKeys> = {
     barcodeLabel: 'बारकोड',
     loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
     loadingData: 'डेटाबेस में खोजा जा रहा है...',
-    // loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...', // Removed
+    loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
     errorOccurred: 'एक त्रुटि हुई',
     errorAi: 'एआई खोज वृद्धि विफल रही या छोड़ दी गई। मूल क्वेरी का उपयोग किया जा रहा है।',
     errorData: 'डेटाबेस से दवा डेटा लाने में विफल।',
-    // errorAiDetails: 'एआई पूर्ण विवरण उत्पन्न करने में विफल रहा।', // Removed
-    // errorAiDetailsShort: 'एआई विवरण विफल।', // Removed
+    errorAiDetails: (medicineName: string, source: string) => `एआई "${medicineName}" के लिए पूर्ण विवरण उत्पन्न नहीं कर सका। स्थिति: ${source}। उपलब्ध डेटा प्रदर्शित किया जा रहा है।`,
     searchWithAiResult: (correctedName: string) => `एआई ने सुझाया: "${correctedName}"। इस शब्द के साथ खोज रहे हैं।`,
     clearSearchButton: 'खोज साफ़ करें',
-    sourceDbOnlyMessage: 'डेटाबेस से विवरण।', // Simplified
+    sourceDbAiMessage: 'डेटाबेस से विवरण, एआई द्वारा संवर्धित।',
+    sourceAiOnlyMessage: 'विवरण मुख्य रूप से एआई-जनित।',
+    sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
+    sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
+    sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
     barcodeNotAvailable: 'उपलब्ध नहीं है',
     initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
     allRightsReserved: 'सभी अधिकार सुरक्षित।',
@@ -160,15 +159,18 @@ export const translations: Record<Language, TranslationKeys> = {
     barcodeLabel: 'বারকোড',
     loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
     loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
-    // loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...', // Removed
+    loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
     errorOccurred: 'একটি ত্রুটি ঘটেছে',
     errorAi: 'এআই অনুসন্ধান উন্নতি ব্যর্থ হয়েছে বা এড়িয়ে যাওয়া হয়েছে। মূল কোয়েরি ব্যবহার করা হচ্ছে।',
     errorData: 'ডাটাবেস থেকে ওষুধের ডেটা আনতে ব্যর্থ হয়েছে।',
-    // errorAiDetails: 'এআই সম্পূর্ণ বিবরণ তৈরি করতে ব্যর্থ হয়েছে।', // Removed
-    // errorAiDetailsShort: 'এআই বিস্তারিত ব্যর্থ হয়েছে।', // Removed
+    errorAiDetails: (medicineName: string, source: string) => `এআই "${medicineName}" এর জন্য সম্পূর্ণ বিবরণ তৈরি করতে পারেনি। স্থিতি: ${source}। উপলব্ধ ডেটা দেখানো হচ্ছে।`,
     searchWithAiResult: (correctedName: string) => `এআই প্রস্তাবিত: "${correctedName}"। এই শব্দটি দিয়ে অনুসন্ধান করা হচ্ছে।`,
     clearSearchButton: 'অনুসন্ধান সাফ করুন',
-    sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।', // Simplified
+    sourceDbAiMessage: 'ডাটাবেস থেকে বিস্তারিত, এআই দ্বারা উন্নত।',
+    sourceAiOnlyMessage: 'বিস্তারিত প্রধানত এআই-জেনারেটেড।',
+    sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
+    sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি অনুপলব্ধ।`,
+    sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
     barcodeNotAvailable: 'উপলব্ধ নয়',
     initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',
     allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
@@ -184,3 +186,4 @@ export const translations: Record<Language, TranslationKeys> = {
 };
 
 export const getTranslations = (lang: Language): TranslationKeys => translations[lang];
+

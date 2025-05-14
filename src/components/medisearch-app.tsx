@@ -6,6 +6,7 @@ import Image from "next/image";
 import type { Language, Medicine } from "@/types";
 import { getTranslations, type TranslationKeys } from "@/lib/translations";
 import { enhanceMedicineSearch, type EnhanceMedicineSearchOutput } from "@/ai/flows/enhance-medicine-search";
+import { generateMedicineDetails } from "@/ai/flows/generate-medicine-details";
 import { fetchMedicineByName, fetchSuggestions } from "@/lib/mockApi";
 import { LanguageSelector } from "@/components/medisearch/LanguageSelector";
 import { SearchBar } from "@/components/medisearch/SearchBar";
@@ -73,9 +74,7 @@ export default function MediSearchApp() {
 
     try {
       setLoadingMessage(t.loadingAi);
-      console.log(`performSearchLogic: Calling enhanceMedicineSearch with query: "${termToSearch}"`);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
-      console.log(`performSearchLogic: enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
       aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
 
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
@@ -92,29 +91,26 @@ export default function MediSearchApp() {
             setAiConfigError(t.errorAiNotConfigured);
             setAiConfigErrorType('key_missing');
             toast({ title: t.appName, description: t.errorAiNotConfigured, variant: "destructive" });
-        } else { // 'ai_failed' or unexpected value
+        } else { 
            toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
            setAiConfigError(t.errorAiFailed);
            setAiConfigErrorType('api_fail');
         }
-      } else { // AI enhancement returned nothing valid or failed to produce a corrected name
+      } else { 
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
         aiEnhancedSearchTerm = termToSearch.trim();
-        aiEnhancementSource = 'ai_failed'; // Mark as failed if no valid corrected name
+        aiEnhancementSource = 'ai_failed'; 
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
     } catch (aiError: any) {
       let message = t.errorAi;
-      let errorCauseDetails = '';
-       if (aiError?.message) {
-          // Prefer the message from the error object if available and more specific
+      if (aiError?.message) {
           if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported')) {
               message = t.errorAiNotConfigured;
               setAiConfigError(t.errorAiNotConfigured);
               setAiConfigErrorType('key_missing');
           } else if (aiError.message.includes('server error') || aiError.message.includes('internal error') || aiError.message.includes('flow execution failed')) {
-              // Generic AI server-side failure
               message = t.errorAiFailed;
               setAiConfigError(t.errorAiFailed);
               setAiConfigErrorType('api_fail');
@@ -122,48 +118,55 @@ export default function MediSearchApp() {
              message = `${t.errorAi} Details: ${aiError.message}`;
           }
       }
-      if (aiError?.cause?.message) { // Sometimes the root cause is nested
-        errorCauseDetails = ` (Cause: ${aiError.cause.message})`;
-        if (aiError.cause.message.includes('API key not valid') || aiError.cause.message.includes('API_KEY_INVALID') || aiError.cause.message.includes('User location is not supported')) {
-            message = t.errorAiNotConfigured; // Overwrite generic message if cause is specific
-            setAiConfigError(t.errorAiNotConfigured);
-            setAiConfigErrorType('key_missing');
-        }
-      }
-      console.error(`AI enhancement critical failure (medisearch-app.tsx): Query: "${termToSearch}", Error: ${aiError.message || aiError}${errorCauseDetails}`, aiError);
+      console.error(`AI enhancement critical failure (medisearch-app.tsx): Query: "${termToSearch}", Error: ${aiError.message || aiError}`, aiError);
       toast({
         title: t.appName,
         description: message,
         variant: "destructive"
       });
-      aiEnhancedSearchTerm = termToSearch.trim(); // Fallback to original term
-      aiEnhancementSource = 'ai_failed'; // Ensure this is set
-      if (!aiConfigErrorType) { // If not already set by more specific checks
-          setAiConfigError(message); // Use the determined message
-          setAiConfigErrorType('api_fail'); // Default to api_fail if not key_missing
+      aiEnhancedSearchTerm = termToSearch.trim(); 
+      aiEnhancementSource = 'ai_failed'; 
+      if (!aiConfigErrorType) { 
+          setAiConfigError(message); 
+          setAiConfigErrorType('api_fail'); 
       }
     }
 
     setLoadingMessage(t.loadingData);
-    console.log(`performSearchLogic: Calling fetchMedicineByName with term: "${aiEnhancedSearchTerm}"`);
     
     try {
       const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
-      console.log(`performSearchLogic: fetchMedicineByName response (found ${dbDataArray.length} items):`, JSON.stringify(dbDataArray, null, 2));
-
       let processedMedicines: Medicine[] = [];
+
       if (dbDataArray.length > 0) {
-        processedMedicines = dbDataArray.map(dbItem => ({
-          id: dbItem.id,
-          name: dbItem.name,
-          composition: dbItem.composition || t.infoNotAvailable,
-          barcode: dbItem.barcode,
-          usage: t.infoNotAvailable, 
-          manufacturer: t.infoNotAvailable, 
-          dosage: t.infoNotAvailable, 
-          sideEffects: t.infoNotAvailable, 
-          source: 'database_only' as const, 
-        }));
+        setLoadingMessage(t.loadingAiDetails); // Update loading message
+
+        processedMedicines = await Promise.all(
+          dbDataArray.map(async (dbItem) => {
+            const aiDetails = await generateMedicineDetails({
+              searchTermOrName: dbItem.name, // Use actual name from DB for context
+              language: selectedLanguage,
+              contextName: dbItem.name,
+              contextComposition: dbItem.composition,
+              contextBarcode: dbItem.barcode,
+            });
+            console.log(`AI details for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
+
+            // Check if AI detail generation had issues and toast if necessary
+            if (aiDetails.source === 'ai_failed' || aiDetails.source === 'ai_unavailable' || (aiDetails.source === 'database_only' && dbItem.name)) {
+                toast({
+                    title: t.appName,
+                    description: t.errorAiDetails(dbItem.name, aiDetails.source),
+                    variant: "destructive",
+                });
+            }
+            
+            return {
+              id: dbItem.id, // Keep the original DB ID
+              ...aiDetails // This will include name, composition, barcode (from context or AI), AI-generated fields, and source
+            };
+          })
+        );
       }
       
       setSearchResults(processedMedicines);
@@ -178,14 +181,10 @@ export default function MediSearchApp() {
 
     } catch (dataProcessingError: any) {
       let errorMessage = t.errorData;
-      let errorCauseDetails = '';
       if (dataProcessingError?.message) {
         errorMessage = `${t.errorData} Details: ${dataProcessingError.message}`;
       }
-      if (dataProcessingError?.cause?.message) {
-        errorCauseDetails = ` (Cause: ${dataProcessingError.cause.message})`;
-      }
-      console.error(`Data processing failed (medisearch-app.tsx): Query: "${aiEnhancedSearchTerm}", Error: ${dataProcessingError.message || dataProcessingError}${errorCauseDetails}`, dataProcessingError);
+      console.error(`Data processing failed (medisearch-app.tsx): Query: "${aiEnhancedSearchTerm}", Error: ${dataProcessingError.message || dataProcessingError}`, dataProcessingError);
       setError(errorMessage);
       toast({ title: t.appName, description: errorMessage, variant: "destructive" });
     } finally {
@@ -216,9 +215,15 @@ export default function MediSearchApp() {
         setAiConfigErrorType(null);
       }
       debounceTimeoutRef.current = setTimeout(async () => {
-        const fetchedSuggestions = await fetchSuggestions(query);
-        setSuggestions(fetchedSuggestions);
-        setShowSuggestions(fetchedSuggestions.length > 0);
+        try {
+            const fetchedSuggestions = await fetchSuggestions(query);
+            setSuggestions(fetchedSuggestions);
+            setShowSuggestions(fetchedSuggestions.length > 0);
+        } catch (e) {
+            console.error("Failed to fetch suggestions:", e);
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
       }, 300);
     } else {
       setSuggestions([]);
@@ -250,7 +255,7 @@ export default function MediSearchApp() {
       </header>
 
       <main className="w-full max-w-lg flex flex-col items-center space-y-6 px-4 pb-8 pt-2 sm:pt-6">
-        <div className="flex items-center justify-center"> {/* Removed negative margins and mb-1, space-x-3 */}
+        <div className="flex items-center justify-center">
              <Image
                 src="/images/logo_transparent.png"
                 alt="WellMeds Logo"
@@ -262,7 +267,7 @@ export default function MediSearchApp() {
             />
         </div>
 
-        <section className="w-full p-6 bg-card rounded-xl shadow-2xl"> {/* Removed negative margins */}
+        <section className="w-full p-6 bg-card rounded-xl shadow-2xl">
           <h2 className="text-2xl font-semibold text-center mb-6 text-foreground">{t.searchTitle}</h2>
           <SearchBar
             searchQuery={searchQuery}

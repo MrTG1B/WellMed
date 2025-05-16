@@ -66,6 +66,13 @@ export default function MedicineList() {
               barcode: medData.barcode,
             };
           });
+          // Sort the medicines by ID (alphanumerically)
+          medsList.sort((a, b) => {
+            // Basic alphanumeric sort for IDs
+            if (a.id < b.id) return -1;
+            if (a.id > b.id) return 1;
+            return 0;
+          });
           setMedicines(medsList);
         } else {
           setMedicines([]);
@@ -235,3 +242,4 @@ export default function MedicineList() {
     </>
   );
 }
+

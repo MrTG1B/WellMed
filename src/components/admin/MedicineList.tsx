@@ -128,7 +128,7 @@ export default function MedicineList() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 space-y-2">
+      <div className="flex flex-col items-center justify-center py-8 space-y-2 flex-grow">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-muted-foreground">Loading medicines...</p>
       </div>
@@ -159,7 +159,7 @@ export default function MedicineList() {
 
   return (
     <>
-      <ScrollArea className="h-[600px] w-full rounded-md border bg-card shadow-inner">
+      <ScrollArea className="flex-grow w-full rounded-md border bg-card shadow-inner">
         <div className="p-4">
           <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
             Available Medicines ({medicines.length})
@@ -235,4 +235,3 @@ export default function MedicineList() {
     </>
   );
 }
-

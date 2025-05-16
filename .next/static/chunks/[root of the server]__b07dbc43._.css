@@ -857,6 +857,10 @@ body {
   max-height: 750px;
 }
 
+.max-h-\[760px\] {
+  max-height: 760px;
+}
+
 .min-h-0 {
   min-height: 0;
 }

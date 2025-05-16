@@ -66,12 +66,26 @@ export default function MedicineList() {
               barcode: medData.barcode,
             };
           });
-          // Sort the medicines by ID (alphanumerically)
+          // Sort the medicines by ID
           medsList.sort((a, b) => {
-            // Basic alphanumeric sort for IDs
-            if (a.id < b.id) return -1;
-            if (a.id > b.id) return 1;
-            return 0;
+            const numA = parseInt(a.id, 10);
+            const numB = parseInt(b.id, 10);
+
+            const aIsNum = !isNaN(numA);
+            const bIsNum = !isNaN(numB);
+
+            if (aIsNum && bIsNum) {
+              return numA - numB; // Sort numerically
+            } else if (aIsNum && !bIsNum) {
+              return -1; // Numbers come before non-numbers
+            } else if (!aIsNum && bIsNum) {
+              return 1;  // Non-numbers come after numbers
+            } else {
+              // Both are non-numeric strings, sort them alphanumerically
+              if (a.id.toLowerCase() < b.id.toLowerCase()) return -1;
+              if (a.id.toLowerCase() > b.id.toLowerCase()) return 1;
+              return 0;
+            }
           });
           setMedicines(medsList);
         } else {

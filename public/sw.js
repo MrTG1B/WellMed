@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wellmeds-cache-v1';
+const CACHE_NAME = 'wellmeds-cache-v1.0';
 const urlsToCache = [
   '/',
   '/manifest.json',

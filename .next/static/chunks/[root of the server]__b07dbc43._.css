@@ -841,16 +841,12 @@ body {
   max-height: 24rem;
 }
 
-.max-h-\[760px\] {
-  max-height: 760px;
+.max-h-\[960px\] {
+  max-height: 960px;
 }
 
 .max-h-screen {
   max-height: 100vh;
-}
-
-.max-h-\[750px\] {
-  max-height: 750px;
 }
 
 .min-h-0 {

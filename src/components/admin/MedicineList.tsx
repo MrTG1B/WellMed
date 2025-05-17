@@ -185,7 +185,7 @@ export default function MedicineList() {
 
   return (
     <>
-      <ScrollArea className="flex-grow h-auto max-h-[760px] w-full rounded-md border bg-card shadow-inner">
+      <ScrollArea className="flex-grow h-auto max-h-[960px] w-full rounded-md border bg-card shadow-inner">
         <div className="p-4">
           <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
             Available Medicines ({medicines.length})

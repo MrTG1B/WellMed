@@ -12,7 +12,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Barcode, Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info } from "lucide-react";
+import { Barcode, Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, IndianRupee, Package } from "lucide-react";
 
 interface MedicineCardProps {
   medicine: Medicine;
@@ -29,10 +29,10 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     case 'database_ai_enhanced':
       sourceMessage = t.sourceDbAiMessage;
       break;
-    case 'ai_generated': 
+    case 'ai_generated':
       sourceMessage = t.sourceAiOnlyMessage;
       break;
-    case 'database_only': 
+    case 'database_only':
       sourceMessage = t.sourceDbOnlyMessage;
       break;
     case 'ai_unavailable':
@@ -43,7 +43,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       break;
     default:
       if (medicine.name && medicine.composition && medicine.usage === t.infoNotAvailable) {
-        sourceMessage = t.sourceDbOnlyMessage; 
+        sourceMessage = t.sourceDbOnlyMessage;
       }
   }
 
@@ -71,6 +71,25 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </h3>
           <p className={detailValueClass}>{medicine.composition}</p>
         </div>
+
+        {medicine.mrp != null && medicine.mrp !== t.infoNotAvailable && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <IndianRupee className="mr-2 h-4 w-4 text-primary" /> {t.mrpLabel}
+            </h3>
+            <p className={detailValueClass}>₹{medicine.mrp}</p>
+          </div>
+        )}
+
+        {medicine.uom && medicine.uom !== t.infoNotAvailable && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <Package className="mr-2 h-4 w-4 text-primary" /> {t.uomLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.uom}</p>
+          </div>
+        )}
+
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
             <Stethoscope className="mr-2 h-4 w-4 text-primary" /> {t.usageLabel}
@@ -126,4 +145,3 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
-

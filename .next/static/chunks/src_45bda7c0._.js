@@ -29,6 +29,8 @@ const translations = {
         dosageLabel: 'Dosage',
         sideEffectsLabel: 'Side Effects',
         barcodeLabel: 'Barcode',
+        mrpLabel: 'MRP',
+        uomLabel: 'Unit of Measure',
         loadingAi: 'Enhancing search with AI...',
         loadingData: 'Searching database...',
         loadingAiDetails: 'Generating details with AI...',
@@ -79,6 +81,8 @@ const translations = {
         dosageLabel: 'खुराक',
         sideEffectsLabel: 'दुष्प्रभाव',
         barcodeLabel: 'बारकोड',
+        mrpLabel: 'एमआरपी',
+        uomLabel: 'माप की इकाई',
         loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
         loadingData: 'डेटाबेस में खोजा जा रहा है...',
         loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
@@ -129,6 +133,8 @@ const translations = {
         dosageLabel: 'মাত্রা',
         sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
         barcodeLabel: 'বারকোড',
+        mrpLabel: 'এমআরপি',
+        uomLabel: 'পরিমাপের একক',
         loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
         loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
         loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
@@ -306,45 +312,38 @@ const isPotentiallyBarcode = (term)=>{
 };
 const fetchMedicineByName = async (searchTerm)=>{
     if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"]) {
-        console.error("[mockApi] Firebase Realtime Database (db) is not initialized. Cannot fetch from DB.");
+        console.warn("[mockApi] Firebase Realtime Database (db) is not initialized. Cannot fetch from DB.");
         return [];
     }
     if (!searchTerm || searchTerm.trim() === "") {
-        console.log("[mockApi] Search term is empty. Returning no results.");
         return [];
     }
     const normalizedAiEnhancedSearchTerm = searchTerm.toLowerCase().trim();
     const originalSearchTermTrimmed = searchTerm.trim();
-    console.log(`[mockApi] Starting search for term: "${searchTerm}", Normalized for name/composition: "${normalizedAiEnhancedSearchTerm}", Original for barcode: "${originalSearchTermTrimmed}"`);
     const medicinesRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ref"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], 'medicines');
     const allMatches = [];
-    const foundIds = new Set(); // To avoid duplicates if a medicine matches multiple criteria
-    // Attempt 1: Direct ID lookup
+    const foundIds = new Set();
     const potentialIdsToTry = new Set();
-    potentialIdsToTry.add(normalizedAiEnhancedSearchTerm.replace(/\s+/g, '-')); // Common ID format
+    potentialIdsToTry.add(normalizedAiEnhancedSearchTerm.replace(/\s+/g, '-'));
     potentialIdsToTry.add(originalSearchTermTrimmed.replace(/\s+/g, '-'));
-    potentialIdsToTry.add(originalSearchTermTrimmed); // Exact term as ID
-    console.log(`[mockApi] Potential IDs for direct lookup:`, Array.from(potentialIdsToTry));
+    potentialIdsToTry.add(originalSearchTermTrimmed);
     for (const potentialId of potentialIdsToTry){
-        if (!potentialId.match(/^[a-zA-Z0-9-_]+$/)) continue; // Skip if not valid ID format
+        if (!potentialId.match(/^[a-zA-Z0-9-_]+$/)) continue;
         try {
-            console.log(`[mockApi] Attempting direct ID lookup for: "${potentialId}"`);
             const directIdSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["get"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["child"])(medicinesRef, potentialId));
             if (directIdSnapshot.exists()) {
                 const data = directIdSnapshot.val();
                 if (data && data.name && data.composition && !foundIds.has(potentialId)) {
-                    console.log(`[mockApi] Found by direct ID: "${potentialId}". Data:`, data);
                     allMatches.push({
                         id: directIdSnapshot.key,
                         name: data.name,
                         composition: data.composition,
                         barcode: data.barcode,
+                        mrp: data.mrp,
+                        uom: data.uom,
                         foundInDb: true
                     });
                     foundIds.add(potentialId);
-                    // If ID match found, typically this is the most specific, so we can prioritize it.
-                    // For "show all matches", we might not want to return early.
-                    // However, an ID match is usually definitive. Let's return if an ID match is found.
                     return allMatches;
                 }
             }
@@ -352,32 +351,28 @@ const fetchMedicineByName = async (searchTerm)=>{
             console.error(`[mockApi] Error fetching medicine by direct ID '${potentialId}':`, e.message);
         }
     }
-    // Attempt 2: Query by barcode (conditionally)
     if (isPotentiallyBarcode(originalSearchTermTrimmed)) {
-        console.log(`[mockApi] Term "${originalSearchTermTrimmed}" appears to be a barcode. Attempting barcode query.`);
         try {
-            const barcodeQueryInstance = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["query"])(medicinesRef, (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["orderByChild"])('barcode'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["equalTo"])(originalSearchTermTrimmed)); // Removed limitToFirst
+            const barcodeQueryInstance = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["query"])(medicinesRef, (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["orderByChild"])('barcode'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["equalTo"])(originalSearchTermTrimmed));
             const barcodeSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["get"])(barcodeQueryInstance);
             if (barcodeSnapshot.exists()) {
                 const data = barcodeSnapshot.val();
                 Object.keys(data).forEach((id)=>{
                     const medicine = data[id];
                     if (medicine && medicine.name && medicine.composition && !foundIds.has(id)) {
-                        console.log(`[mockApi] Found by barcode: "${originalSearchTermTrimmed}". ID: ${id}, Data:`, medicine);
                         allMatches.push({
                             id,
                             name: medicine.name,
                             composition: medicine.composition,
                             barcode: medicine.barcode,
+                            mrp: medicine.mrp,
+                            uom: medicine.uom,
                             foundInDb: true
                         });
                         foundIds.add(id);
                     }
                 });
-                // If barcode matches found, these are also quite specific.
                 if (allMatches.length > 0) return allMatches;
-            } else {
-                console.log(`[mockApi] No match for barcode: "${originalSearchTermTrimmed}"`);
             }
         } catch (e) {
             console.error(`[mockApi] Error fetching medicine by barcode '${originalSearchTermTrimmed}':`, e.message);
@@ -385,70 +380,54 @@ const fetchMedicineByName = async (searchTerm)=>{
                 console.error("🔴 IMPORTANT: Firebase Realtime Database: Query by 'barcode' failed likely due to a missing index. " + "Please add an index for 'barcode' in your Realtime Database security rules for efficient querying: \n" + "{\n" + "  \"rules\": {\n" + "    \"medicines\": {\n" + "      \".indexOn\": [\"barcode\", \"name_lowercase\"] // Ensure 'barcode' is listed here (and 'name_lowercase' if used elsewhere)\n" + "    }\n" + "    // ... your other rules ...\n" + "  }\n" + "}");
             }
         }
-    } else {
-        console.log(`[mockApi] Term "${originalSearchTermTrimmed}" does not appear to be a barcode. Skipping barcode-specific query.`);
     }
-    // Attempt 3: Full scan for Name (exact or includes, case-insensitive) or Composition (includes, case-insensitive)
-    console.log(`[mockApi] Starting full scan of all medicines for name/composition match against normalized term: "${normalizedAiEnhancedSearchTerm}"`);
     try {
         const allMedicinesSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["get"])(medicinesRef);
         if (allMedicinesSnapshot.exists()) {
             const medicinesData = allMedicinesSnapshot.val();
-            console.log(`[mockApi] Full Scan: Processing ${Object.keys(medicinesData).length} records.`);
             for(const id in medicinesData){
-                if (foundIds.has(id)) continue; // Skip if already added
+                if (foundIds.has(id)) continue;
                 const medicine = medicinesData[id];
                 if (!medicine || typeof medicine.name !== 'string' || typeof medicine.composition !== 'string') {
-                    console.log(`[mockApi] Full Scan: Skipping malformed/incomplete record for ID ${id}:`, medicine);
                     continue;
                 }
                 const currentMedicineNameLower = medicine.name.toLowerCase();
                 const currentMedicineCompositionLower = medicine.composition.toLowerCase();
-                // Prioritize exact name match, then broader matches
-                if (currentMedicineNameLower === normalizedAiEnhancedSearchTerm) {
-                    console.log(`[mockApi] Full Scan: Found by EXACT NAME match: ID ${id}, Name: "${medicine.name}"`);
-                    allMatches.push({
-                        id,
-                        name: medicine.name,
-                        composition: medicine.composition,
-                        barcode: medicine.barcode,
-                        foundInDb: true
-                    });
-                    foundIds.add(id);
-                } else if (currentMedicineNameLower.includes(normalizedAiEnhancedSearchTerm)) {
-                    console.log(`[mockApi] Full Scan: Found by NAME INCLUDES match: ID ${id}, Name: "${medicine.name}"`);
-                    allMatches.push({
-                        id,
-                        name: medicine.name,
-                        composition: medicine.composition,
-                        barcode: medicine.barcode,
-                        foundInDb: true
-                    });
-                    foundIds.add(id);
-                } else if (currentMedicineCompositionLower.includes(normalizedAiEnhancedSearchTerm)) {
-                    // Check if already added by name match to avoid duplicate on same item
+                // Normalize search term parts for "includes" check
+                const searchTermsParts = normalizedAiEnhancedSearchTerm.split(/\s+/).filter((part)=>part.length > 1); // Split and filter small parts
+                const nameMatches = searchTermsParts.every((part)=>currentMedicineNameLower.includes(part));
+                const compositionMatches = searchTermsParts.every((part)=>currentMedicineCompositionLower.includes(part));
+                if (currentMedicineNameLower === normalizedAiEnhancedSearchTerm || nameMatches) {
                     if (!foundIds.has(id)) {
-                        console.log(`[mockApi] Full Scan: Found by COMPOSITION INCLUDES: ID ${id}, Name: "${medicine.name}"`);
                         allMatches.push({
                             id,
                             name: medicine.name,
                             composition: medicine.composition,
                             barcode: medicine.barcode,
+                            mrp: medicine.mrp,
+                            uom: medicine.uom,
+                            foundInDb: true
+                        });
+                        foundIds.add(id);
+                    }
+                } else if (compositionMatches) {
+                    if (!foundIds.has(id)) {
+                        allMatches.push({
+                            id,
+                            name: medicine.name,
+                            composition: medicine.composition,
+                            barcode: medicine.barcode,
+                            mrp: medicine.mrp,
+                            uom: medicine.uom,
                             foundInDb: true
                         });
                         foundIds.add(id);
                     }
                 }
             }
-            console.log(`[mockApi] Full Scan: Completed. Total unique matches: ${allMatches.length}.`);
-        } else {
-            console.log("[mockApi] Full Scan: No medicines data exists at 'medicines' path.");
         }
     } catch (e) {
         console.error(`[mockApi] Error during full scan for name/composition query (normalized term: '${normalizedAiEnhancedSearchTerm}'):`, e.message);
-    }
-    if (allMatches.length === 0) {
-        console.log(`[mockApi] Medicine not found in DB after all checks for search term: '${searchTerm}' (normalized: '${normalizedAiEnhancedSearchTerm}')`);
     }
     return allMatches;
 };
@@ -461,11 +440,6 @@ const fetchSuggestions = async (query)=>{
     const suggestions = [];
     const addedSuggestions = new Set(); // To avoid duplicate suggestion strings
     try {
-        // Firebase RTDB does not support "contains" or "LIKE" queries efficiently without full scan.
-        // For "startsWith" on name:
-        // An index on a lowercase version of the name would be ideal. E.g., `name_lowercase`.
-        // If `name_lowercase` is not available, we have to scan.
-        // For this example, we'll do a full scan and client-side filter for startsWith on name, and includes on composition.
         const snapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["get"])(medicinesRef);
         if (snapshot.exists()) {
             const medicinesData = snapshot.val();
@@ -480,15 +454,9 @@ const fetchSuggestions = async (query)=>{
                     }
                 }
                 if (suggestions.length >= 7) break;
-                // Optionally, also check composition for suggestions
                 if (medicine && typeof medicine.composition === 'string') {
                     const lowerComposition = medicine.composition.toLowerCase();
                     if (lowerComposition.includes(normalizedQuery) && !addedSuggestions.has(medicine.composition) && suggestions.length < 7) {
-                        // To make composition suggestions more relevant, perhaps return the medicine name
-                        // if (lowerComposition.includes(normalizedQuery) && !addedSuggestions.has(medicine.name)) {
-                        // suggestions.push(medicine.name); // Suggest medicine name if composition matches
-                        // addedSuggestions.add(medicine.name);
-                        // For now, let's stick to suggesting the composition string itself if it's unique
                         if (!addedSuggestions.has(medicine.composition)) {
                             suggestions.push(medicine.composition);
                             addedSuggestions.add(medicine.composition);
@@ -498,9 +466,8 @@ const fetchSuggestions = async (query)=>{
             }
         }
     } catch (error) {
-        console.error("Error fetching suggestions:", error);
+        console.error("[mockApi] Error fetching suggestions:", error);
     }
-    console.log(`[mockApi] Suggestions for "${query}":`, suggestions);
     return suggestions.slice(0, 7); // Ensure limit
 };
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
@@ -1255,6 +1222,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clipboard$2d$list$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ClipboardList$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/clipboard-list.js [app-client] (ecmascript) <export default as ClipboardList>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$stethoscope$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Stethoscope$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/stethoscope.js [app-client] (ecmascript) <export default as Stethoscope>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$info$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Info$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/info.js [app-client] (ecmascript) <export default as Info>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$indian$2d$rupee$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__IndianRupee$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/indian-rupee.js [app-client] (ecmascript) <export default as IndianRupee>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$package$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Package$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/package.js [app-client] (ecmascript) <export default as Package>");
 "use client";
 ;
 ;
@@ -1380,6 +1349,77 @@ function MedicineCard({ medicine, t }) {
                         lineNumber: 68,
                         columnNumber: 9
                     }, this),
+                    medicine.mrp != null && medicine.mrp !== t.infoNotAvailable && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                className: detailItemClass + " flex items-center",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$indian$2d$rupee$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__IndianRupee$3e$__["IndianRupee"], {
+                                        className: "mr-2 h-4 w-4 text-primary"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                        lineNumber: 78,
+                                        columnNumber: 15
+                                    }, this),
+                                    " ",
+                                    t.mrpLabel
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 77,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: detailValueClass,
+                                children: [
+                                    "₹",
+                                    medicine.mrp
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 80,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                        lineNumber: 76,
+                        columnNumber: 11
+                    }, this),
+                    medicine.uom && medicine.uom !== t.infoNotAvailable && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                className: detailItemClass + " flex items-center",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$package$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Package$3e$__["Package"], {
+                                        className: "mr-2 h-4 w-4 text-primary"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                        lineNumber: 87,
+                                        columnNumber: 15
+                                    }, this),
+                                    " ",
+                                    t.uomLabel
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 86,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: detailValueClass,
+                                children: medicine.uom
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 89,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                        lineNumber: 85,
+                        columnNumber: 11
+                    }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -1389,7 +1429,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 76,
+                                        lineNumber: 95,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1397,7 +1437,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 75,
+                                lineNumber: 94,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1405,13 +1445,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.usage
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 78,
+                                lineNumber: 97,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 74,
+                        lineNumber: 93,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1423,7 +1463,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 82,
+                                        lineNumber: 101,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1431,7 +1471,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 81,
+                                lineNumber: 100,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1439,13 +1479,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.manufacturer
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 84,
+                                lineNumber: 103,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 80,
+                        lineNumber: 99,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1469,55 +1509,55 @@ function MedicineCard({ medicine, t }) {
                                                 d: "m18 2 4 4"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 242
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m17 7 3-3"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 263
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 284
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m9 15 4-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 356
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m5 19-3 3"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 377
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m12 12 4.5 4.5"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 88,
+                                                lineNumber: 107,
                                                 columnNumber: 398
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 88,
+                                        lineNumber: 107,
                                         columnNumber: 12
                                     }, this),
                                     t.dosageLabel
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 87,
+                                lineNumber: 106,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1525,13 +1565,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.dosage
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 91,
+                                lineNumber: 110,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 86,
+                        lineNumber: 105,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1543,7 +1583,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 95,
+                                        lineNumber: 114,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1551,7 +1591,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 94,
+                                lineNumber: 113,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1559,13 +1599,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.sideEffects
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 97,
+                                lineNumber: 116,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 93,
+                        lineNumber: 112,
                         columnNumber: 9
                     }, this),
                     medicine.barcode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1577,7 +1617,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 102,
+                                        lineNumber: 121,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1585,7 +1625,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 101,
+                                lineNumber: 120,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1596,18 +1636,18 @@ function MedicineCard({ medicine, t }) {
                                     children: medicine.barcode
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 124,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 104,
+                                lineNumber: 123,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 100,
+                        lineNumber: 119,
                         columnNumber: 11
                     }, this),
                     !medicine.barcode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1619,7 +1659,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 114,
+                                        lineNumber: 133,
                                         columnNumber: 14
                                     }, this),
                                     " ",
@@ -1627,7 +1667,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 113,
+                                lineNumber: 132,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1635,13 +1675,13 @@ function MedicineCard({ medicine, t }) {
                                 children: t.barcodeNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 116,
+                                lineNumber: 135,
                                 columnNumber: 14
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 112,
+                        lineNumber: 131,
                         columnNumber: 12
                     }, this)
                 ]
@@ -1657,14 +1697,14 @@ function MedicineCard({ medicine, t }) {
                         className: "mr-2 h-3 w-3"
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 122,
+                        lineNumber: 141,
                         columnNumber: 11
                     }, this),
                     sourceMessage
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                lineNumber: 121,
+                lineNumber: 140,
                 columnNumber: 9
             }, this)
         ]
@@ -1860,11 +1900,9 @@ function MediSearchApp() {
         let aiEnhancementSource = 'original_query_used';
         try {
             setLoadingMessage(t.loadingAi);
-            console.log(`[MediSearchApp] Calling enhanceMedicineSearch with query: "${termToSearch}"`);
             const aiEnhanceResponse = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$enhance$2d$medicine$2d$search$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["enhanceMedicineSearch"])({
                 query: termToSearch
             });
-            console.log(`[MediSearchApp] enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
             aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
             if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
                 aiEnhancedSearchTerm = aiEnhanceResponse.correctedMedicineName.trim();
@@ -1876,7 +1914,7 @@ function MediSearchApp() {
                             className: "h-5 w-5 text-primary"
                         }, void 0, false, {
                             fileName: "[project]/src/components/medisearch-app.tsx",
-                            lineNumber: 88,
+                            lineNumber: 86,
                             columnNumber: 21
                         }, this)
                     });
@@ -1922,7 +1960,7 @@ function MediSearchApp() {
             console.error(`[MediSearchApp] Error Stack: ${aiError?.stack || 'No stack'}`);
             console.error(`[MediSearchApp] Full Error Object:`, aiError);
             if (aiError?.message) {
-                if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest')) {
+                if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest') || aiError.message.includes('gemini-pro')) {
                     message = t.errorAiNotConfiguredOrModel;
                     setAiConfigError(t.errorAiNotConfiguredOrModel);
                     setAiConfigErrorType('key_or_model');
@@ -1959,15 +1997,15 @@ function MediSearchApp() {
                 setLoadingMessage(t.loadingAiDetails);
                 processedMedicines = await Promise.all(dbDataArray.map(async (dbItem)=>{
                     try {
-                        console.log(`[MediSearchApp] Calling generateMedicineDetails for DB item: ${dbItem.id} - ${dbItem.name}`);
                         const aiDetails = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["generateMedicineDetails"])({
                             searchTermOrName: dbItem.name,
                             language: selectedLanguage,
                             contextName: dbItem.name,
                             contextComposition: dbItem.composition,
-                            contextBarcode: dbItem.barcode
+                            contextBarcode: dbItem.barcode,
+                            contextMrp: dbItem.mrp,
+                            contextUom: dbItem.uom
                         });
-                        console.log(`[MediSearchApp] AI details response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
                         if (aiDetails.source === 'ai_failed' || aiDetails.source === 'ai_unavailable') {
                             toast({
                                 title: t.appName,
@@ -2013,6 +2051,8 @@ function MediSearchApp() {
                             name: dbItem.name,
                             composition: dbItem.composition,
                             barcode: dbItem.barcode,
+                            mrp: dbItem.mrp,
+                            uom: dbItem.uom,
                             usage: t.infoNotAvailable,
                             manufacturer: t.infoNotAvailable,
                             dosage: t.infoNotAvailable,
@@ -2023,13 +2063,11 @@ function MediSearchApp() {
                 }));
             } else if (aiEnhancementSource === 'ai_enhanced' || aiEnhancementSource === 'original_query_used') {
                 setLoadingMessage(t.loadingAiDetails);
-                console.log(`[MediSearchApp] No DB match for "${aiEnhancedSearchTerm}". Attempting full AI generation.`);
                 try {
                     const aiOnlyDetails = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$ai$2f$flows$2f$generate$2d$medicine$2d$details$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["generateMedicineDetails"])({
                         searchTermOrName: aiEnhancedSearchTerm,
                         language: selectedLanguage
                     });
-                    console.log(`[MediSearchApp] AI-only details response for "${aiEnhancedSearchTerm}":`, JSON.stringify(aiOnlyDetails, null, 2));
                     if (aiOnlyDetails.name && aiOnlyDetails.name !== t.infoNotAvailable && aiOnlyDetails.composition !== t.infoNotAvailable) {
                         processedMedicines = [
                             {
@@ -2149,12 +2187,12 @@ function MediSearchApp() {
                     t: t
                 }, void 0, false, {
                     fileName: "[project]/src/components/medisearch-app.tsx",
-                    lineNumber: 349,
+                    lineNumber: 347,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 348,
+                lineNumber: 346,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -2172,12 +2210,12 @@ function MediSearchApp() {
                             "data-ai-hint": "logo health"
                         }, void 0, false, {
                             fileName: "[project]/src/components/medisearch-app.tsx",
-                            lineNumber: 358,
+                            lineNumber: 356,
                             columnNumber: 14
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 357,
+                        lineNumber: 355,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -2188,7 +2226,7 @@ function MediSearchApp() {
                                 children: t.searchTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 370,
+                                lineNumber: 368,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$medisearch$2f$SearchBar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SearchBar"], {
@@ -2204,13 +2242,13 @@ function MediSearchApp() {
                                 onInputBlur: handleInputBlur
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 371,
+                                lineNumber: 369,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 369,
+                        lineNumber: 367,
                         columnNumber: 9
                     }, this),
                     aiConfigError && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2221,20 +2259,20 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 387,
+                                lineNumber: 385,
                                 columnNumber: 53
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$server$2d$crash$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ServerCrash$3e$__["ServerCrash"], {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 387,
+                                lineNumber: 385,
                                 columnNumber: 88
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: aiConfigErrorType === 'key_or_model' ? t.errorAiNotConfiguredOrModelTitle : t.errorAiFailedTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 388,
+                                lineNumber: 386,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
@@ -2245,7 +2283,7 @@ function MediSearchApp() {
                                         children: t.errorAiNotConfiguredOrModelDetail
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch-app.tsx",
-                                        lineNumber: 392,
+                                        lineNumber: 390,
                                         columnNumber: 17
                                     }, this),
                                     aiConfigErrorType === 'api_fail' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2253,19 +2291,19 @@ function MediSearchApp() {
                                         children: t.errorAiFailedDetail
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch-app.tsx",
-                                        lineNumber: 397,
+                                        lineNumber: 395,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 389,
+                                lineNumber: 387,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 386,
+                        lineNumber: 384,
                         columnNumber: 11
                     }, this),
                     searchAttempted && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2277,14 +2315,14 @@ function MediSearchApp() {
                                 className: "mr-2 h-4 w-4"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 407,
+                                lineNumber: 405,
                                 columnNumber: 13
                             }, this),
                             t.clearSearchButton
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 406,
+                        lineNumber: 404,
                         columnNumber: 11
                     }, this),
                     isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2294,7 +2332,7 @@ function MediSearchApp() {
                                 className: "h-8 w-8 animate-spin text-primary"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 414,
+                                lineNumber: 412,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2302,13 +2340,13 @@ function MediSearchApp() {
                                 children: loadingMessage || t.loadingData
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 415,
+                                lineNumber: 413,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 413,
+                        lineNumber: 411,
                         columnNumber: 11
                     }, this),
                     error && !isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2319,27 +2357,27 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 421,
+                                lineNumber: 419,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: t.errorOccurred
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 422,
+                                lineNumber: 420,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                                 children: error
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 423,
+                                lineNumber: 421,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 420,
+                        lineNumber: 418,
                         columnNumber: 11
                     }, this),
                     !isLoading && !error && searchResults && searchResults.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -2349,12 +2387,12 @@ function MediSearchApp() {
                                 t: t
                             }, medicine.id, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 430,
+                                lineNumber: 428,
                                 columnNumber: 15
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 428,
+                        lineNumber: 426,
                         columnNumber: 11
                     }, this),
                     !isLoading && !error && searchResults && searchResults.length === 0 && searchAttempted && !aiConfigError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Alert"], {
@@ -2364,27 +2402,27 @@ function MediSearchApp() {
                                 className: "h-5 w-5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 437,
+                                lineNumber: 435,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                                 children: t.noResultsTitle
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 438,
+                                lineNumber: 436,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                                 children: t.noResults
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch-app.tsx",
-                                lineNumber: 439,
+                                lineNumber: 437,
                                 columnNumber: 17
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 436,
+                        lineNumber: 434,
                         columnNumber: 13
                     }, this),
                     !isLoading && !searchAttempted && !aiConfigError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2392,13 +2430,13 @@ function MediSearchApp() {
                         children: t.initialHelperText
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch-app.tsx",
-                        lineNumber: 445,
+                        lineNumber: 443,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 356,
+                lineNumber: 354,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("footer", {
@@ -2415,12 +2453,12 @@ function MediSearchApp() {
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/medisearch-app.tsx",
-                    lineNumber: 453,
+                    lineNumber: 451,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/medisearch-app.tsx",
-                lineNumber: 452,
+                lineNumber: 450,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$jsx$2f$style$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -2430,7 +2468,7 @@ function MediSearchApp() {
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/medisearch-app.tsx",
-        lineNumber: 347,
+        lineNumber: 345,
         columnNumber: 5
     }, this);
 }

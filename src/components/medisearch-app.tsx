@@ -74,9 +74,7 @@ export default function MediSearchApp() {
 
     try {
       setLoadingMessage(t.loadingAi);
-      console.log(`[MediSearchApp] Calling enhanceMedicineSearch with query: "${termToSearch}"`);
       const aiEnhanceResponse = await enhanceMedicineSearch({ query: termToSearch });
-      console.log(`[MediSearchApp] enhanceMedicineSearch response:`, JSON.stringify(aiEnhanceResponse, null, 2));
       aiEnhancementSource = aiEnhanceResponse.source || 'ai_failed';
 
       if (aiEnhanceResponse && aiEnhanceResponse.correctedMedicineName && aiEnhanceResponse.correctedMedicineName.trim() !== '') {
@@ -93,15 +91,15 @@ export default function MediSearchApp() {
             setAiConfigError(t.errorAiNotConfiguredOrModel);
             setAiConfigErrorType('key_or_model');
             toast({ title: t.appName, description: t.errorAiNotConfiguredOrModel, variant: "destructive" });
-        } else { 
+        } else {
            toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
            setAiConfigError(t.errorAiFailed);
            setAiConfigErrorType('api_fail');
         }
-      } else { 
+      } else {
         toast({ title: t.appName, description: t.errorAi, variant: "destructive" });
         aiEnhancedSearchTerm = termToSearch.trim();
-        aiEnhancementSource = 'ai_failed'; 
+        aiEnhancementSource = 'ai_failed';
         setAiConfigError(t.errorAiFailed);
         setAiConfigErrorType('api_fail');
       }
@@ -116,7 +114,7 @@ export default function MediSearchApp() {
 
 
       if (aiError?.message) {
-          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest') ) {
+          if (aiError.message.includes('API key not valid') || aiError.message.includes('API_KEY_INVALID') || aiError.message.includes('User location is not supported') || aiError.message.includes('permission') || aiError.message.includes('denied') || aiError.message.includes('model not found') || aiError.message.includes('Could not find model') || aiError.message.includes('404 Not Found') || aiError.message.includes('gemini-1.5-flash-latest') || aiError.message.includes('gemini-pro') ) {
               message = t.errorAiNotConfiguredOrModel;
               setAiConfigError(t.errorAiNotConfiguredOrModel);
               setAiConfigErrorType('key_or_model');
@@ -126,48 +124,48 @@ export default function MediSearchApp() {
               setAiConfigErrorType('api_fail');
           } else {
              message = `${t.errorAi} Details: ${aiError.message}`;
-             if (!aiConfigErrorType) { 
+             if (!aiConfigErrorType) {
                 setAiConfigError(message);
                 setAiConfigErrorType('api_fail');
              }
           }
       } else {
-         if (!aiConfigErrorType) { 
+         if (!aiConfigErrorType) {
             setAiConfigError(message);
             setAiConfigErrorType('api_fail');
          }
       }
-      
+
       toast({
         title: t.appName,
         description: message,
         variant: toastVariant,
       });
-      aiEnhancedSearchTerm = termToSearch.trim(); 
-      aiEnhancementSource = 'ai_failed'; 
+      aiEnhancedSearchTerm = termToSearch.trim();
+      aiEnhancementSource = 'ai_failed';
     }
 
     setLoadingMessage(t.loadingData);
-    
+
     try {
       const dbDataArray = await fetchMedicineByName(aiEnhancedSearchTerm);
       let processedMedicines: Medicine[] = [];
 
       if (dbDataArray.length > 0) {
-        setLoadingMessage(t.loadingAiDetails); 
+        setLoadingMessage(t.loadingAiDetails);
 
         processedMedicines = await Promise.all(
           dbDataArray.map(async (dbItem) => {
             try {
-                console.log(`[MediSearchApp] Calling generateMedicineDetails for DB item: ${dbItem.id} - ${dbItem.name}`);
                 const aiDetails = await generateMedicineDetails({
-                searchTermOrName: dbItem.name, 
+                searchTermOrName: dbItem.name,
                 language: selectedLanguage,
                 contextName: dbItem.name,
                 contextComposition: dbItem.composition,
                 contextBarcode: dbItem.barcode,
+                contextMrp: dbItem.mrp,
+                contextUom: dbItem.uom,
                 });
-                console.log(`[MediSearchApp] AI details response for ${dbItem.name}:`, JSON.stringify(aiDetails, null, 2));
 
                 if (aiDetails.source === 'ai_failed' || aiDetails.source === 'ai_unavailable') {
                     toast({
@@ -189,10 +187,10 @@ export default function MediSearchApp() {
                         variant: "default",
                     });
                 }
-                
+
                 return {
-                id: dbItem.id, 
-                ...aiDetails 
+                id: dbItem.id,
+                ...aiDetails
                 };
             } catch (genDetailsError: any) {
                 console.error(`[MediSearchApp] Critical error during generateMedicineDetails promise for ${dbItem.name}:`, genDetailsError.message, genDetailsError.stack, genDetailsError);
@@ -210,33 +208,33 @@ export default function MediSearchApp() {
                         setAiConfigErrorType('api_fail');
                     }
                 }
-                return { 
+                return {
                     id: dbItem.id,
                     name: dbItem.name,
                     composition: dbItem.composition,
                     barcode: dbItem.barcode,
+                    mrp: dbItem.mrp,
+                    uom: dbItem.uom,
                     usage: t.infoNotAvailable,
                     manufacturer: t.infoNotAvailable,
                     dosage: t.infoNotAvailable,
                     sideEffects: t.infoNotAvailable,
-                    source: 'ai_failed' 
+                    source: 'ai_failed'
                 };
             }
           })
         );
-      } else if (aiEnhancementSource === 'ai_enhanced' || aiEnhancementSource === 'original_query_used') { 
+      } else if (aiEnhancementSource === 'ai_enhanced' || aiEnhancementSource === 'original_query_used') {
           setLoadingMessage(t.loadingAiDetails);
-          console.log(`[MediSearchApp] No DB match for "${aiEnhancedSearchTerm}". Attempting full AI generation.`);
           try {
             const aiOnlyDetails = await generateMedicineDetails({
                 searchTermOrName: aiEnhancedSearchTerm,
                 language: selectedLanguage,
             });
-            console.log(`[MediSearchApp] AI-only details response for "${aiEnhancedSearchTerm}":`, JSON.stringify(aiOnlyDetails, null, 2));
              if (aiOnlyDetails.name && aiOnlyDetails.name !== t.infoNotAvailable && aiOnlyDetails.composition !== t.infoNotAvailable ) {
                  processedMedicines = [{ id: `ai-${Date.now()}`, ...aiOnlyDetails }];
              } else {
-                 processedMedicines = []; 
+                 processedMedicines = [];
              }
 
             if (aiOnlyDetails.source === 'ai_failed' || aiOnlyDetails.source === 'ai_unavailable') {
@@ -271,7 +269,7 @@ export default function MediSearchApp() {
             }
           }
       }
-      
+
       setSearchResults(processedMedicines);
 
       if (aiEnhancementSource === 'ai_unavailable' && !aiConfigError) {
@@ -339,7 +337,7 @@ export default function MediSearchApp() {
   const handleInputBlur = () => {
     setTimeout(() => {
       setShowSuggestions(false);
-    }, 150); 
+    }, 150);
   };
 
 
@@ -358,8 +356,8 @@ export default function MediSearchApp() {
              <Image
                 src="/images/logo_transparent.png"
                 alt="WellMeds Logo"
-                width={320} 
-                height={320} 
+                width={320}
+                height={320}
                 priority
                 className="object-contain"
                 data-ai-hint="logo health"
@@ -464,4 +462,3 @@ export default function MediSearchApp() {
     </div>
   );
 }
-

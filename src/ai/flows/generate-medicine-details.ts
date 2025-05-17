@@ -22,6 +22,8 @@ const GenerateMedicineDetailsInputSchema = z.object({
   contextName: z.string().optional().describe('The medicine name, if already known from the database. This might be an ID like "06".'),
   contextComposition: z.string().optional().describe('The medicine composition, if already known from the database. This is key for generating details.'),
   contextBarcode: z.string().optional().describe('The medicine barcode, if already known from the database.'),
+  contextMrp: z.union([z.string(), z.number()]).optional().describe('The MRP (Maximum Retail Price) of the medicine, if known from the database.'),
+  contextUom: z.string().optional().describe('The UOM (Unit of Measure, e.g., "10 tablets", "100ml bottle") of the medicine, if known from the database.'),
 });
 export type GenerateMedicineDetailsInput = z.infer<typeof GenerateMedicineDetailsInputSchema>;
 
@@ -33,6 +35,8 @@ const GenerateMedicineDetailsOutputSchema = z.object({
   dosage: z.string().describe("General dosage guidelines for the medicine. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. For example:\n• Adults: 1 tablet\n• Children: Half tablet"),
   sideEffects: z.string().describe("Common side effects associated with the medicine. Each point MUST start with '• ' (a bullet character followed by a space) and be on its own new line. For example:\n• Nausea\n• Headache"),
   barcode: z.string().optional().describe('The barcode of the medicine, if applicable or provided in context.'),
+  mrp: z.union([z.string(), z.number()]).optional().describe('The MRP (Maximum Retail Price) of the medicine, typically in INR.'),
+  uom: z.string().optional().describe('The UOM (Unit of Measure) of the medicine, e.g., "strip of 10 tablets", "100ml bottle".'),
   source: z.enum(['database_ai_enhanced', 'ai_generated', 'database_only', 'ai_unavailable', 'ai_failed']).describe('Indicates if the primary details were from a database and enhanced by AI, or if all details were AI-generated, or if only database details are available due to AI failure/unavailability.'),
 });
 export type GenerateMedicineDetailsOutput = z.infer<typeof GenerateMedicineDetailsOutputSchema>;
@@ -54,6 +58,8 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       dosage: t_fallback.infoNotAvailable,
       sideEffects: t_fallback.infoNotAvailable,
       barcode: input?.contextBarcode,
+      mrp: input?.contextMrp,
+      uom: input?.contextUom,
       source: 'ai_failed',
     };
   }
@@ -73,6 +79,8 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
         ...result,
         name: result.name || nameForFallback,
         composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable,
+        mrp: result.mrp ?? input.contextMrp, // Ensure MRP from context is preferred if AI doesn't provide
+        uom: result.uom ?? input.contextUom,   // Ensure UOM from context is preferred
     };
     console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with validated result:", JSON.stringify(validatedResult, null, 2));
     return validatedResult;
@@ -90,7 +98,7 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       rawErrorMessage = String((error as any).message);
       errorDetails = JSON.stringify(error);
     }
-    
+
     console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     console.error("!!!!!!!! CATCH IN generateMedicineDetails WRAPPER !!!!!!!");
     console.error(`Input: ${JSON.stringify(input)}`);
@@ -108,6 +116,8 @@ export async function generateMedicineDetails(input: GenerateMedicineDetailsInpu
       dosage: t_fallback.infoNotAvailable,
       sideEffects: t_fallback.infoNotAvailable,
       barcode: input.contextBarcode,
+      mrp: input.contextMrp,
+      uom: input.contextUom,
       source: source,
     };
     console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with fallback due to CATCH:", JSON.stringify(fallbackResult, null, 2));
@@ -128,6 +138,8 @@ The user has provided context for a medicine:
 Identifier (Name/ID): "{{contextName}}"
 Composition: "{{contextComposition}}"
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
+{{#if contextMrp}}MRP: "{{contextMrp}}"{{/if}}
+{{#if contextUom}}UOM: "{{contextUom}}"{{/if}}
 
 Your primary task is to use the provided 'Composition: "{{contextComposition}}"' to generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
 - usage: Provide typical usage/indications. Each point MUST start with '• ' and be on its own new line. (e.g., "• For pain relief\n• Reduces fever").
@@ -139,10 +151,12 @@ CRITICALLY, the output 'source' field MUST be "database_ai_enhanced".
 The output 'name' field MUST be "{{contextName}}".
 The output 'composition' field MUST be "{{contextComposition}}".
 {{#if contextBarcode}}The output 'barcode' field SHOULD be "{{contextBarcode}}".{{else}}If a common barcode is known for a medicine with this composition, provide it; otherwise, you can omit the 'barcode' field or leave it empty.{{/if}}
+{{#if contextMrp}}The output 'mrp' field SHOULD be "{{contextMrp}}".{{else}}If a typical MRP is known for this composition in India (INR), provide it; otherwise omit.{{/if}}
+{{#if contextUom}}The output 'uom' field SHOULD be "{{contextUom}}".{{else}}If a typical UOM (e.g., "strip of 10 tablets") is known, provide it; otherwise omit.{{/if}}
 
-If you cannot find specific information for any of the generated fields (usage, manufacturer, dosage, sideEffects) based on the composition, PROVIDE AN EMPTY STRING for that field. Do NOT use phrases like 'Information not available' or 'Not found' yourself in these fields. The system will handle fallbacks for empty strings.
+If you cannot find specific information for any of the generated fields (usage, manufacturer, dosage, sideEffects), PROVIDE AN EMPTY STRING for that field. Do NOT use phrases like 'Information not available' or 'Not found' yourself in these fields. The system will handle fallbacks for empty strings.
 
-Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
+Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en", contextMrp="20", contextUom="Strip of 10 tablets":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
   usage: "• For relief from fever\n• To reduce mild to moderate pain"
@@ -150,6 +164,8 @@ Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500
   dosage: "• Adults: 1 to 2 tablets every 4-6 hours\n• Max: 8 tablets in 24 hours"
   sideEffects: "• Nausea (rare)\n• Allergic reactions (very rare)"
   barcode: "123456789012"
+  mrp: "20"
+  uom: "Strip of 10 tablets"
   source: "database_ai_enhanced"
 
 {{else}}
@@ -165,6 +181,8 @@ Then, provide the following details for that identified medicine in {{language}}
 - General dosage guidelines. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. (e.g., "• Adults: 1 tablet, 2-3 times a day\n• Children (6-12 years): Half tablet, 2 times a day").
 - Common side effects. Each point MUST start with '• ' and be on its own new line. (e.g., "• Nausea\n• Headache\n• Dizziness").
 - Barcode (if identifiable and applicable, otherwise omit or leave empty).
+- MRP (Maximum Retail Price in INR, if known or typical for the medicine).
+- UOM (Unit of Measure, e.g., "strip of 10 tablets", "100ml bottle", if known).
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
 If "{{searchTermOrName}}" seems to be a composition, describe a common medicine with that composition.
@@ -180,10 +198,12 @@ Example for searchTermOrName="Amoxicillin", language="en":
   dosage: "• Adults: 250mg to 500mg every 8 hours\n• Children: Dosage based on weight"
   sideEffects: "• Diarrhea\n• Nausea\n• Rash"
   barcode: ""
+  mrp: "50"
+  uom: "Strip of 10 capsules"
   source: "ai_generated"
 {{/if}}
 
-Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects) is in {{language}}.
+Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects, uom) is in {{language}}.
 The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated', as specified above. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response.
 `,
 });
@@ -214,7 +234,9 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         dosage: t_api_key_fallback.infoNotAvailable,
         sideEffects: t_api_key_fallback.infoNotAvailable,
         barcode: input.contextBarcode,
-        source: 'ai_unavailable', 
+        mrp: input.contextMrp,
+        uom: input.contextUom,
+        source: 'ai_unavailable',
       };
     } else {
       console.log("[generateMedicineDetailsFlow] GEMINI_API_KEY appears to be set in the environment.");
@@ -261,6 +283,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             dosage: t_flow_fallback.infoNotAvailable,
             sideEffects: t_flow_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
+            mrp: input.contextMrp,
+            uom: input.contextUom,
             source: sourceForFailure,
         };
       }
@@ -275,10 +299,17 @@ const generateMedicineDetailsFlow = ai.defineFlow(
       let finalDosage: string;
       let finalSideEffects: string;
       let finalBarcode: string | undefined;
+      let finalMrp: string | number | undefined;
+      let finalUom: string | undefined;
+
 
       if (input.contextName && input.contextComposition) {
         finalName = input.contextName;
         finalComposition = input.contextComposition;
+        finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
+        finalMrp = rawOutputFromAI.mrp ?? input.contextMrp;
+        finalUom = rawOutputFromAI.uom?.trim() || input.contextUom || undefined;
+
 
         if (rawOutputFromAI.source === 'database_ai_enhanced') {
           finalSource = 'database_ai_enhanced';
@@ -286,14 +317,16 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalManufacturer = (rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '') ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
           finalDosage = (rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '') ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
           finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
-          finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
+
 
           const anyDetailEnhanced =
             (finalUsage !== t_flow_fallback.infoNotAvailable) ||
             (finalManufacturer !== t_flow_fallback.infoNotAvailable) ||
             (finalDosage !== t_flow_fallback.infoNotAvailable) ||
             (finalSideEffects !== t_flow_fallback.infoNotAvailable) ||
-            (finalBarcode && finalBarcode !== input.contextBarcode);
+            (finalBarcode !== input.contextBarcode) || // Barcode can be enhanced
+            (finalMrp !== input.contextMrp) || // MRP can be enhanced
+            (finalUom !== input.contextUom);   // UOM can be enhanced
 
 
           if (!anyDetailEnhanced && finalUsage === t_flow_fallback.infoNotAvailable && finalManufacturer === t_flow_fallback.infoNotAvailable && finalDosage === t_flow_fallback.infoNotAvailable && finalSideEffects === t_flow_fallback.infoNotAvailable ) {
@@ -308,9 +341,12 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalManufacturer = t_flow_fallback.infoNotAvailable;
           finalDosage = t_flow_fallback.infoNotAvailable;
           finalSideEffects = t_flow_fallback.infoNotAvailable;
+          // Keep barcode, mrp, uom from context if AI path fails
           finalBarcode = input.contextBarcode;
+          finalMrp = input.contextMrp;
+          finalUom = input.contextUom;
         }
-      } else {
+      } else { // AI-only path
         if (rawOutputFromAI.source === 'ai_generated' && rawOutputFromAI.name.trim() !== '' && rawOutputFromAI.composition.trim() !== '') {
           finalSource = 'ai_generated';
           finalName = rawOutputFromAI.name.trim();
@@ -320,6 +356,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalDosage = (rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '') ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
           finalSideEffects = (rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '') ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
           finalBarcode = rawOutputFromAI.barcode?.trim() || undefined;
+          finalMrp = rawOutputFromAI.mrp;
+          finalUom = rawOutputFromAI.uom?.trim() || undefined;
         } else {
           console.warn(`[generateMedicineDetailsFlow] In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated' with non-empty name/composition. Raw AI output: ${JSON.stringify(rawOutputFromAI)}. Falling back to ai_failed.`);
           finalSource = 'ai_failed';
@@ -332,6 +370,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
           finalDosage = t_flow_fallback.infoNotAvailable;
           finalSideEffects = t_flow_fallback.infoNotAvailable;
           finalBarcode = undefined;
+          finalMrp = undefined;
+          finalUom = undefined;
         }
       }
 
@@ -343,6 +383,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         dosage: finalDosage,
         sideEffects: finalSideEffects,
         barcode: finalBarcode,
+        mrp: finalMrp,
+        uom: finalUom,
         source: finalSource,
       };
 
@@ -354,11 +396,11 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.error("!!!!!!!!!!!!!!!!! CRITICAL ERROR IN generateMedicineDetailsFlow CATCH BLOCK !!!!!!!!!!!!!!!!!!");
         console.error(`Input that caused error: ${JSON.stringify(input)}`);
-        
+
         let errorToLog = flowError;
         if (flowError && flowError.cause instanceof Error) {
           console.error("Original Cause of Error:", flowError.cause.message, flowError.cause.stack);
-          errorToLog = flowError.cause; 
+          errorToLog = flowError.cause;
         }
 
         console.error(`Error Type: ${errorToLog.name || 'Unknown type'}`);
@@ -366,7 +408,7 @@ const generateMedicineDetailsFlow = ai.defineFlow(
         console.error(`Error Stack: ${errorToLog.stack || 'No stack trace available'}`);
 
         if (errorToLog.response && errorToLog.response.data) console.error("Error Response Data (from original error):", errorToLog.response.data);
-        
+
         console.error(`Full Error Object (potentially wrapped):`, JSON.stringify(flowError, Object.getOwnPropertyNames(flowError), 2));
         console.error(`Raw AI Output (if available from before error): ${rawOutputFromAI === null ? "NULL_VALUE" : rawOutputFromAI === undefined ? "UNDEFINED_VALUE" : JSON.stringify(rawOutputFromAI, null, 2)}`);
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -387,13 +429,13 @@ const generateMedicineDetailsFlow = ai.defineFlow(
                  sourceForError = 'ai_unavailable';
             } else if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network error")) {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Network issue or AI service unreachable: ${errorToLog.message}`);
-                sourceForError = 'ai_failed'; 
-            } else if (errorToLog.name === 'ZodError') { 
+                sourceForError = 'ai_failed';
+            } else if (errorToLog.name === 'ZodError') {
                 console.error(`[generateMedicineDetailsFlow] Categorized Error: Zod validation error on AI output: ${errorToLog.message}. Details:`, (errorToLog as any).errors);
                 sourceForError = 'ai_failed';
             }
         }
-        
+
         const errorFallbackResult = {
             name: input.contextName || input.searchTermOrName || t_flow_fallback.infoNotAvailable,
             composition: input.contextComposition || t_flow_fallback.infoNotAvailable,
@@ -402,6 +444,8 @@ const generateMedicineDetailsFlow = ai.defineFlow(
             dosage: t_flow_fallback.infoNotAvailable,
             sideEffects: t_flow_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
+            mrp: input.contextMrp,
+            uom: input.contextUom,
             source: sourceForError,
         };
         console.log("🔷🔷🔷🔷🔷 EXITING generateMedicineDetailsFlow (ai.defineFlow) - CATCH PATH 🔷🔷🔷🔷🔷", JSON.stringify(errorFallbackResult, null, 2));
@@ -409,4 +453,3 @@ const generateMedicineDetailsFlow = ai.defineFlow(
     }
   }
 );
-

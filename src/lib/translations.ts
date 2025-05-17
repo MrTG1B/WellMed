@@ -20,6 +20,8 @@ export type TranslationKeys = {
   dosageLabel: string;
   sideEffectsLabel: string;
   barcodeLabel: string;
+  mrpLabel: string;
+  uomLabel: string;
   loadingAi: string;
   loadingData: string;
   loadingAiDetails: string;
@@ -30,7 +32,7 @@ export type TranslationKeys = {
   searchWithAiResult: (correctedName: string) => string;
   clearSearchButton: string;
   sourceDbAiMessage: string;
-  sourceAiOnlyMessage: string; 
+  sourceAiOnlyMessage: string;
   sourceDbOnlyMessage: string;
   sourceAiUnavailableForDetailsMessage: (medicineName: string) => string;
   sourceAiFailedForDetailsMessage: (medicineName: string) => string;
@@ -72,6 +74,8 @@ export const translations: Record<Language, TranslationKeys> = {
     dosageLabel: 'Dosage',
     sideEffectsLabel: 'Side Effects',
     barcodeLabel: 'Barcode',
+    mrpLabel: 'MRP',
+    uomLabel: 'Unit of Measure',
     loadingAi: 'Enhancing search with AI...',
     loadingData: 'Searching database...',
     loadingAiDetails: 'Generating details with AI...',
@@ -122,6 +126,8 @@ export const translations: Record<Language, TranslationKeys> = {
     dosageLabel: 'खुराक',
     sideEffectsLabel: 'दुष्प्रभाव',
     barcodeLabel: 'बारकोड',
+    mrpLabel: 'एमआरपी',
+    uomLabel: 'माप की इकाई',
     loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
     loadingData: 'डेटाबेस में खोजा जा रहा है...',
     loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
@@ -172,6 +178,8 @@ export const translations: Record<Language, TranslationKeys> = {
     dosageLabel: 'মাত্রা',
     sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
     barcodeLabel: 'বারকোড',
+    mrpLabel: 'এমআরপি',
+    uomLabel: 'পরিমাপের একক',
     loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
     loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
     loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
@@ -206,4 +214,3 @@ export const translations: Record<Language, TranslationKeys> = {
 };
 
 export const getTranslations = (lang: Language): TranslationKeys => translations[lang];
-

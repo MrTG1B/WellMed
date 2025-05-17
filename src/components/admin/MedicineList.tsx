@@ -63,6 +63,8 @@ export default function MedicineList() {
               id: key,
               name: medData.name || "Unnamed Medicine",
               composition: medData.composition,
+              uom:medData.uom,
+              mrp:medData.mrp,
               barcode: medData.barcode,
             };
           });

@@ -482,6 +482,8 @@ const translations = {
         dosageLabel: 'Dosage',
         sideEffectsLabel: 'Side Effects',
         barcodeLabel: 'Barcode',
+        mrpLabel: 'MRP',
+        uomLabel: 'Unit of Measure',
         loadingAi: 'Enhancing search with AI...',
         loadingData: 'Searching database...',
         loadingAiDetails: 'Generating details with AI...',
@@ -532,6 +534,8 @@ const translations = {
         dosageLabel: 'खुराक',
         sideEffectsLabel: 'दुष्प्रभाव',
         barcodeLabel: 'बारकोड',
+        mrpLabel: 'एमआरपी',
+        uomLabel: 'माप की इकाई',
         loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
         loadingData: 'डेटाबेस में खोजा जा रहा है...',
         loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
@@ -582,6 +586,8 @@ const translations = {
         dosageLabel: 'মাত্রা',
         sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
         barcodeLabel: 'বারকোড',
+        mrpLabel: 'এমআরপি',
+        uomLabel: 'পরিমাপের একক',
         loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
         loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
         loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
@@ -654,7 +660,12 @@ const GenerateMedicineDetailsInputSchema = __TURBOPACK__imported__module__$5b$pr
     ]).describe('The language for the generated details.'),
     contextName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The medicine name, if already known from the database. This might be an ID like "06".'),
     contextComposition: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The medicine composition, if already known from the database. This is key for generating details.'),
-    contextBarcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The medicine barcode, if already known from the database.')
+    contextBarcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The medicine barcode, if already known from the database.'),
+    contextMrp: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].union([
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string(),
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].number()
+    ]).optional().describe('The MRP (Maximum Retail Price) of the medicine, if known from the database.'),
+    contextUom: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The UOM (Unit of Measure, e.g., "10 tablets", "100ml bottle") of the medicine, if known from the database.')
 });
 const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].object({
     name: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The common name of the medicine.'),
@@ -664,6 +675,11 @@ const GenerateMedicineDetailsOutputSchema = __TURBOPACK__imported__module__$5b$p
     dosage: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("General dosage guidelines for the medicine. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. For example:\n• Adults: 1 tablet\n• Children: Half tablet"),
     sideEffects: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe("Common side effects associated with the medicine. Each point MUST start with '• ' (a bullet character followed by a space) and be on its own new line. For example:\n• Nausea\n• Headache"),
     barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The barcode of the medicine, if applicable or provided in context.'),
+    mrp: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].union([
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string(),
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].number()
+    ]).optional().describe('The MRP (Maximum Retail Price) of the medicine, typically in INR.'),
+    uom: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().optional().describe('The UOM (Unit of Measure) of the medicine, e.g., "strip of 10 tablets", "100ml bottle".'),
     source: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].enum([
         'database_ai_enhanced',
         'ai_generated',
@@ -687,6 +703,8 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             dosage: t_fallback.infoNotAvailable,
             sideEffects: t_fallback.infoNotAvailable,
             barcode: input?.contextBarcode,
+            mrp: input?.contextMrp,
+            uom: input?.contextUom,
             source: 'ai_failed'
         };
     }
@@ -701,7 +719,9 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
         const validatedResult = {
             ...result,
             name: result.name || nameForFallback,
-            composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable
+            composition: result.composition || input.contextComposition || t_fallback.infoNotAvailable,
+            mrp: result.mrp ?? input.contextMrp,
+            uom: result.uom ?? input.contextUom
         };
         console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with validated result:", JSON.stringify(validatedResult, null, 2));
         return validatedResult;
@@ -734,6 +754,8 @@ async function /*#__TURBOPACK_DISABLE_EXPORT_MERGING__*/ generateMedicineDetails
             dosage: t_fallback.infoNotAvailable,
             sideEffects: t_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
+            mrp: input.contextMrp,
+            uom: input.contextUom,
             source: source
         };
         console.log("🚀🚀🚀🚀🚀 EXITING generateMedicineDetails WRAPPER with fallback due to CATCH:", JSON.stringify(fallbackResult, null, 2));
@@ -757,6 +779,8 @@ The user has provided context for a medicine:
 Identifier (Name/ID): "{{contextName}}"
 Composition: "{{contextComposition}}"
 {{#if contextBarcode}}Barcode: "{{contextBarcode}}"{{/if}}
+{{#if contextMrp}}MRP: "{{contextMrp}}"{{/if}}
+{{#if contextUom}}UOM: "{{contextUom}}"{{/if}}
 
 Your primary task is to use the provided 'Composition: "{{contextComposition}}"' to generate the following details for the medicine (identified as "{{contextName}}") in {{language}}:
 - usage: Provide typical usage/indications. Each point MUST start with '• ' and be on its own new line. (e.g., "• For pain relief\n• Reduces fever").
@@ -768,10 +792,12 @@ CRITICALLY, the output 'source' field MUST be "database_ai_enhanced".
 The output 'name' field MUST be "{{contextName}}".
 The output 'composition' field MUST be "{{contextComposition}}".
 {{#if contextBarcode}}The output 'barcode' field SHOULD be "{{contextBarcode}}".{{else}}If a common barcode is known for a medicine with this composition, provide it; otherwise, you can omit the 'barcode' field or leave it empty.{{/if}}
+{{#if contextMrp}}The output 'mrp' field SHOULD be "{{contextMrp}}".{{else}}If a typical MRP is known for this composition in India (INR), provide it; otherwise omit.{{/if}}
+{{#if contextUom}}The output 'uom' field SHOULD be "{{contextUom}}".{{else}}If a typical UOM (e.g., "strip of 10 tablets") is known, provide it; otherwise omit.{{/if}}
 
-If you cannot find specific information for any of the generated fields (usage, manufacturer, dosage, sideEffects) based on the composition, PROVIDE AN EMPTY STRING for that field. Do NOT use phrases like 'Information not available' or 'Not found' yourself in these fields. The system will handle fallbacks for empty strings.
+If you cannot find specific information for any of the generated fields (usage, manufacturer, dosage, sideEffects), PROVIDE AN EMPTY STRING for that field. Do NOT use phrases like 'Information not available' or 'Not found' yourself in these fields. The system will handle fallbacks for empty strings.
 
-Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en":
+Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500mg", language="en", contextMrp="20", contextUom="Strip of 10 tablets":
   name: "Paracetamol 500mg"
   composition: "Paracetamol 500mg"
   usage: "• For relief from fever\n• To reduce mild to moderate pain"
@@ -779,6 +805,8 @@ Example for contextName="Paracetamol 500mg", contextComposition="Paracetamol 500
   dosage: "• Adults: 1 to 2 tablets every 4-6 hours\n• Max: 8 tablets in 24 hours"
   sideEffects: "• Nausea (rare)\n• Allergic reactions (very rare)"
   barcode: "123456789012"
+  mrp: "20"
+  uom: "Strip of 10 tablets"
   source: "database_ai_enhanced"
 
 {{else}}
@@ -794,6 +822,8 @@ Then, provide the following details for that identified medicine in {{language}}
 - General dosage guidelines. Each distinct guideline MUST be a separate bullet point on a new line, starting with '• '. (e.g., "• Adults: 1 tablet, 2-3 times a day\n• Children (6-12 years): Half tablet, 2 times a day").
 - Common side effects. Each point MUST start with '• ' and be on its own new line. (e.g., "• Nausea\n• Headache\n• Dizziness").
 - Barcode (if identifiable and applicable, otherwise omit or leave empty).
+- MRP (Maximum Retail Price in INR, if known or typical for the medicine).
+- UOM (Unit of Measure, e.g., "strip of 10 tablets", "100ml bottle", if known).
 
 If "{{searchTermOrName}}" is a barcode, try to identify the medicine and its details.
 If "{{searchTermOrName}}" seems to be a composition, describe a common medicine with that composition.
@@ -809,10 +839,12 @@ Example for searchTermOrName="Amoxicillin", language="en":
   dosage: "• Adults: 250mg to 500mg every 8 hours\n• Children: Dosage based on weight"
   sideEffects: "• Diarrhea\n• Nausea\n• Rash"
   barcode: ""
+  mrp: "50"
+  uom: "Strip of 10 capsules"
   source: "ai_generated"
 {{/if}}
 
-Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects) is in {{language}}.
+Ensure all textual output (name, composition, usage, manufacturer, dosage, sideEffects, uom) is in {{language}}.
 The 'source' field must be one of: 'database_ai_enhanced', 'ai_generated', as specified above. Do not use 'database_only', 'ai_unavailable', or 'ai_failed' in the direct AI response.
 `
 });
@@ -839,6 +871,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             dosage: t_api_key_fallback.infoNotAvailable,
             sideEffects: t_api_key_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
+            mrp: input.contextMrp,
+            uom: input.contextUom,
             source: 'ai_unavailable'
         };
     } else {
@@ -868,6 +902,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 dosage: t_flow_fallback.infoNotAvailable,
                 sideEffects: t_flow_fallback.infoNotAvailable,
                 barcode: input.contextBarcode,
+                mrp: input.contextMrp,
+                uom: input.contextUom,
                 source: sourceForFailure
             };
         }
@@ -880,17 +916,21 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
         let finalDosage;
         let finalSideEffects;
         let finalBarcode;
+        let finalMrp;
+        let finalUom;
         if (input.contextName && input.contextComposition) {
             finalName = input.contextName;
             finalComposition = input.contextComposition;
+            finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
+            finalMrp = rawOutputFromAI.mrp ?? input.contextMrp;
+            finalUom = rawOutputFromAI.uom?.trim() || input.contextUom || undefined;
             if (rawOutputFromAI.source === 'database_ai_enhanced') {
                 finalSource = 'database_ai_enhanced';
                 finalUsage = rawOutputFromAI.usage && rawOutputFromAI.usage.trim() !== '' ? rawOutputFromAI.usage.trim() : t_flow_fallback.infoNotAvailable;
                 finalManufacturer = rawOutputFromAI.manufacturer && rawOutputFromAI.manufacturer.trim() !== '' ? rawOutputFromAI.manufacturer.trim() : t_flow_fallback.infoNotAvailable;
                 finalDosage = rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '' ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
                 finalSideEffects = rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '' ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
-                finalBarcode = rawOutputFromAI.barcode?.trim() || input.contextBarcode || undefined;
-                const anyDetailEnhanced = finalUsage !== t_flow_fallback.infoNotAvailable || finalManufacturer !== t_flow_fallback.infoNotAvailable || finalDosage !== t_flow_fallback.infoNotAvailable || finalSideEffects !== t_flow_fallback.infoNotAvailable || finalBarcode && finalBarcode !== input.contextBarcode;
+                const anyDetailEnhanced = finalUsage !== t_flow_fallback.infoNotAvailable || finalManufacturer !== t_flow_fallback.infoNotAvailable || finalDosage !== t_flow_fallback.infoNotAvailable || finalSideEffects !== t_flow_fallback.infoNotAvailable || finalBarcode !== input.contextBarcode || finalMrp !== input.contextMrp || finalUom !== input.contextUom; // UOM can be enhanced
                 if (!anyDetailEnhanced && finalUsage === t_flow_fallback.infoNotAvailable && finalManufacturer === t_flow_fallback.infoNotAvailable && finalDosage === t_flow_fallback.infoNotAvailable && finalSideEffects === t_flow_fallback.infoNotAvailable) {
                     console.log("[generateMedicineDetailsFlow] AI reported 'database_ai_enhanced' but provided no new textual details beyond context or fallbacks for usage, manufacturer, dosage, sideEffects. Downgrading to 'database_only'.");
                     finalSource = 'database_only';
@@ -902,7 +942,10 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 finalManufacturer = t_flow_fallback.infoNotAvailable;
                 finalDosage = t_flow_fallback.infoNotAvailable;
                 finalSideEffects = t_flow_fallback.infoNotAvailable;
+                // Keep barcode, mrp, uom from context if AI path fails
                 finalBarcode = input.contextBarcode;
+                finalMrp = input.contextMrp;
+                finalUom = input.contextUom;
             }
         } else {
             if (rawOutputFromAI.source === 'ai_generated' && rawOutputFromAI.name.trim() !== '' && rawOutputFromAI.composition.trim() !== '') {
@@ -914,6 +957,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 finalDosage = rawOutputFromAI.dosage && rawOutputFromAI.dosage.trim() !== '' ? rawOutputFromAI.dosage.trim() : t_flow_fallback.infoNotAvailable;
                 finalSideEffects = rawOutputFromAI.sideEffects && rawOutputFromAI.sideEffects.trim() !== '' ? rawOutputFromAI.sideEffects.trim() : t_flow_fallback.infoNotAvailable;
                 finalBarcode = rawOutputFromAI.barcode?.trim() || undefined;
+                finalMrp = rawOutputFromAI.mrp;
+                finalUom = rawOutputFromAI.uom?.trim() || undefined;
             } else {
                 console.warn(`[generateMedicineDetailsFlow] In AI-only path, AI returned source '${rawOutputFromAI.source}' or missing name/composition. Expected 'ai_generated' with non-empty name/composition. Raw AI output: ${JSON.stringify(rawOutputFromAI)}. Falling back to ai_failed.`);
                 finalSource = 'ai_failed';
@@ -925,6 +970,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
                 finalDosage = t_flow_fallback.infoNotAvailable;
                 finalSideEffects = t_flow_fallback.infoNotAvailable;
                 finalBarcode = undefined;
+                finalMrp = undefined;
+                finalUom = undefined;
             }
         }
         const validatedOutput = {
@@ -935,6 +982,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             dosage: finalDosage,
             sideEffects: finalSideEffects,
             barcode: finalBarcode,
+            mrp: finalMrp,
+            uom: finalUom,
             source: finalSource
         };
         console.log("[generateMedicineDetailsFlow] Validated Output to be returned:", JSON.stringify(validatedOutput, null, 2));
@@ -984,6 +1033,8 @@ const generateMedicineDetailsFlow = __TURBOPACK__imported__module__$5b$project$5
             dosage: t_flow_fallback.infoNotAvailable,
             sideEffects: t_flow_fallback.infoNotAvailable,
             barcode: input.contextBarcode,
+            mrp: input.contextMrp,
+            uom: input.contextUom,
             source: sourceForError
         };
         console.log("🔷🔷🔷🔷🔷 EXITING generateMedicineDetailsFlow (ai.defineFlow) - CATCH PATH 🔷🔷🔷🔷🔷", JSON.stringify(errorFallbackResult, null, 2));

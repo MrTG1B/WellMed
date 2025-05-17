@@ -37,6 +37,8 @@ interface MedicineDoc {
   name: string;
   composition?: string;
   barcode?: string;
+  mrp?: string;
+  uom?: string;
 }
 
 interface EditMedicineDialogProps {
@@ -58,6 +60,8 @@ const formSchema = z.object({
     })
     .optional(),
   barcode: z.string().trim().optional(),
+  mrp: z.string().trim().optional(),
+  uom: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,6 +77,8 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
       composition: medicine.composition || "",
       medicineName: medicine.name || "",
       barcode: medicine.barcode || "",
+      mrp: medicine.mrp || "",
+      uom: medicine.uom || "",
     },
     mode: "onChange",
   });
@@ -84,6 +90,8 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
       composition: medicine.composition || "",
       medicineName: medicine.name || "",
       barcode: medicine.barcode || "",
+      mrp: medicine.mrp || "",
+      uom: medicine.uom || "",
     });
   }, [medicine, form]);
 
@@ -96,6 +104,8 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
                             : data.composition.trim();
     const updatedComposition = data.composition.trim();
     const updatedBarcode = data.barcode?.trim();
+    const updatedMrp = data.mrp?.trim();
+    const updatedUom = data.uom?.trim();
 
     try {
       if (!db) {
@@ -108,12 +118,22 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
         return;
       }
 
-      const medicineDataToUpdate = {
+      const medicineDataToUpdate: any = { // Use any for flexibility with null values
         name: finalMedicineName,
         composition: updatedComposition,
         barcode: (updatedBarcode && updatedBarcode.length > 0) ? updatedBarcode : null,
+        mrp: (updatedMrp && updatedMrp.length > 0) ? updatedMrp : null,
+        uom: (updatedUom && updatedUom.length > 0) ? updatedUom : null,
         lastUpdated: new Date().toISOString(),
       };
+      
+      // Remove null fields to avoid writing them to Firebase RTDB if not desired
+      Object.keys(medicineDataToUpdate).forEach(key => {
+        if (medicineDataToUpdate[key] === null) {
+          delete medicineDataToUpdate[key]; // Or set to rtdb.ServerValue.remove() if you prefer explicit deletion
+        }
+      });
+
 
       const medicineRef = ref(db, `medicines/${medicine.id}`);
       await update(medicineRef, medicineDataToUpdate);
@@ -122,7 +142,7 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
         title: "Update Successful",
         description: `Medicine "${finalMedicineName}" (ID: ${medicine.id}) updated.`,
       });
-      onSuccess(); // Call onSuccess to close dialog and potentially refresh list
+      onSuccess(); 
     } catch (error: any) {
       console.error("[EditMedicineDialog] Realtime Database update FAILED. Error:", error.message || error, error);
       toast({
@@ -211,6 +231,38 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="mrp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>MRP (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., 150.75" {...field} type="text"/>
+                  </FormControl>
+                  <FormDescription>
+                     Maximum Retail Price (INR).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="uom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit of Measure (UOM) (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Strip of 10 tablets" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    The packaging unit.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
@@ -234,3 +286,5 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
     </Dialog>
   );
 }
+
+    

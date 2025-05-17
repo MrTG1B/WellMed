@@ -1873,6 +1873,8 @@ function MedicineList() {
                                     id: key,
                                     name: medData.name || "Unnamed Medicine",
                                     composition: medData.composition,
+                                    uom: medData.uom,
+                                    mrp: medData.mrp,
                                     barcode: medData.barcode
                                 };
                             }
@@ -1963,7 +1965,7 @@ function MedicineList() {
                     className: "h-8 w-8 animate-spin text-primary"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 153,
+                    lineNumber: 155,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1971,13 +1973,13 @@ function MedicineList() {
                     children: "Loading medicines..."
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 154,
+                    lineNumber: 156,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 152,
+            lineNumber: 154,
             columnNumber: 7
         }, this);
     }
@@ -1990,27 +1992,27 @@ function MedicineList() {
                     className: "h-5 w-5"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 162,
+                    lineNumber: 164,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                     children: "Error Loading Medicines"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 163,
+                    lineNumber: 165,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                     children: error
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 164,
+                    lineNumber: 166,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 161,
+            lineNumber: 163,
             columnNumber: 7
         }, this);
     }
@@ -2022,27 +2024,27 @@ function MedicineList() {
                     className: "h-5 w-5"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 172,
+                    lineNumber: 174,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                     children: "No Medicines Found"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 173,
+                    lineNumber: 175,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                     children: "There are currently no medicines stored in the Realtime Database. Use the form to upload new medicine data."
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 174,
+                    lineNumber: 176,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 171,
+            lineNumber: 173,
             columnNumber: 7
         }, this);
     }
@@ -2062,7 +2064,7 @@ function MedicineList() {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 185,
+                            lineNumber: 187,
                             columnNumber: 11
                         }, this),
                         medicines.map((medicine)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2082,13 +2084,13 @@ function MedicineList() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 193,
+                                                lineNumber: 195,
                                                 columnNumber: 76
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 193,
+                                        lineNumber: 195,
                                         columnNumber: 15
                                     }, this),
                                     medicine.composition && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2099,7 +2101,7 @@ function MedicineList() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 194,
+                                        lineNumber: 196,
                                         columnNumber: 40
                                     }, this),
                                     medicine.barcode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2110,7 +2112,7 @@ function MedicineList() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 195,
+                                        lineNumber: 197,
                                         columnNumber: 36
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2126,12 +2128,12 @@ function MedicineList() {
                                                     className: "h-4 w-4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                    lineNumber: 205,
+                                                    lineNumber: 207,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 198,
+                                                lineNumber: 200,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2145,35 +2147,35 @@ function MedicineList() {
                                                     className: "h-4 w-4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                    lineNumber: 215,
+                                                    lineNumber: 217,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 207,
+                                                lineNumber: 209,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 197,
+                                        lineNumber: 199,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, medicine.id, true, {
                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                lineNumber: 189,
+                                lineNumber: 191,
                                 columnNumber: 13
                             }, this))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 184,
+                    lineNumber: 186,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 183,
+                lineNumber: 185,
                 columnNumber: 7
             }, this),
             medicineToDelete && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialog"], {
@@ -2187,7 +2189,7 @@ function MedicineList() {
                                     children: "Confirm Deletion"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 227,
+                                    lineNumber: 229,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogDescription"], {
@@ -2200,13 +2202,13 @@ function MedicineList() {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 228,
+                                    lineNumber: 230,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 226,
+                            lineNumber: 228,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogFooter"], {
@@ -2217,7 +2219,7 @@ function MedicineList() {
                                     children: "Cancel"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 234,
+                                    lineNumber: 236,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogAction"], {
@@ -2228,29 +2230,29 @@ function MedicineList() {
                                         className: "mr-2 h-4 w-4 animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 238,
+                                        lineNumber: 240,
                                         columnNumber: 31
                                     }, this) : "Delete"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 237,
+                                    lineNumber: 239,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 233,
+                            lineNumber: 235,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 225,
+                    lineNumber: 227,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 224,
+                lineNumber: 226,
                 columnNumber: 9
             }, this),
             medicineToEdit && showEditDialog && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$admin$2f$EditMedicineDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -2263,7 +2265,7 @@ function MedicineList() {
                 onSuccess: handleEditSuccess
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 246,
+                lineNumber: 248,
                 columnNumber: 9
             }, this)
         ]

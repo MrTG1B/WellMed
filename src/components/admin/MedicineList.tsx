@@ -26,6 +26,8 @@ interface MedicineDoc {
   name: string;
   composition?: string;
   barcode?: string;
+  mrp?: string;
+  uom?: string;
 }
 
 export default function MedicineList() {
@@ -63,12 +65,12 @@ export default function MedicineList() {
               id: key,
               name: medData.name || "Unnamed Medicine",
               composition: medData.composition,
-              uom:medData.uom,
-              mrp:medData.mrp,
               barcode: medData.barcode,
+              mrp: medData.mrp,
+              uom: medData.uom,
             };
           });
-          // Sort the medicines by ID
+          
           medsList.sort((a, b) => {
             const numA = parseInt(a.id, 10);
             const numB = parseInt(b.id, 10);
@@ -77,13 +79,12 @@ export default function MedicineList() {
             const bIsNum = !isNaN(numB);
 
             if (aIsNum && bIsNum) {
-              return numA - numB; // Sort numerically
+              return numA - numB; 
             } else if (aIsNum && !bIsNum) {
-              return -1; // Numbers come before non-numbers
+              return -1; 
             } else if (!aIsNum && bIsNum) {
-              return 1;  // Non-numbers come after numbers
+              return 1;  
             } else {
-              // Both are non-numeric strings, sort them alphanumerically
               if (a.id.toLowerCase() < b.id.toLowerCase()) return -1;
               if (a.id.toLowerCase() > b.id.toLowerCase()) return 1;
               return 0;
@@ -182,7 +183,7 @@ export default function MedicineList() {
 
   return (
     <>
-      <ScrollArea className="flex-grow h-auto max-h-[760px] w-full rounded-md border bg-card shadow-inner">
+      <ScrollArea className="flex-grow h-auto max-h-[750px] w-full rounded-md border bg-card shadow-inner">
         <div className="p-4">
           <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
             Available Medicines ({medicines.length})
@@ -195,6 +196,8 @@ export default function MedicineList() {
               <p className="font-semibold text-foreground">{medicine.name} <span className="text-xs text-muted-foreground">({medicine.id})</span></p>
               {medicine.composition && <p className="text-xs text-muted-foreground">Composition: {medicine.composition}</p>}
               {medicine.barcode && <p className="text-xs text-muted-foreground">Barcode: {medicine.barcode}</p>}
+              {medicine.mrp && <p className="text-xs text-muted-foreground">MRP: {medicine.mrp}</p>}
+              {medicine.uom && <p className="text-xs text-muted-foreground">UOM: {medicine.uom}</p>}
 
               <div className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                 <Button
@@ -259,3 +262,4 @@ export default function MedicineList() {
   );
 }
 
+    

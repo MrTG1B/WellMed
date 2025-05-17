@@ -45,6 +45,8 @@ const formSchema = z.object({
     })
     .optional(),
   barcode: z.string().trim().optional(),
+  mrp: z.string().trim().optional(),
+  uom: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,17 +62,25 @@ export default function AdminUploadForm() {
       composition: "",
       medicineName: "",
       barcode: "",
+      mrp: "",
+      uom: "",
     },
-    mode: "onChange", // Validate on change to provide immediate feedback
+    mode: "onChange", 
   });
 
-  const { formState: { isDirty, isValid }, watch, setValue, getValues, formState } = form;
+  const { formState: { isValid }, watch, setValue, getValues, formState, trigger } = form;
   const watchedComposition = watch("composition");
 
   useEffect(() => {
-    // Automatically populate medicineName from composition or clear it if composition is empty
-    setValue("medicineName", watchedComposition || "", { shouldValidate: true, shouldDirty: true });
-  }, [watchedComposition, setValue]);
+    const subscription = watch((value, { name }) => {
+      if (name === 'composition') {
+        setValue("medicineName", value.composition || "", { shouldValidate: true, shouldDirty: true });
+      }
+      // Trigger validation for all fields to update isValid state
+      trigger();
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setValue, trigger]);
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -78,13 +88,19 @@ export default function AdminUploadForm() {
       return;
     }
     setIsSubmitting(true);
+    console.log("AdminUploadForm: onSubmit triggered. Initial isSubmitting:", form.formState.isSubmitting);
+    console.log("AdminUploadForm: isSubmitting set to true.");
 
-    const newMedicineId = data.medicineId.trim(); 
-    const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 
+    const newMedicineId = data.medicineId.trim();
+    const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0
                             ? data.medicineName.trim()
-                            : data.composition.trim(); // Use composition if medicineName is empty
+                            : data.composition.trim(); 
     const newComposition = data.composition.trim();
     const newBarcode = data.barcode?.trim();
+    const newMrp = data.mrp?.trim();
+    const newUom = data.uom?.trim();
+
+    console.log("AdminUploadForm: Generated medicineId =", newMedicineId);
 
     try {
       if (!db) {
@@ -94,7 +110,7 @@ export default function AdminUploadForm() {
           description: "Firebase Realtime Database is not configured. Cannot save data.",
           variant: "destructive",
         });
-        setIsSubmitting(false); 
+        setIsSubmitting(false);
         return;
       }
 
@@ -143,10 +159,13 @@ export default function AdminUploadForm() {
       
       const medicineDataToSave = {
         name: finalMedicineName,
-        composition: newComposition, 
-        barcode: (newBarcode && newBarcode.length > 0) ? newBarcode : null, 
+        composition: newComposition,
+        barcode: (newBarcode && newBarcode.length > 0) ? newBarcode : null,
+        mrp: (newMrp && newMrp.length > 0) ? newMrp : null,
+        uom: (newUom && newUom.length > 0) ? newUom : null,
         lastUpdated: new Date().toISOString(),
       };
+      console.log("AdminUploadForm: Attempting set for ID:", newMedicineId, "Data:", medicineDataToSave);
 
       const medicineRef = ref(db, `medicines/${newMedicineId}`);
       await set(medicineRef, medicineDataToSave);
@@ -174,13 +193,14 @@ export default function AdminUploadForm() {
       });
     } finally {
       setIsSubmitting(false);
+      console.log("AdminUploadForm: isSubmitting set to false in finally block.");
     }
   };
-
+  
   // Debugging logs
-  console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isDirty =", isDirty, "isValid =", isValid);
-  console.log("AdminUploadForm RENDER: Form values:", getValues());
-  console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
+  console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isValid =", isValid);
+  // console.log("AdminUploadForm RENDER: Form values:", getValues());
+  // console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
 
 
   return (
@@ -196,7 +216,7 @@ export default function AdminUploadForm() {
                 <Input placeholder="e.g., paracetamol-500" {...field} />
               </FormControl>
               <FormDescription>
-                Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars.
+                Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars. Max 50 chars.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -254,6 +274,38 @@ export default function AdminUploadForm() {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="mrp"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>MRP (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., 150.75" {...field} type="text" />
+              </FormControl>
+              <FormDescription>
+                Maximum Retail Price (INR).
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="uom"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Unit of Measure (UOM) (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Strip of 10 tablets, 100ml bottle" {...field} />
+              </FormControl>
+              <FormDescription>
+                The packaging unit.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" disabled={isSubmitting || !isValid } className="w-full">
           {isSubmitting ? (
             <>
@@ -268,3 +320,5 @@ export default function AdminUploadForm() {
     </Form>
   );
 }
+
+    

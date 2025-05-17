@@ -26,8 +26,8 @@ interface MedicineDoc {
   name: string;
   composition?: string;
   barcode?: string;
-  mrp?: string; // Added MRP
-  uom?: string;  // Added UOM
+  mrp?: string;
+  uom?: string; 
 }
 
 export default function MedicineList() {
@@ -66,8 +66,8 @@ export default function MedicineList() {
               name: medData.name || "Unnamed Medicine",
               composition: medData.composition,
               barcode: medData.barcode,
-              mrp: medData.mrp, // Map MRP
-              uom: medData.uom,  // Map UOM
+              mrp: medData.mrp,
+              uom: medData.uom,
             };
           });
           
@@ -85,6 +85,8 @@ export default function MedicineList() {
             } else if (!aIsNum && bIsNum) {
               return 1;  
             } else {
+              // Fallback to string comparison if both are non-numeric or mixed
+              // This handles "01", "02" as well as "medA", "medB"
               if (a.id.toLowerCase() < b.id.toLowerCase()) return -1;
               if (a.id.toLowerCase() > b.id.toLowerCase()) return 1;
               return 0;
@@ -147,6 +149,7 @@ export default function MedicineList() {
   const handleEditSuccess = () => {
     setShowEditDialog(false);
     setMedicineToEdit(null);
+    // Data will refresh via the onValue listener
   };
 
   if (isLoading) {
@@ -182,7 +185,7 @@ export default function MedicineList() {
 
   return (
     <>
-      <ScrollArea className="flex-grow h-auto max-h-[750px] w-full rounded-md border bg-card shadow-inner">
+      <ScrollArea className="flex-grow h-auto max-h-[760px] w-full rounded-md border bg-card shadow-inner">
         <div className="p-4">
           <h4 className="mb-4 text-lg font-semibold leading-none text-center text-primary">
             Available Medicines ({medicines.length})

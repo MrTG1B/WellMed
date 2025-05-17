@@ -26,8 +26,8 @@ interface MedicineDoc {
   name: string;
   composition?: string;
   barcode?: string;
-  mrp?: string;
-  uom?: string;
+  mrp?: string; // Added MRP
+  uom?: string;  // Added UOM
 }
 
 export default function MedicineList() {
@@ -66,8 +66,8 @@ export default function MedicineList() {
               name: medData.name || "Unnamed Medicine",
               composition: medData.composition,
               barcode: medData.barcode,
-              mrp: medData.mrp,
-              uom: medData.uom,
+              mrp: medData.mrp, // Map MRP
+              uom: medData.uom,  // Map UOM
             };
           });
           
@@ -147,7 +147,6 @@ export default function MedicineList() {
   const handleEditSuccess = () => {
     setShowEditDialog(false);
     setMedicineToEdit(null);
-    // Data will refresh due to onValue listener
   };
 
   if (isLoading) {
@@ -196,8 +195,8 @@ export default function MedicineList() {
               <p className="font-semibold text-foreground">{medicine.name} <span className="text-xs text-muted-foreground">({medicine.id})</span></p>
               {medicine.composition && <p className="text-xs text-muted-foreground">Composition: {medicine.composition}</p>}
               {medicine.barcode && <p className="text-xs text-muted-foreground">Barcode: {medicine.barcode}</p>}
-              {medicine.mrp && <p className="text-xs text-muted-foreground">MRP: {medicine.mrp}</p>}
-              {medicine.uom && <p className="text-xs text-muted-foreground">UOM: {medicine.uom}</p>}
+              {medicine.mrp && <p className="text-xs text-muted-foreground">MRP: {medicine.mrp}</p>} 
+              {medicine.uom && <p className="text-xs text-muted-foreground">UOM: {medicine.uom}</p>} 
 
               <div className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                 <Button
@@ -261,5 +260,4 @@ export default function MedicineList() {
     </>
   );
 }
-
     

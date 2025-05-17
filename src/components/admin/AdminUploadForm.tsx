@@ -45,8 +45,8 @@ const formSchema = z.object({
     })
     .optional(),
   barcode: z.string().trim().optional(),
-  mrp: z.string().trim().optional(),
-  uom: z.string().trim().optional(),
+  mrp: z.string().trim().optional(), // Added MRP
+  uom: z.string().trim().optional(), // Added UOM
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -65,18 +65,16 @@ export default function AdminUploadForm() {
       mrp: "",
       uom: "",
     },
-    mode: "onChange", 
+    mode: "onChange",
   });
 
   const { formState: { isValid }, watch, setValue, getValues, formState, trigger } = form;
-  const watchedComposition = watch("composition");
 
   useEffect(() => {
     const subscription = watch((value, { name }) => {
       if (name === 'composition') {
         setValue("medicineName", value.composition || "", { shouldValidate: true, shouldDirty: true });
       }
-      // Trigger validation for all fields to update isValid state
       trigger();
     });
     return () => subscription.unsubscribe();
@@ -88,19 +86,15 @@ export default function AdminUploadForm() {
       return;
     }
     setIsSubmitting(true);
-    console.log("AdminUploadForm: onSubmit triggered. Initial isSubmitting:", form.formState.isSubmitting);
-    console.log("AdminUploadForm: isSubmitting set to true.");
 
     const newMedicineId = data.medicineId.trim();
     const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0
                             ? data.medicineName.trim()
-                            : data.composition.trim(); 
+                            : data.composition.trim();
     const newComposition = data.composition.trim();
     const newBarcode = data.barcode?.trim();
-    const newMrp = data.mrp?.trim();
-    const newUom = data.uom?.trim();
-
-    console.log("AdminUploadForm: Generated medicineId =", newMedicineId);
+    const newMrp = data.mrp?.trim(); // Get MRP
+    const newUom = data.uom?.trim(); // Get UOM
 
     try {
       if (!db) {
@@ -156,25 +150,24 @@ export default function AdminUploadForm() {
         setIsSubmitting(false);
         return;
       }
-      
+
       const medicineDataToSave = {
         name: finalMedicineName,
         composition: newComposition,
         barcode: (newBarcode && newBarcode.length > 0) ? newBarcode : null,
-        mrp: (newMrp && newMrp.length > 0) ? newMrp : null,
-        uom: (newUom && newUom.length > 0) ? newUom : null,
+        mrp: (newMrp && newMrp.length > 0) ? newMrp : null, // Save MRP
+        uom: (newUom && newUom.length > 0) ? newUom : null, // Save UOM
         lastUpdated: new Date().toISOString(),
       };
-      console.log("AdminUploadForm: Attempting set for ID:", newMedicineId, "Data:", medicineDataToSave);
 
       const medicineRef = ref(db, `medicines/${newMedicineId}`);
       await set(medicineRef, medicineDataToSave);
-      
+
       toast({
         title: "Upload Successful",
         description: `Medicine "${finalMedicineName}" (ID: ${newMedicineId}) data saved.`,
       });
-      form.reset(); 
+      form.reset();
 
     } catch (error: any) {
       console.error("[AdminUploadForm] Realtime Database write FAILED. Error:", error.message || error, error);
@@ -193,15 +186,12 @@ export default function AdminUploadForm() {
       });
     } finally {
       setIsSubmitting(false);
-      console.log("AdminUploadForm: isSubmitting set to false in finally block.");
     }
   };
-  
-  // Debugging logs
-  console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isValid =", isValid);
+
+  // console.log("AdminUploadForm RENDER: isDirty =", form.formState.isDirty, "isValid =", isValid);
   // console.log("AdminUploadForm RENDER: Form values:", getValues());
   // console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
-
 
   return (
     <Form {...form}>
@@ -320,5 +310,4 @@ export default function AdminUploadForm() {
     </Form>
   );
 }
-
     

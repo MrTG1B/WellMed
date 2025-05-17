@@ -542,7 +542,9 @@ const formSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$
     medicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().refine((val)=>val === '' || val.length >= 2, {
         message: "Medicine Display Name, if provided, must be at least 2 characters after trimming."
     }).optional(),
-    barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional()
+    barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional(),
+    mrp: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional(),
+    uom: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional()
 });
 function AdminUploadForm() {
     _s();
@@ -554,33 +556,51 @@ function AdminUploadForm() {
             medicineId: "",
             composition: "",
             medicineName: "",
-            barcode: ""
+            barcode: "",
+            mrp: "",
+            uom: ""
         },
         mode: "onChange"
     });
-    const { formState: { isDirty, isValid }, watch, setValue, getValues, formState } = form;
+    const { formState: { isValid }, watch, setValue, getValues, formState, trigger } = form;
     const watchedComposition = watch("composition");
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AdminUploadForm.useEffect": ()=>{
-            // Automatically populate medicineName from composition or clear it if composition is empty
-            setValue("medicineName", watchedComposition || "", {
-                shouldValidate: true,
-                shouldDirty: true
-            });
+            const subscription = watch({
+                "AdminUploadForm.useEffect.subscription": (value, { name })=>{
+                    if (name === 'composition') {
+                        setValue("medicineName", value.composition || "", {
+                            shouldValidate: true,
+                            shouldDirty: true
+                        });
+                    }
+                    // Trigger validation for all fields to update isValid state
+                    trigger();
+                }
+            }["AdminUploadForm.useEffect.subscription"]);
+            return ({
+                "AdminUploadForm.useEffect": ()=>subscription.unsubscribe()
+            })["AdminUploadForm.useEffect"];
         }
     }["AdminUploadForm.useEffect"], [
-        watchedComposition,
-        setValue
+        watch,
+        setValue,
+        trigger
     ]);
     const onSubmit = async (data)=>{
         if (isSubmitting) {
             return;
         }
         setIsSubmitting(true);
+        console.log("AdminUploadForm: onSubmit triggered. Initial isSubmitting:", form.formState.isSubmitting);
+        console.log("AdminUploadForm: isSubmitting set to true.");
         const newMedicineId = data.medicineId.trim();
-        const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 ? data.medicineName.trim() : data.composition.trim(); // Use composition if medicineName is empty
+        const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 ? data.medicineName.trim() : data.composition.trim();
         const newComposition = data.composition.trim();
         const newBarcode = data.barcode?.trim();
+        const newMrp = data.mrp?.trim();
+        const newUom = data.uom?.trim();
+        console.log("AdminUploadForm: Generated medicineId =", newMedicineId);
         try {
             if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"]) {
                 console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available.");
@@ -635,8 +655,11 @@ function AdminUploadForm() {
                 name: finalMedicineName,
                 composition: newComposition,
                 barcode: newBarcode && newBarcode.length > 0 ? newBarcode : null,
+                mrp: newMrp && newMrp.length > 0 ? newMrp : null,
+                uom: newUom && newUom.length > 0 ? newUom : null,
                 lastUpdated: new Date().toISOString()
             };
+            console.log("AdminUploadForm: Attempting set for ID:", newMedicineId, "Data:", medicineDataToSave);
             const medicineRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ref"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], `medicines/${newMedicineId}`);
             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["set"])(medicineRef, medicineDataToSave);
             toast({
@@ -661,12 +684,13 @@ function AdminUploadForm() {
             });
         } finally{
             setIsSubmitting(false);
+            console.log("AdminUploadForm: isSubmitting set to false in finally block.");
         }
     };
     // Debugging logs
-    console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isDirty =", isDirty, "isValid =", isValid);
-    console.log("AdminUploadForm RENDER: Form values:", getValues());
-    console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
+    console.log("AdminUploadForm RENDER: isSubmitting =", isSubmitting, "isValid =", isValid);
+    // console.log("AdminUploadForm RENDER: Form values:", getValues());
+    // console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Form"], {
         ...form,
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -682,7 +706,7 @@ function AdminUploadForm() {
                                     children: "Medicine ID"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 194,
+                                    lineNumber: 214,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -691,66 +715,16 @@ function AdminUploadForm() {
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 196,
+                                        lineNumber: 216,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 195,
+                                    lineNumber: 215,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars."
-                                }, void 0, false, {
-                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 198,
-                                    columnNumber: 15
-                                }, void 0),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
-                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 201,
-                                    columnNumber: 15
-                                }, void 0)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 193,
-                            columnNumber: 13
-                        }, void 0)
-                }, void 0, false, {
-                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 189,
-                    columnNumber: 9
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
-                    control: form.control,
-                    name: "composition",
-                    render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
-                                    children: "Composition"
-                                }, void 0, false, {
-                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 210,
-                                    columnNumber: 15
-                                }, void 0),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
-                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Textarea"], {
-                                        placeholder: "e.g., Paracetamol 500mg, Caffeine 30mg",
-                                        className: "resize-none",
-                                        ...field
-                                    }, void 0, false, {
-                                        fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 212,
-                                        columnNumber: 17
-                                    }, void 0)
-                                }, void 0, false, {
-                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 211,
-                                    columnNumber: 15
-                                }, void 0),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "Active ingredients and strengths. Used as default display name. Min 5 chars."
+                                    children: "Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars. Max 50 chars."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
                                     lineNumber: 218,
@@ -764,29 +738,30 @@ function AdminUploadForm() {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 209,
+                            lineNumber: 213,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 205,
-                    columnNumber: 10
+                    lineNumber: 209,
+                    columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
                     control: form.control,
-                    name: "medicineName",
+                    name: "composition",
                     render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
-                                    children: "Medicine Display Name (Optional)"
+                                    children: "Composition"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
                                     lineNumber: 230,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
-                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
-                                        placeholder: "Defaults to composition if left blank",
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Textarea"], {
+                                        placeholder: "e.g., Paracetamol 500mg, Caffeine 30mg",
+                                        className: "resize-none",
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
@@ -799,15 +774,15 @@ function AdminUploadForm() {
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                    children: "User-friendly name. Defaults to composition if blank. If provided, min 2 chars."
+                                    children: "Active ingredients and strengths. Used as default display name. Min 5 chars."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 234,
+                                    lineNumber: 238,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 237,
+                                    lineNumber: 241,
                                     columnNumber: 15
                                 }, void 0)
                             ]
@@ -819,6 +794,55 @@ function AdminUploadForm() {
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
                     lineNumber: 225,
+                    columnNumber: 10
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                    control: form.control,
+                    name: "medicineName",
+                    render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                    children: "Medicine Display Name (Optional)"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 250,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                        placeholder: "Defaults to composition if left blank",
+                                        ...field
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                        lineNumber: 252,
+                                        columnNumber: 17
+                                    }, void 0)
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 251,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                    children: "User-friendly name. Defaults to composition if blank. If provided, min 2 chars."
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 254,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 257,
+                                    columnNumber: 15
+                                }, void 0)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                            lineNumber: 249,
+                            columnNumber: 13
+                        }, void 0)
+                }, void 0, false, {
+                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                    lineNumber: 245,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
@@ -830,7 +854,7 @@ function AdminUploadForm() {
                                     children: "Barcode (Optional)"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 246,
+                                    lineNumber: 266,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -839,35 +863,134 @@ function AdminUploadForm() {
                                         ...field
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                        lineNumber: 248,
+                                        lineNumber: 268,
                                         columnNumber: 17
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 247,
+                                    lineNumber: 267,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
                                     children: "The EAN or UPC barcode number."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 250,
+                                    lineNumber: 270,
                                     columnNumber: 15
                                 }, void 0),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                    lineNumber: 253,
+                                    lineNumber: 273,
                                     columnNumber: 15
                                 }, void 0)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                            lineNumber: 245,
+                            lineNumber: 265,
                             columnNumber: 13
                         }, void 0)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 241,
+                    lineNumber: 261,
+                    columnNumber: 9
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                    control: form.control,
+                    name: "mrp",
+                    render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                    children: "MRP (Optional)"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 282,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                        placeholder: "e.g., 150.75",
+                                        ...field,
+                                        type: "text"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                        lineNumber: 284,
+                                        columnNumber: 17
+                                    }, void 0)
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 283,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                    children: "Maximum Retail Price (INR)."
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 286,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 289,
+                                    columnNumber: 15
+                                }, void 0)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                            lineNumber: 281,
+                            columnNumber: 13
+                        }, void 0)
+                }, void 0, false, {
+                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                    lineNumber: 277,
+                    columnNumber: 9
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                    control: form.control,
+                    name: "uom",
+                    render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                    children: "Unit of Measure (UOM) (Optional)"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 298,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                        placeholder: "e.g., Strip of 10 tablets, 100ml bottle",
+                                        ...field
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                        lineNumber: 300,
+                                        columnNumber: 17
+                                    }, void 0)
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 299,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                    children: "The packaging unit."
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 302,
+                                    columnNumber: 15
+                                }, void 0),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                                    lineNumber: 305,
+                                    columnNumber: 15
+                                }, void 0)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                            lineNumber: 297,
+                            columnNumber: 13
+                        }, void 0)
+                }, void 0, false, {
+                    fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
+                    lineNumber: 293,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -880,7 +1003,7 @@ function AdminUploadForm() {
                                 className: "mr-2 h-4 w-4 animate-spin"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                                lineNumber: 260,
+                                lineNumber: 312,
                                 columnNumber: 15
                             }, this),
                             "Submitting..."
@@ -888,18 +1011,18 @@ function AdminUploadForm() {
                     }, void 0, true) : "Upload Medicine"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-                    lineNumber: 257,
+                    lineNumber: 309,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-            lineNumber: 188,
+            lineNumber: 208,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/AdminUploadForm.tsx",
-        lineNumber: 187,
+        lineNumber: 207,
         columnNumber: 5
     }, this);
 }
@@ -1420,7 +1543,9 @@ const formSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$
     medicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().refine((val)=>val === '' || val.length >= 2, {
         message: "Medicine Display Name, if provided, must be at least 2 characters after trimming."
     }).optional(),
-    barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional()
+    barcode: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional(),
+    mrp: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional(),
+    uom: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["z"].string().trim().optional()
 });
 function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
     _s();
@@ -1432,7 +1557,9 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
             medicineId: medicine.id,
             composition: medicine.composition || "",
             medicineName: medicine.name || "",
-            barcode: medicine.barcode || ""
+            barcode: medicine.barcode || "",
+            mrp: medicine.mrp || "",
+            uom: medicine.uom || ""
         },
         mode: "onChange"
     });
@@ -1443,7 +1570,9 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                 medicineId: medicine.id,
                 composition: medicine.composition || "",
                 medicineName: medicine.name || "",
-                barcode: medicine.barcode || ""
+                barcode: medicine.barcode || "",
+                mrp: medicine.mrp || "",
+                uom: medicine.uom || ""
             });
         }
     }["EditMedicineDialog.useEffect"], [
@@ -1456,6 +1585,8 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
         const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0 ? data.medicineName.trim() : data.composition.trim();
         const updatedComposition = data.composition.trim();
         const updatedBarcode = data.barcode?.trim();
+        const updatedMrp = data.mrp?.trim();
+        const updatedUom = data.uom?.trim();
         try {
             if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"]) {
                 toast({
@@ -1470,15 +1601,23 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                 name: finalMedicineName,
                 composition: updatedComposition,
                 barcode: updatedBarcode && updatedBarcode.length > 0 ? updatedBarcode : null,
+                mrp: updatedMrp && updatedMrp.length > 0 ? updatedMrp : null,
+                uom: updatedUom && updatedUom.length > 0 ? updatedUom : null,
                 lastUpdated: new Date().toISOString()
             };
+            // Remove null fields to avoid writing them to Firebase RTDB if not desired
+            Object.keys(medicineDataToUpdate).forEach((key)=>{
+                if (medicineDataToUpdate[key] === null) {
+                    delete medicineDataToUpdate[key]; // Or set to rtdb.ServerValue.remove() if you prefer explicit deletion
+                }
+            });
             const medicineRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ref"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["db"], `medicines/${medicine.id}`);
             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$index$2e$esm2017$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["update"])(medicineRef, medicineDataToUpdate);
             toast({
                 title: "Update Successful",
                 description: `Medicine "${finalMedicineName}" (ID: ${medicine.id}) updated.`
             });
-            onSuccess(); // Call onSuccess to close dialog and potentially refresh list
+            onSuccess();
         } catch (error) {
             console.error("[EditMedicineDialog] Realtime Database update FAILED. Error:", error.message || error, error);
             toast({
@@ -1508,20 +1647,20 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                            lineNumber: 142,
+                            lineNumber: 162,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                             children: "Make changes to the medicine details below. Click save when you're done."
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                            lineNumber: 143,
+                            lineNumber: 163,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                    lineNumber: 141,
+                    lineNumber: 161,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Form"], {
@@ -1539,7 +1678,7 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                 children: "Medicine ID (Read-only)"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 154,
+                                                lineNumber: 174,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -1550,59 +1689,9 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                     className: "bg-muted/50"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                    lineNumber: 156,
+                                                    lineNumber: 176,
                                                     columnNumber: 21
                                                 }, void 0)
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 155,
-                                                columnNumber: 19
-                                            }, void 0),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
-                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 158,
-                                                columnNumber: 19
-                                            }, void 0)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                        lineNumber: 153,
-                                        columnNumber: 17
-                                    }, void 0)
-                            }, void 0, false, {
-                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                lineNumber: 149,
-                                columnNumber: 13
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
-                                control: form.control,
-                                name: "composition",
-                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
-                                                children: "Composition"
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 167,
-                                                columnNumber: 19
-                                            }, void 0),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
-                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Textarea"], {
-                                                    placeholder: "e.g., Paracetamol 500mg",
-                                                    className: "resize-none",
-                                                    ...field
-                                                }, void 0, false, {
-                                                    fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                    lineNumber: 169,
-                                                    columnNumber: 21
-                                                }, void 0)
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 168,
-                                                columnNumber: 19
-                                            }, void 0),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                                children: "Active ingredients and strengths. Min 5 chars."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
                                                 lineNumber: 175,
@@ -1616,29 +1705,30 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                        lineNumber: 166,
+                                        lineNumber: 173,
                                         columnNumber: 17
                                     }, void 0)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                lineNumber: 162,
+                                lineNumber: 169,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
                                 control: form.control,
-                                name: "medicineName",
+                                name: "composition",
                                 render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
-                                                children: "Medicine Display Name (Optional)"
+                                                children: "Composition"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
                                                 lineNumber: 187,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
-                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
-                                                    placeholder: "Defaults to composition if left blank",
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Textarea"], {
+                                                    placeholder: "e.g., Paracetamol 500mg",
+                                                    className: "resize-none",
                                                     ...field
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
@@ -1651,15 +1741,15 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
-                                                children: "User-friendly name. Defaults to composition if blank. If provided, min 2 chars."
+                                                children: "Active ingredients and strengths. Min 5 chars."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 191,
+                                                lineNumber: 195,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 194,
+                                                lineNumber: 198,
                                                 columnNumber: 19
                                             }, void 0)
                                         ]
@@ -1675,6 +1765,55 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
                                 control: form.control,
+                                name: "medicineName",
+                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                children: "Medicine Display Name (Optional)"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 207,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                                    placeholder: "Defaults to composition if left blank",
+                                                    ...field
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                    lineNumber: 209,
+                                                    columnNumber: 21
+                                                }, void 0)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 208,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                                children: "User-friendly name. Defaults to composition if blank. If provided, min 2 chars."
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 211,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 214,
+                                                columnNumber: 19
+                                            }, void 0)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                        lineNumber: 206,
+                                        columnNumber: 17
+                                    }, void 0)
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                lineNumber: 202,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                                control: form.control,
                                 name: "barcode",
                                 render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
                                         children: [
@@ -1682,7 +1821,7 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                 children: "Barcode (Optional)"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 203,
+                                                lineNumber: 223,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
@@ -1691,35 +1830,134 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                     ...field
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                    lineNumber: 205,
+                                                    lineNumber: 225,
                                                     columnNumber: 21
                                                 }, void 0)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 204,
+                                                lineNumber: 224,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
                                                 children: "The EAN or UPC barcode number."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 207,
+                                                lineNumber: 227,
                                                 columnNumber: 19
                                             }, void 0),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
                                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                lineNumber: 210,
+                                                lineNumber: 230,
                                                 columnNumber: 19
                                             }, void 0)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                        lineNumber: 202,
+                                        lineNumber: 222,
                                         columnNumber: 17
                                     }, void 0)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                lineNumber: 198,
+                                lineNumber: 218,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                                control: form.control,
+                                name: "mrp",
+                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                children: "MRP (Optional)"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 239,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                                    placeholder: "e.g., 150.75",
+                                                    ...field,
+                                                    type: "text"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                    lineNumber: 241,
+                                                    columnNumber: 21
+                                                }, void 0)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 240,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                                children: "Maximum Retail Price (INR)."
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 243,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 246,
+                                                columnNumber: 19
+                                            }, void 0)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                        lineNumber: 238,
+                                        columnNumber: 17
+                                    }, void 0)
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                lineNumber: 234,
+                                columnNumber: 14
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormField"], {
+                                control: form.control,
+                                name: "uom",
+                                render: ({ field })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormItem"], {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormLabel"], {
+                                                children: "Unit of Measure (UOM) (Optional)"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 255,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormControl"], {
+                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                                    placeholder: "e.g., Strip of 10 tablets",
+                                                    ...field
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                    lineNumber: 257,
+                                                    columnNumber: 21
+                                                }, void 0)
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 256,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormDescription"], {
+                                                children: "The packaging unit."
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 259,
+                                                columnNumber: 19
+                                            }, void 0),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$form$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FormMessage"], {}, void 0, false, {
+                                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                                lineNumber: 262,
+                                                columnNumber: 19
+                                            }, void 0)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                        lineNumber: 254,
+                                        columnNumber: 17
+                                    }, void 0)
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
+                                lineNumber: 250,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -1734,12 +1972,12 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                             children: "Cancel"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                            lineNumber: 216,
+                                            lineNumber: 268,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                        lineNumber: 215,
+                                        lineNumber: 267,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1751,7 +1989,7 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                                     className: "mr-2 h-4 w-4 animate-spin"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                                    lineNumber: 223,
+                                                    lineNumber: 275,
                                                     columnNumber: 21
                                                 }, this),
                                                 "Saving..."
@@ -1759,35 +1997,35 @@ function EditMedicineDialog({ medicine, isOpen, onClose, onSuccess }) {
                                         }, void 0, true) : "Save Changes"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                        lineNumber: 220,
+                                        lineNumber: 272,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                                lineNumber: 214,
+                                lineNumber: 266,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                        lineNumber: 148,
+                        lineNumber: 168,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-                    lineNumber: 147,
+                    lineNumber: 167,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-            lineNumber: 140,
+            lineNumber: 160,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/EditMedicineDialog.tsx",
-        lineNumber: 139,
+        lineNumber: 159,
         columnNumber: 5
     }, this);
 }
@@ -1873,13 +2111,12 @@ function MedicineList() {
                                     id: key,
                                     name: medData.name || "Unnamed Medicine",
                                     composition: medData.composition,
-                                    uom: medData.uom,
+                                    barcode: medData.barcode,
                                     mrp: medData.mrp,
-                                    barcode: medData.barcode
+                                    uom: medData.uom
                                 };
                             }
                         }["MedicineList.useEffect.listener.medsList"]);
-                        // Sort the medicines by ID
                         medsList.sort({
                             "MedicineList.useEffect.listener": (a, b)=>{
                                 const numA = parseInt(a.id, 10);
@@ -1887,13 +2124,12 @@ function MedicineList() {
                                 const aIsNum = !isNaN(numA);
                                 const bIsNum = !isNaN(numB);
                                 if (aIsNum && bIsNum) {
-                                    return numA - numB; // Sort numerically
+                                    return numA - numB;
                                 } else if (aIsNum && !bIsNum) {
-                                    return -1; // Numbers come before non-numbers
+                                    return -1;
                                 } else if (!aIsNum && bIsNum) {
-                                    return 1; // Non-numbers come after numbers
+                                    return 1;
                                 } else {
-                                    // Both are non-numeric strings, sort them alphanumerically
                                     if (a.id.toLowerCase() < b.id.toLowerCase()) return -1;
                                     if (a.id.toLowerCase() > b.id.toLowerCase()) return 1;
                                     return 0;
@@ -1965,7 +2201,7 @@ function MedicineList() {
                     className: "h-8 w-8 animate-spin text-primary"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 155,
+                    lineNumber: 156,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1973,13 +2209,13 @@ function MedicineList() {
                     children: "Loading medicines..."
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 156,
+                    lineNumber: 157,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 154,
+            lineNumber: 155,
             columnNumber: 7
         }, this);
     }
@@ -1992,27 +2228,27 @@ function MedicineList() {
                     className: "h-5 w-5"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 164,
+                    lineNumber: 165,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                     children: "Error Loading Medicines"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 165,
+                    lineNumber: 166,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                     children: error
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 166,
+                    lineNumber: 167,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 163,
+            lineNumber: 164,
             columnNumber: 7
         }, this);
     }
@@ -2024,34 +2260,34 @@ function MedicineList() {
                     className: "h-5 w-5"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 174,
+                    lineNumber: 175,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertTitle"], {
                     children: "No Medicines Found"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 175,
+                    lineNumber: 176,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDescription"], {
                     children: "There are currently no medicines stored in the Realtime Database. Use the form to upload new medicine data."
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 176,
+                    lineNumber: 177,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/admin/MedicineList.tsx",
-            lineNumber: 173,
+            lineNumber: 174,
             columnNumber: 7
         }, this);
     }
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$scroll$2d$area$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ScrollArea"], {
-                className: "flex-grow h-auto max-h-[760px] w-full rounded-md border bg-card shadow-inner",
+                className: "flex-grow h-auto max-h-[750px] w-full rounded-md border bg-card shadow-inner",
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "p-4",
                     children: [
@@ -2064,7 +2300,7 @@ function MedicineList() {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 187,
+                            lineNumber: 188,
                             columnNumber: 11
                         }, this),
                         medicines.map((medicine)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2084,13 +2320,13 @@ function MedicineList() {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 195,
+                                                lineNumber: 196,
                                                 columnNumber: 76
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 195,
+                                        lineNumber: 196,
                                         columnNumber: 15
                                     }, this),
                                     medicine.composition && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2101,7 +2337,7 @@ function MedicineList() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 196,
+                                        lineNumber: 197,
                                         columnNumber: 40
                                     }, this),
                                     medicine.barcode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2112,8 +2348,30 @@ function MedicineList() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 197,
+                                        lineNumber: 198,
                                         columnNumber: 36
+                                    }, this),
+                                    medicine.mrp && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: [
+                                            "MRP: ",
+                                            medicine.mrp
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/admin/MedicineList.tsx",
+                                        lineNumber: 199,
+                                        columnNumber: 32
+                                    }, this),
+                                    medicine.uom && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: [
+                                            "UOM: ",
+                                            medicine.uom
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/src/components/admin/MedicineList.tsx",
+                                        lineNumber: 200,
+                                        columnNumber: 32
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1",
@@ -2128,12 +2386,12 @@ function MedicineList() {
                                                     className: "h-4 w-4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                    lineNumber: 207,
+                                                    lineNumber: 210,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 200,
+                                                lineNumber: 203,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2147,35 +2405,35 @@ function MedicineList() {
                                                     className: "h-4 w-4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                    lineNumber: 217,
+                                                    lineNumber: 220,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                                lineNumber: 209,
+                                                lineNumber: 212,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 199,
+                                        lineNumber: 202,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, medicine.id, true, {
                                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                lineNumber: 191,
+                                lineNumber: 192,
                                 columnNumber: 13
                             }, this))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 186,
+                    lineNumber: 187,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 185,
+                lineNumber: 186,
                 columnNumber: 7
             }, this),
             medicineToDelete && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialog"], {
@@ -2189,7 +2447,7 @@ function MedicineList() {
                                     children: "Confirm Deletion"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 229,
+                                    lineNumber: 232,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogDescription"], {
@@ -2202,13 +2460,13 @@ function MedicineList() {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 230,
+                                    lineNumber: 233,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 228,
+                            lineNumber: 231,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogFooter"], {
@@ -2219,7 +2477,7 @@ function MedicineList() {
                                     children: "Cancel"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 236,
+                                    lineNumber: 239,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$alert$2d$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AlertDialogAction"], {
@@ -2230,29 +2488,29 @@ function MedicineList() {
                                         className: "mr-2 h-4 w-4 animate-spin"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                        lineNumber: 240,
+                                        lineNumber: 243,
                                         columnNumber: 31
                                     }, this) : "Delete"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                                    lineNumber: 239,
+                                    lineNumber: 242,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/MedicineList.tsx",
-                            lineNumber: 235,
+                            lineNumber: 238,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/MedicineList.tsx",
-                    lineNumber: 227,
+                    lineNumber: 230,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 226,
+                lineNumber: 229,
                 columnNumber: 9
             }, this),
             medicineToEdit && showEditDialog && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$admin$2f$EditMedicineDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -2265,7 +2523,7 @@ function MedicineList() {
                 onSuccess: handleEditSuccess
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/MedicineList.tsx",
-                lineNumber: 248,
+                lineNumber: 251,
                 columnNumber: 9
             }, this)
         ]

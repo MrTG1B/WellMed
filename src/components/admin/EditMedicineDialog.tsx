@@ -37,8 +37,8 @@ interface MedicineDoc {
   name: string;
   composition?: string;
   barcode?: string;
-  mrp?: string;
-  uom?: string;
+  mrp?: string; // Added MRP
+  uom?: string;  // Added UOM
 }
 
 interface EditMedicineDialogProps {
@@ -60,8 +60,8 @@ const formSchema = z.object({
     })
     .optional(),
   barcode: z.string().trim().optional(),
-  mrp: z.string().trim().optional(),
-  uom: z.string().trim().optional(),
+  mrp: z.string().trim().optional(), // Added MRP
+  uom: z.string().trim().optional(), // Added UOM
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -77,21 +77,20 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
       composition: medicine.composition || "",
       medicineName: medicine.name || "",
       barcode: medicine.barcode || "",
-      mrp: medicine.mrp || "",
-      uom: medicine.uom || "",
+      mrp: medicine.mrp || "", // Default MRP
+      uom: medicine.uom || "", // Default UOM
     },
     mode: "onChange",
   });
 
   useEffect(() => {
-    // Reset form with new medicine data if the medicine prop changes
     form.reset({
       medicineId: medicine.id,
       composition: medicine.composition || "",
       medicineName: medicine.name || "",
       barcode: medicine.barcode || "",
-      mrp: medicine.mrp || "",
-      uom: medicine.uom || "",
+      mrp: medicine.mrp || "", // Reset MRP
+      uom: medicine.uom || "", // Reset UOM
     });
   }, [medicine, form]);
 
@@ -104,8 +103,8 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
                             : data.composition.trim();
     const updatedComposition = data.composition.trim();
     const updatedBarcode = data.barcode?.trim();
-    const updatedMrp = data.mrp?.trim();
-    const updatedUom = data.uom?.trim();
+    const updatedMrp = data.mrp?.trim(); // Get MRP
+    const updatedUom = data.uom?.trim(); // Get UOM
 
     try {
       if (!db) {
@@ -118,22 +117,22 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
         return;
       }
 
-      const medicineDataToUpdate: any = { // Use any for flexibility with null values
+      const medicineDataToUpdate: any = {
         name: finalMedicineName,
         composition: updatedComposition,
         barcode: (updatedBarcode && updatedBarcode.length > 0) ? updatedBarcode : null,
-        mrp: (updatedMrp && updatedMrp.length > 0) ? updatedMrp : null,
-        uom: (updatedUom && updatedUom.length > 0) ? updatedUom : null,
+        mrp: (updatedMrp && updatedMrp.length > 0) ? updatedMrp : null, // Update MRP
+        uom: (updatedUom && updatedUom.length > 0) ? updatedUom : null, // Update UOM
         lastUpdated: new Date().toISOString(),
       };
       
-      // Remove null fields to avoid writing them to Firebase RTDB if not desired
       Object.keys(medicineDataToUpdate).forEach(key => {
         if (medicineDataToUpdate[key] === null) {
-          delete medicineDataToUpdate[key]; // Or set to rtdb.ServerValue.remove() if you prefer explicit deletion
+          // For RTDB, setting a field to null deletes it.
+          // If you want to ensure fields are explicitly removed if empty, this is correct.
+          // If you want to keep empty strings, remove this deletion logic and ensure nulls are handled as empty strings before this.
         }
       });
-
 
       const medicineRef = ref(db, `medicines/${medicine.id}`);
       await update(medicineRef, medicineDataToUpdate);
@@ -286,5 +285,4 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
     </Dialog>
   );
 }
-
     

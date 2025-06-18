@@ -158,7 +158,7 @@ export default function MediSearchApp() {
           dbDataArray.map(async (dbItem) => {
             try {
                 const aiDetails = await generateMedicineDetails({
-                  searchTermOrName: dbItem.drugName, // Use drugName for AI search context
+                  searchTermOrName: dbItem.drugName, 
                   language: selectedLanguage,
                   contextDrugCode: dbItem.drugCode,
                   contextDrugName: dbItem.drugName,
@@ -190,16 +190,18 @@ export default function MediSearchApp() {
                         variant: "default",
                     });
                 }
-                // Merging: AI details take precedence for AI-generated fields, context for DB fields
+                
                 return {
-                  drugCode: aiDetails.drugCode || dbItem.drugCode, // Should be same if from DB
-                  drugName: aiDetails.drugName || dbItem.drugName, // Should be same
-                  saltName: aiDetails.saltName || dbItem.saltName, // Should be same
+                  drugCode: aiDetails.drugCode || dbItem.drugCode,
+                  drugName: aiDetails.drugName || dbItem.drugName,
+                  saltName: aiDetails.saltName || dbItem.saltName,
                   drugCategory: dbItem.drugCategory || aiDetails.drugCategory,
                   drugGroup: dbItem.drugGroup || aiDetails.drugGroup,
                   drugType: dbItem.drugType || aiDetails.drugType,
                   hsnCode: dbItem.hsnCode || aiDetails.hsnCode,
                   searchKey: dbItem.searchKey || aiDetails.searchKey,
+                  mrp: dbItem.mrp, // Retain from DB if present
+                  uom: dbItem.uom, // Retain from DB if present
                   usage: aiDetails.usage,
                   manufacturer: aiDetails.manufacturer,
                   dosage: aiDetails.dosage,
@@ -222,7 +224,7 @@ export default function MediSearchApp() {
                         setAiConfigErrorType('api_fail');
                     }
                 }
-                return { // Fallback structure
+                return { 
                     drugCode: dbItem.drugCode,
                     drugName: dbItem.drugName,
                     saltName: dbItem.saltName,
@@ -231,6 +233,8 @@ export default function MediSearchApp() {
                     drugType: dbItem.drugType,
                     hsnCode: dbItem.hsnCode,
                     searchKey: dbItem.searchKey,
+                    mrp: dbItem.mrp,
+                    uom: dbItem.uom,
                     usage: t.infoNotAvailable,
                     manufacturer: t.infoNotAvailable,
                     dosage: t.infoNotAvailable,
@@ -248,7 +252,7 @@ export default function MediSearchApp() {
                 language: selectedLanguage,
             });
              if (aiOnlyDetails.drugName && aiOnlyDetails.drugName !== t.infoNotAvailable && aiOnlyDetails.saltName !== t.infoNotAvailable ) {
-                 processedMedicines = [aiOnlyDetails]; // AI flow now returns the full Medicine structure
+                 processedMedicines = [aiOnlyDetails]; 
              } else {
                  processedMedicines = [];
              }

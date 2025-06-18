@@ -1107,6 +1107,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$book$2d$open$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BookOpen$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/book-open.js [app-ssr] (ecmascript) <export default as BookOpen>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$type$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Type$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/type.js [app-ssr] (ecmascript) <export default as Type>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$package$2d$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__PackageSearch$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/package-search.js [app-ssr] (ecmascript) <export default as PackageSearch>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$fingerprint$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Fingerprint$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/fingerprint.js [app-ssr] (ecmascript) <export default as Fingerprint>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$indian$2d$rupee$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__IndianRupee$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/indian-rupee.js [app-ssr] (ecmascript) <export default as IndianRupee>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$box$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Box$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/box.js [app-ssr] (ecmascript) <export default as Box>");
 "use client";
@@ -1157,24 +1158,8 @@ function MedicineCard({ medicine, t }) {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "break-words",
-                                children: [
-                                    medicine.drugName,
-                                    showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                        className: "text-sm font-normal text-muted-foreground ml-2",
-                                        children: [
-                                            "(",
-                                            t.drugCodeLabel,
-                                            ": ",
-                                            medicine.drugCode,
-                                            ")"
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 60,
-                                        columnNumber: 15
-                                    }, this)
-                                ]
-                            }, void 0, true, {
+                                children: medicine.drugName
+                            }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
                                 lineNumber: 56,
                                 columnNumber: 11
@@ -1190,7 +1175,7 @@ function MedicineCard({ medicine, t }) {
                         children: t.resultsTitle
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 64,
+                        lineNumber: 60,
                         columnNumber: 9
                     }, this)
                 ]
@@ -1211,7 +1196,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 71,
+                                        lineNumber: 67,
                                         columnNumber: 14
                                     }, this),
                                     " ",
@@ -1219,7 +1204,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 70,
+                                lineNumber: 66,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1227,14 +1212,48 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.saltName || t.infoNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 73,
+                                lineNumber: 69,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 69,
+                        lineNumber: 65,
                         columnNumber: 9
+                    }, this),
+                    showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                className: detailItemClass + " flex items-center",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$fingerprint$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Fingerprint$3e$__["Fingerprint"], {
+                                        className: "mr-2 h-4 w-4 text-primary"
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                        lineNumber: 75,
+                                        columnNumber: 15
+                                    }, this),
+                                    " ",
+                                    t.drugCodeLabel
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 74,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                className: detailValueClass,
+                                children: medicine.drugCode
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                                lineNumber: 77,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
+                        lineNumber: 73,
+                        columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.mrp && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         children: [
@@ -1245,7 +1264,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 79,
+                                        lineNumber: 84,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1253,7 +1272,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 78,
+                                lineNumber: 83,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1261,13 +1280,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.mrp
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 81,
+                                lineNumber: 86,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 77,
+                        lineNumber: 82,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.uom && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1279,7 +1298,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 88,
+                                        lineNumber: 93,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1287,7 +1306,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 87,
+                                lineNumber: 92,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1295,13 +1314,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.uom
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 90,
+                                lineNumber: 95,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 86,
+                        lineNumber: 91,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.drugCategory && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1313,7 +1332,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 97,
+                                        lineNumber: 102,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1321,7 +1340,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 96,
+                                lineNumber: 101,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1329,13 +1348,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.drugCategory
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 99,
+                                lineNumber: 104,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 95,
+                        lineNumber: 100,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.drugGroup && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1347,7 +1366,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 106,
+                                        lineNumber: 111,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1355,7 +1374,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 105,
+                                lineNumber: 110,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1363,13 +1382,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.drugGroup
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 108,
+                                lineNumber: 113,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 104,
+                        lineNumber: 109,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.drugType && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1381,7 +1400,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 115,
+                                        lineNumber: 120,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1389,7 +1408,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 114,
+                                lineNumber: 119,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1397,13 +1416,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.drugType
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 117,
+                                lineNumber: 122,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 113,
+                        lineNumber: 118,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.hsnCode && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1415,7 +1434,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 124,
+                                        lineNumber: 129,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1423,7 +1442,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 123,
+                                lineNumber: 128,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1431,13 +1450,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.hsnCode
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 126,
+                                lineNumber: 131,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 122,
+                        lineNumber: 127,
                         columnNumber: 11
                     }, this),
                     showDatabaseSpecificFields && medicine.searchKey && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1449,7 +1468,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 133,
+                                        lineNumber: 138,
                                         columnNumber: 15
                                     }, this),
                                     " ",
@@ -1457,7 +1476,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 132,
+                                lineNumber: 137,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1465,13 +1484,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.searchKey
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 135,
+                                lineNumber: 140,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 131,
+                        lineNumber: 136,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1483,7 +1502,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 141,
+                                        lineNumber: 146,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1491,7 +1510,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 140,
+                                lineNumber: 145,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1499,13 +1518,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.usage || t.infoNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 143,
+                                lineNumber: 148,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 139,
+                        lineNumber: 144,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1517,7 +1536,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 147,
+                                        lineNumber: 152,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1525,7 +1544,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 146,
+                                lineNumber: 151,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1533,13 +1552,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.manufacturer || t.infoNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 149,
+                                lineNumber: 154,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 145,
+                        lineNumber: 150,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1563,55 +1582,55 @@ function MedicineCard({ medicine, t }) {
                                                 d: "m18 2 4 4"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 242
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m17 7 3-3"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 263
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 284
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m9 15 4-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 356
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m5 19-3 3"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 377
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                 d: "m12 12 4.5 4.5"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                                lineNumber: 153,
+                                                lineNumber: 158,
                                                 columnNumber: 398
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 153,
+                                        lineNumber: 158,
                                         columnNumber: 12
                                     }, this),
                                     t.dosageLabel
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 152,
+                                lineNumber: 157,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1619,13 +1638,13 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.dosage || t.infoNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 156,
+                                lineNumber: 161,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 151,
+                        lineNumber: 156,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1637,7 +1656,7 @@ function MedicineCard({ medicine, t }) {
                                         className: "mr-2 h-4 w-4 text-primary"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                        lineNumber: 160,
+                                        lineNumber: 165,
                                         columnNumber: 13
                                     }, this),
                                     " ",
@@ -1645,7 +1664,7 @@ function MedicineCard({ medicine, t }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 159,
+                                lineNumber: 164,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1653,19 +1672,19 @@ function MedicineCard({ medicine, t }) {
                                 children: medicine.sideEffects || t.infoNotAvailable
                             }, void 0, false, {
                                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                                lineNumber: 162,
+                                lineNumber: 167,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 158,
+                        lineNumber: 163,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                lineNumber: 68,
+                lineNumber: 64,
                 columnNumber: 7
             }, this),
             sourceMessage && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardFooter"], {
@@ -1675,14 +1694,14 @@ function MedicineCard({ medicine, t }) {
                         className: "mr-2 h-3 w-3"
                     }, void 0, false, {
                         fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                        lineNumber: 168,
+                        lineNumber: 173,
                         columnNumber: 11
                     }, this),
                     sourceMessage
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/medisearch/MedicineCard.tsx",
-                lineNumber: 167,
+                lineNumber: 172,
                 columnNumber: 9
             }, this)
         ]

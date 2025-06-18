@@ -55,10 +55,6 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           <Pill className="mr-2 h-7 w-7 flex-shrink-0" />
           <span className="break-words">
             {medicine.drugName}
-            {/* Only show drugCode if it's from the database (not AI generated) */}
-            {showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">({t.drugCodeLabel}: {medicine.drugCode})</span>
-            )}
           </span>
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
@@ -72,6 +68,15 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </h3>
           <p className={detailValueClass}>{medicine.saltName || t.infoNotAvailable}</p>
         </div>
+
+        {showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <Fingerprint className="mr-2 h-4 w-4 text-primary" /> {t.drugCodeLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.drugCode}</p>
+          </div>
+        )}
         
         {showDatabaseSpecificFields && medicine.mrp && (
           <div>
@@ -172,3 +177,4 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
+

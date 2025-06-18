@@ -470,7 +470,7 @@ const translations = {
     en: {
         appName: 'WellMeds',
         searchTitle: 'Search for Medicines',
-        searchPlaceholder: 'Enter drug name, salt, drug code, HSN code...',
+        searchPlaceholder: 'Enter Drug Name, Salt, Drug Code, HSN Code...',
         searchButton: 'Search',
         languageLabel: 'Language',
         english: 'English',
@@ -521,7 +521,11 @@ const translations = {
         aiCouldNotEnhance: (itemName)=>`AI could not provide further details for "${itemName}" beyond what was found in the database.`,
         errorAiNotConfiguredOrModelForDetails: (itemName)=>`AI features for generating details for "${itemName}" are unavailable due to API key or model configuration issues.`,
         errorAiFailedForDetails: (itemName)=>`AI failed to generate details for "${itemName}".`,
-        errorAiDetailsCritical: (itemName)=>`A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`
+        errorAiDetailsCritical: (itemName)=>`A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`,
+        copiedToClipboardTitle: "Copied to Clipboard",
+        copiedToClipboardDescription: (fieldName, value)=>`${fieldName}: "${value}" copied.`,
+        copyFailedTitle: "Copy Failed",
+        copyFailedDescription: "Could not copy text to clipboard. Please try again."
     },
     hi: {
         appName: 'वेलमेड्स',
@@ -577,7 +581,11 @@ const translations = {
         aiCouldNotEnhance: (itemName)=>`एआई डेटाबेस में मिली जानकारी के अतिरिक्त "${itemName}" के लिए और विवरण प्रदान नहीं कर सका।`,
         errorAiNotConfiguredOrModelForDetails: (itemName)=>`एपीआई कुंजी या मॉडल कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
         errorAiFailedForDetails: (itemName)=>`एआई "${itemName}" के लिए विवरण उत्पन्न करने में विफल रहा।`,
-        errorAiDetailsCritical: (itemName)=>`"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`
+        errorAiDetailsCritical: (itemName)=>`"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`,
+        copiedToClipboardTitle: "क्लिपबोर्ड पर कॉपी किया गया",
+        copiedToClipboardDescription: (fieldName, value)=>`${fieldName}: "${value}" कॉपी किया गया।`,
+        copyFailedTitle: "कॉपी विफल",
+        copyFailedDescription: "टेक्स्ट को क्लिपबोर्ड पर कॉपी नहीं किया जा सका। कृपया पुनः प्रयास करें।"
     },
     bn: {
         appName: 'ওয়েলমেডস',
@@ -633,7 +641,11 @@ const translations = {
         aiCouldNotEnhance: (itemName)=>`ডাটাবেসে যা পাওয়া গেছে তার বাইরে এআই "${itemName}" এর জন্য আর কোনো বিবরণ দিতে পারেনি।`,
         errorAiNotConfiguredOrModelForDetails: (itemName)=>`API কী বা মডেল কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি অনুপলব্ধ।`,
         errorAiFailedForDetails: (itemName)=>`এআই "${itemName}" এর জন্য বিবরণ তৈরি করতে ব্যর্থ হয়েছে।`,
-        errorAiDetailsCritical: (itemName)=>`"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`
+        errorAiDetailsCritical: (itemName)=>`"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`,
+        copiedToClipboardTitle: "ক্লিপবোর্ডে কপি করা হয়েছে",
+        copiedToClipboardDescription: (fieldName, value)=>`${fieldName}: "${value}" কপি করা হয়েছে।`,
+        copyFailedTitle: "কপি ব্যর্থ হয়েছে",
+        copyFailedDescription: "ক্লিপবোর্ডে টেক্সট কপি করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
     }
 };
 const getTranslations = (lang)=>translations[lang];

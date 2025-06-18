@@ -608,6 +608,10 @@ body {
   margin-top: auto;
 }
 
+.mb-0\.5 {
+  margin-bottom: .125rem;
+}
+
 .block {
   display: block;
 }

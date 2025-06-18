@@ -3,6 +3,8 @@
 
 import type { Medicine } from "@/types";
 import type { TranslationKeys } from "@/lib/translations";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -11,7 +13,7 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
-import { Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, Hash, Tag, BookOpen, Type, PackageSearch, Fingerprint, IndianRupee, Box } from "lucide-react";
+import { Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, Hash, Tag, BookOpen, Type, PackageSearch, Fingerprint, IndianRupee, Box, Copy } from "lucide-react";
 
 interface MedicineCardProps {
   medicine: Medicine;
@@ -19,6 +21,7 @@ interface MedicineCardProps {
 }
 
 export function MedicineCard({ medicine, t }: MedicineCardProps) {
+  const { toast } = useToast();
   const detailItemClass = "text-sm font-medium text-foreground/80";
   const detailValueClass = "text-base text-foreground";
   const multiLineDetailValueClass = `${detailValueClass} whitespace-pre-line`;
@@ -48,6 +51,24 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
   
   const showDatabaseSpecificFields = medicine.source === 'database_ai_enhanced' || medicine.source === 'database_only';
 
+  const handleCopy = async (text: string | undefined, fieldName: string) => {
+    if (!text || text === t.infoNotAvailable) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: t.copiedToClipboardTitle,
+        description: t.copiedToClipboardDescription(fieldName, text),
+      });
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+      toast({
+        title: t.copyFailedTitle,
+        description: t.copyFailedDescription,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
       <CardHeader>
@@ -63,17 +84,41 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className={detailItemClass + " flex items-center"}>
-             <ClipboardList className="mr-2 h-4 w-4 text-primary" /> {t.saltNameLabel}
-          </h3>
+          <div className="flex justify-between items-center mb-0.5">
+            <h3 className={detailItemClass + " flex items-center"}>
+               <ClipboardList className="mr-2 h-4 w-4 text-primary" /> {t.saltNameLabel}
+            </h3>
+            {medicine.saltName && medicine.saltName !== t.infoNotAvailable && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => handleCopy(medicine.saltName, t.saltNameLabel)}
+                aria-label={`Copy ${t.saltNameLabel}`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
           <p className={detailValueClass}>{medicine.saltName || t.infoNotAvailable}</p>
         </div>
 
         {showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && (
           <div>
-            <h3 className={detailItemClass + " flex items-center"}>
-              <Fingerprint className="mr-2 h-4 w-4 text-primary" /> {t.drugCodeLabel}
-            </h3>
+            <div className="flex justify-between items-center mb-0.5">
+              <h3 className={detailItemClass + " flex items-center"}>
+                <Fingerprint className="mr-2 h-4 w-4 text-primary" /> {t.drugCodeLabel}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => handleCopy(medicine.drugCode, t.drugCodeLabel)}
+                aria-label={`Copy ${t.drugCodeLabel}`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
             <p className={detailValueClass}>{medicine.drugCode}</p>
           </div>
         )}
@@ -125,18 +170,40 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
 
         {showDatabaseSpecificFields && medicine.hsnCode && (
           <div>
-            <h3 className={detailItemClass + " flex items-center"}>
-              <Hash className="mr-2 h-4 w-4 text-primary" /> {t.hsnCodeLabel}
-            </h3>
+             <div className="flex justify-between items-center mb-0.5">
+              <h3 className={detailItemClass + " flex items-center"}>
+                <Hash className="mr-2 h-4 w-4 text-primary" /> {t.hsnCodeLabel}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => handleCopy(medicine.hsnCode, t.hsnCodeLabel)}
+                aria-label={`Copy ${t.hsnCodeLabel}`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
             <p className={detailValueClass}>{medicine.hsnCode}</p>
           </div>
         )}
         
         {showDatabaseSpecificFields && medicine.searchKey && (
           <div>
-            <h3 className={detailItemClass + " flex items-center"}>
-              <PackageSearch className="mr-2 h-4 w-4 text-primary" /> {t.searchKeyLabel}
-            </h3>
+            <div className="flex justify-between items-center mb-0.5">
+              <h3 className={detailItemClass + " flex items-center"}>
+                <PackageSearch className="mr-2 h-4 w-4 text-primary" /> {t.searchKeyLabel}
+              </h3>
+               <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => handleCopy(medicine.searchKey, t.searchKeyLabel)}
+                aria-label={`Copy ${t.searchKeyLabel}`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
             <p className={detailValueClass}>{medicine.searchKey}</p>
           </div>
         )}
@@ -177,4 +244,3 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
-

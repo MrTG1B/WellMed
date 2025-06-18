@@ -56,13 +56,17 @@ export type TranslationKeys = {
   errorAiNotConfiguredOrModelForDetails: (itemName: string) => string;
   errorAiFailedForDetails: (itemName: string) => string;
   errorAiDetailsCritical: (itemName: string) => string;
+  copiedToClipboardTitle: string;
+  copiedToClipboardDescription: (fieldName: string, value: string) => string;
+  copyFailedTitle: string;
+  copyFailedDescription: string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
   en: {
     appName: 'WellMeds',
     searchTitle: 'Search for Medicines',
-    searchPlaceholder: 'Enter drug name, salt, drug code, HSN code...',
+    searchPlaceholder: 'Enter Drug Name, Salt, Drug Code, HSN Code...',
     searchButton: 'Search',
     languageLabel: 'Language',
     english: 'English',
@@ -114,6 +118,10 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiNotConfiguredOrModelForDetails: (itemName: string) => `AI features for generating details for "${itemName}" are unavailable due to API key or model configuration issues.`,
     errorAiFailedForDetails: (itemName: string) => `AI failed to generate details for "${itemName}".`,
     errorAiDetailsCritical: (itemName: string) => `A critical error occurred while trying to generate AI details for "${itemName}". Please check server logs.`,
+    copiedToClipboardTitle: "Copied to Clipboard",
+    copiedToClipboardDescription: (fieldName: string, value: string) => `${fieldName}: "${value}" copied.`,
+    copyFailedTitle: "Copy Failed",
+    copyFailedDescription: "Could not copy text to clipboard. Please try again.",
   },
   hi: {
     appName: 'वेलमेड्स',
@@ -170,6 +178,10 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiNotConfiguredOrModelForDetails: (itemName: string) => `एपीआई कुंजी या मॉडल कॉन्फ़िगरेशन समस्याओं के कारण "${itemName}" के लिए विवरण उत्पन्न करने के लिए एआई सुविधाएँ अनुपलब्ध हैं।`,
     errorAiFailedForDetails: (itemName: string) => `एआई "${itemName}" के लिए विवरण उत्पन्न करने में विफल रहा।`,
     errorAiDetailsCritical: (itemName: string) => `"${itemName}" के लिए एआई विवरण उत्पन्न करने का प्रयास करते समय एक गंभीर त्रुटि हुई। कृपया सर्वर लॉग जांचें।`,
+    copiedToClipboardTitle: "क्लिपबोर्ड पर कॉपी किया गया",
+    copiedToClipboardDescription: (fieldName: string, value: string) => `${fieldName}: "${value}" कॉपी किया गया।`,
+    copyFailedTitle: "कॉपी विफल",
+    copyFailedDescription: "टेक्स्ट को क्लिपबोर्ड पर कॉपी नहीं किया जा सका। कृपया पुनः प्रयास करें।",
   },
   bn: {
     appName: 'ওয়েলমেডস',
@@ -226,6 +238,10 @@ export const translations: Record<Language, TranslationKeys> = {
     errorAiNotConfiguredOrModelForDetails: (itemName: string) => `API কী বা মডেল কনফিগারেশন সমস্যার কারণে "${itemName}" এর জন্য বিবরণ তৈরি করার এআই বৈশিষ্ট্যগুলি অনুপলব্ধ।`,
     errorAiFailedForDetails: (itemName: string) => `এআই "${itemName}" এর জন্য বিবরণ তৈরি করতে ব্যর্থ হয়েছে।`,
     errorAiDetailsCritical: (itemName: string) => `"${itemName}" এর জন্য এআই বিবরণ তৈরি করার চেষ্টা করার সময় একটি গুরুতর ত্রুটি ঘটেছে। অনুগ্রহ করে সার্ভার লগ পরীক্ষা করুন।`,
+    copiedToClipboardTitle: "ক্লিপবোর্ডে কপি করা হয়েছে",
+    copiedToClipboardDescription: (fieldName: string, value: string) => `${fieldName}: "${value}" কপি করা হয়েছে।`,
+    copyFailedTitle: "কপি ব্যর্থ হয়েছে",
+    copyFailedDescription: "ক্লিপবোর্ডে টেক্সট কপি করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।",
   },
 };
 

@@ -1,16 +1,21 @@
 
 export type Medicine = {
-  id: string; // If from DB, it's the DB key. If AI-generated, it's a derived/temporary ID.
-  name: string;
-  composition: string;
+  drugCode: string; // The primary key from Firebase (e.g., "1", "2")
+  drugName: string;
+  saltName: string; // Replaces 'composition'
+  drugCategory?: string;
+  drugGroup?: string;
+  drugType?: string;
+  hsnCode?: string;
+  searchKey?: string;
+  // AI Generated fields
   usage: string;
   manufacturer: string;
   dosage: string;
   sideEffects: string;
-  barcode?: string;
-  mrp?: string | number; // Maximum Retail Price
-  uom?: string; // Unit of Measure (e.g., "10 tablets", "100ml bottle")
-  source: 'database_ai_enhanced' | 'ai_generated' | 'database_only' | 'ai_unavailable' | 'ai_failed'; // Indicates the origin of the data
+  // Source field
+  source: 'database_ai_enhanced' | 'ai_generated' | 'database_only' | 'ai_unavailable' | 'ai_failed';
 };
 
 export type Language = 'en' | 'hi' | 'bn';
+

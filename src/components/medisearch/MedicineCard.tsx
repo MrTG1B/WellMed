@@ -11,8 +11,7 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Barcode, Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, IndianRupee, Package } from "lucide-react";
+import { Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, Hash, Tag, BookOpen, Type, PackageSearch, Fingerprint } from "lucide-react";
 
 interface MedicineCardProps {
   medicine: Medicine;
@@ -36,17 +35,16 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       sourceMessage = t.sourceDbOnlyMessage;
       break;
     case 'ai_unavailable':
-      sourceMessage = t.sourceAiUnavailableForDetailsMessage(medicine.name);
+      sourceMessage = t.sourceAiUnavailableForDetailsMessage(medicine.drugName);
       break;
     case 'ai_failed':
-      sourceMessage = t.sourceAiFailedForDetailsMessage(medicine.name);
+      sourceMessage = t.sourceAiFailedForDetailsMessage(medicine.drugName);
       break;
     default:
-      if (medicine.name && medicine.composition && medicine.usage === t.infoNotAvailable) {
+      if (medicine.drugName && medicine.saltName && medicine.usage === t.infoNotAvailable) {
         sourceMessage = t.sourceDbOnlyMessage;
       }
   }
-
 
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
@@ -54,9 +52,9 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
         <CardTitle className="text-2xl font-semibold text-primary flex items-center mb-1">
           <Pill className="mr-2 h-7 w-7 flex-shrink-0" />
           <span className="break-words">
-            {medicine.name}
-            {!medicine.id.startsWith('ai-') && (
-              <span className="text-sm font-normal text-muted-foreground ml-2">({medicine.id})</span>
+            {medicine.drugName}
+            {!medicine.drugCode.startsWith('ai-') && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">({t.drugCodeLabel}: {medicine.drugCode})</span>
             )}
           </span>
         </CardTitle>
@@ -67,26 +65,53 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       <CardContent className="space-y-4">
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
-             <ClipboardList className="mr-2 h-4 w-4 text-primary" /> {t.compositionLabel}
+             <ClipboardList className="mr-2 h-4 w-4 text-primary" /> {t.saltNameLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.composition}</p>
+          <p className={detailValueClass}>{medicine.saltName}</p>
         </div>
 
-        {medicine.mrp != null && medicine.mrp !== t.infoNotAvailable && (
+        {medicine.drugCategory && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
-              <IndianRupee className="mr-2 h-4 w-4 text-primary" /> {t.mrpLabel}
+              <Tag className="mr-2 h-4 w-4 text-primary" /> {t.drugCategoryLabel}
             </h3>
-            <p className={detailValueClass}>₹{medicine.mrp}</p>
+            <p className={detailValueClass}>{medicine.drugCategory}</p>
           </div>
         )}
 
-        {medicine.uom && medicine.uom !== t.infoNotAvailable && (
+        {medicine.drugGroup && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
-              <Package className="mr-2 h-4 w-4 text-primary" /> {t.uomLabel}
+              <BookOpen className="mr-2 h-4 w-4 text-primary" /> {t.drugGroupLabel}
             </h3>
-            <p className={detailValueClass}>{medicine.uom}</p>
+            <p className={detailValueClass}>{medicine.drugGroup}</p>
+          </div>
+        )}
+        
+        {medicine.drugType && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <Type className="mr-2 h-4 w-4 text-primary" /> {t.drugTypeLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.drugType}</p>
+          </div>
+        )}
+
+        {medicine.hsnCode && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <Hash className="mr-2 h-4 w-4 text-primary" /> {t.hsnCodeLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.hsnCode}</p>
+          </div>
+        )}
+        
+        {medicine.searchKey && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <PackageSearch className="mr-2 h-4 w-4 text-primary" /> {t.searchKeyLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.searchKey}</p>
           </div>
         )}
 
@@ -115,26 +140,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </h3>
           <p className={multiLineDetailValueClass}>{medicine.sideEffects}</p>
         </div>
-        {medicine.barcode && (
-          <div>
-            <h3 className={detailItemClass + " flex items-center"}>
-              <Barcode className="mr-2 h-4 w-4 text-primary" /> {t.barcodeLabel}
-            </h3>
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="text-base font-mono">
-                {medicine.barcode}
-              </Badge>
-            </div>
-          </div>
-        )}
-        {!medicine.barcode && (
-           <div>
-            <h3 className={detailItemClass + " flex items-center"}>
-             <Barcode className="mr-2 h-4 w-4 text-primary" /> {t.barcodeLabel}
-            </h3>
-             <p className="text-sm text-muted-foreground italic">{t.barcodeNotAvailable}</p>
-           </div>
-        )}
+        
       </CardContent>
       {sourceMessage && (
         <CardFooter className="text-xs text-muted-foreground italic pt-4 border-t">
@@ -145,3 +151,4 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
+

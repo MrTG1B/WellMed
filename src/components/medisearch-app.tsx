@@ -158,63 +158,79 @@ export default function MediSearchApp() {
           dbDataArray.map(async (dbItem) => {
             try {
                 const aiDetails = await generateMedicineDetails({
-                searchTermOrName: dbItem.name,
-                language: selectedLanguage,
-                contextName: dbItem.name,
-                contextComposition: dbItem.composition,
-                contextBarcode: dbItem.barcode,
-                contextMrp: dbItem.mrp,
-                contextUom: dbItem.uom,
+                  searchTermOrName: dbItem.drugName, // Use drugName for AI search context
+                  language: selectedLanguage,
+                  contextDrugCode: dbItem.drugCode,
+                  contextDrugName: dbItem.drugName,
+                  contextSaltName: dbItem.saltName,
+                  contextDrugCategory: dbItem.drugCategory,
+                  contextDrugGroup: dbItem.drugGroup,
+                  contextDrugType: dbItem.drugType,
+                  contextHsnCode: dbItem.hsnCode,
+                  contextSearchKey: dbItem.searchKey,
                 });
 
                 if (aiDetails.source === 'ai_failed' || aiDetails.source === 'ai_unavailable') {
                     toast({
                         title: t.appName,
-                        description: t.errorAiDetails(dbItem.name, aiDetails.source),
+                        description: t.errorAiDetails(dbItem.drugName, aiDetails.source),
                         variant: "destructive",
                     });
                      if (aiDetails.source === 'ai_unavailable' && !aiConfigError) {
-                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.name));
+                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.drugName));
                         setAiConfigErrorType('key_or_model');
                     } else if (aiDetails.source === 'ai_failed' && !aiConfigError) {
-                        setAiConfigError(t.errorAiFailedForDetails(dbItem.name));
+                        setAiConfigError(t.errorAiFailedForDetails(dbItem.drugName));
                         setAiConfigErrorType('api_fail');
                     }
                 } else if (aiDetails.source === 'database_only' && (aiDetails.usage === t.infoNotAvailable || aiDetails.manufacturer === t.infoNotAvailable)){
                      toast({
                         title: t.appName,
-                        description: t.aiCouldNotEnhance(dbItem.name),
+                        description: t.aiCouldNotEnhance(dbItem.drugName),
                         variant: "default",
                     });
                 }
-
+                // Merging: AI details take precedence for AI-generated fields, context for DB fields
                 return {
-                id: dbItem.id,
-                ...aiDetails
+                  drugCode: aiDetails.drugCode || dbItem.drugCode, // Should be same if from DB
+                  drugName: aiDetails.drugName || dbItem.drugName, // Should be same
+                  saltName: aiDetails.saltName || dbItem.saltName, // Should be same
+                  drugCategory: dbItem.drugCategory || aiDetails.drugCategory,
+                  drugGroup: dbItem.drugGroup || aiDetails.drugGroup,
+                  drugType: dbItem.drugType || aiDetails.drugType,
+                  hsnCode: dbItem.hsnCode || aiDetails.hsnCode,
+                  searchKey: dbItem.searchKey || aiDetails.searchKey,
+                  usage: aiDetails.usage,
+                  manufacturer: aiDetails.manufacturer,
+                  dosage: aiDetails.dosage,
+                  sideEffects: aiDetails.sideEffects,
+                  source: aiDetails.source,
                 };
             } catch (genDetailsError: any) {
-                console.error(`[MediSearchApp] Critical error during generateMedicineDetails promise for ${dbItem.name}:`, genDetailsError.message, genDetailsError.stack, genDetailsError);
+                console.error(`[MediSearchApp] Critical error during generateMedicineDetails promise for ${dbItem.drugName}:`, genDetailsError.message, genDetailsError.stack, genDetailsError);
                  toast({
                     title: t.appName,
-                    description: t.errorAiDetailsCritical(dbItem.name),
+                    description: t.errorAiDetailsCritical(dbItem.drugName),
                     variant: "destructive",
                 });
-                if (!aiConfigError) { // Prioritize Key/Model error if not already set
+                if (!aiConfigError) { 
                     if(genDetailsError?.message?.toLowerCase().includes('api key') || genDetailsError?.message?.toLowerCase().includes('model not found')) {
-                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.name));
+                        setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(dbItem.drugName));
                         setAiConfigErrorType('key_or_model');
                     } else {
-                        setAiConfigError(t.errorAiDetailsCritical(dbItem.name));
+                        setAiConfigError(t.errorAiDetailsCritical(dbItem.drugName));
                         setAiConfigErrorType('api_fail');
                     }
                 }
-                return {
-                    id: dbItem.id,
-                    name: dbItem.name,
-                    composition: dbItem.composition,
-                    barcode: dbItem.barcode,
-                    mrp: dbItem.mrp,
-                    uom: dbItem.uom,
+                return { // Fallback structure
+                    drugCode: dbItem.drugCode,
+                    drugName: dbItem.drugName,
+                    saltName: dbItem.saltName,
+                    drugCategory: dbItem.drugCategory,
+                    drugGroup: dbItem.drugGroup,
+                    drugType: dbItem.drugType,
+                    hsnCode: dbItem.hsnCode,
+                    searchKey: dbItem.searchKey,
                     usage: t.infoNotAvailable,
                     manufacturer: t.infoNotAvailable,
                     dosage: t.infoNotAvailable,
@@ -231,8 +247,8 @@ export default function MediSearchApp() {
                 searchTermOrName: aiEnhancedSearchTerm,
                 language: selectedLanguage,
             });
-             if (aiOnlyDetails.name && aiOnlyDetails.name !== t.infoNotAvailable && aiOnlyDetails.composition !== t.infoNotAvailable ) {
-                 processedMedicines = [{ id: `ai-${Date.now()}`, ...aiOnlyDetails }];
+             if (aiOnlyDetails.drugName && aiOnlyDetails.drugName !== t.infoNotAvailable && aiOnlyDetails.saltName !== t.infoNotAvailable ) {
+                 processedMedicines = [aiOnlyDetails]; // AI flow now returns the full Medicine structure
              } else {
                  processedMedicines = [];
              }
@@ -258,7 +274,7 @@ export default function MediSearchApp() {
                 description: t.errorAiDetailsCritical(aiEnhancedSearchTerm),
                 variant: "destructive",
             });
-            if (!aiConfigError) { // Prioritize Key/Model error
+            if (!aiConfigError) { 
                  if(aiOnlyGenError?.message?.toLowerCase().includes('api key') || aiOnlyGenError?.message?.toLowerCase().includes('model not found')) {
                     setAiConfigError(t.errorAiNotConfiguredOrModelForDetails(aiEnhancedSearchTerm));
                     setAiConfigErrorType('key_or_model');
@@ -425,7 +441,7 @@ export default function MediSearchApp() {
         {!isLoading && !error && searchResults && searchResults.length > 0 && (
           <section className="w-full mt-0 animate-fadeIn space-y-6 flex flex-col items-center">
             {searchResults.map(medicine => (
-              <MedicineCard key={medicine.id} medicine={medicine} t={t} />
+              <MedicineCard key={medicine.drugCode} medicine={medicine} t={t} />
             ))}
           </section>
         )}
@@ -462,3 +478,4 @@ export default function MediSearchApp() {
     </div>
   );
 }
+

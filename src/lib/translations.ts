@@ -13,15 +13,18 @@ export type TranslationKeys = {
   resultsTitle: string;
   noResults: string;
   noResultsTitle: string;
-  medicineNameLabel: string;
-  compositionLabel: string;
+  drugNameLabel: string; // Was medicineNameLabel
+  saltNameLabel: string; // Was compositionLabel
+  drugCodeLabel: string;
+  drugCategoryLabel: string;
+  drugGroupLabel: string;
+  drugTypeLabel: string;
+  hsnCodeLabel: string;
+  searchKeyLabel: string;
   usageLabel: string;
   manufacturerLabel: string;
   dosageLabel: string;
   sideEffectsLabel: string;
-  barcodeLabel: string;
-  mrpLabel: string;
-  uomLabel: string;
   loadingAi: string;
   loadingData: string;
   loadingAiDetails: string;
@@ -36,7 +39,6 @@ export type TranslationKeys = {
   sourceDbOnlyMessage: string;
   sourceAiUnavailableForDetailsMessage: (medicineName: string) => string;
   sourceAiFailedForDetailsMessage: (medicineName: string) => string;
-  barcodeNotAvailable: string;
   initialHelperText: string;
   allRightsReserved: string;
   infoNotAvailable: string;
@@ -58,7 +60,7 @@ export const translations: Record<Language, TranslationKeys> = {
   en: {
     appName: 'WellMeds',
     searchTitle: 'Search for Medicines',
-    searchPlaceholder: 'Enter medicine name, barcode, or composition...',
+    searchPlaceholder: 'Enter drug name, salt name, or search key...',
     searchButton: 'Search',
     languageLabel: 'Language',
     english: 'English',
@@ -67,15 +69,18 @@ export const translations: Record<Language, TranslationKeys> = {
     resultsTitle: 'Search Result',
     noResults: 'No medicine found matching your query.',
     noResultsTitle: 'No Specific Match Found',
-    medicineNameLabel: 'Name',
-    compositionLabel: 'Composition',
+    drugNameLabel: 'Drug Name',
+    saltNameLabel: 'Salt Name (Composition)',
+    drugCodeLabel: 'Drug Code',
+    drugCategoryLabel: 'Category',
+    drugGroupLabel: 'Group',
+    drugTypeLabel: 'Type',
+    hsnCodeLabel: 'HSN Code',
+    searchKeyLabel: 'Search Key',
     usageLabel: 'Usage',
     manufacturerLabel: 'Manufacturer',
     dosageLabel: 'Dosage',
     sideEffectsLabel: 'Side Effects',
-    barcodeLabel: 'Barcode',
-    mrpLabel: 'MRP',
-    uomLabel: 'Unit of Measure',
     loadingAi: 'Enhancing search with AI...',
     loadingData: 'Searching database...',
     loadingAiDetails: 'Generating details with AI...',
@@ -90,8 +95,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'Details from database.',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `AI features for enhancing "${medicineName}" details are unavailable due to API key or model issues.`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `AI enhancement failed for "${medicineName}" details.`,
-    barcodeNotAvailable: 'Not available',
-    initialHelperText: 'Enter a medicine name, barcode, or composition to begin your search.',
+    initialHelperText: 'Enter a drug name, salt name, or search key to begin your search.',
     allRightsReserved: 'All rights reserved.',
     infoNotAvailable: "Information not available.",
     errorAiNotConfiguredOrModelTitle: "AI Key/Model Issue",
@@ -110,24 +114,27 @@ export const translations: Record<Language, TranslationKeys> = {
   hi: {
     appName: 'वेलमेड्स',
     searchTitle: 'दवाएं खोजें',
-    searchPlaceholder: 'दवा का नाम, बारकोड, या संरचना दर्ज करें...',
+    searchPlaceholder: 'दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें...',
     searchButton: 'खोजें',
     languageLabel: 'भाषा',
     english: 'अंग्रेज़ी',
     hindi: 'हिंदी',
-    bengali: 'बंगाली',
+    bengali: 'বাংলা',
     resultsTitle: 'खोज परिणाम',
     noResults: 'आपकी क्वेरी से मेल खाने वाली कोई दवा नहीं मिली।',
     noResultsTitle: 'कोई विशिष्ट मिलान नहीं मिला',
-    medicineNameLabel: 'नाम',
-    compositionLabel: 'संरचना',
+    drugNameLabel: 'दवा का नाम',
+    saltNameLabel: 'सॉल्ट का नाम (संरचना)',
+    drugCodeLabel: 'ड्रग कोड',
+    drugCategoryLabel: 'श्रेणी',
+    drugGroupLabel: 'समूह',
+    drugTypeLabel: 'प्रकार',
+    hsnCodeLabel: 'एचएसएन कोड',
+    searchKeyLabel: 'खोज कुंजी',
     usageLabel: 'उपयोग',
     manufacturerLabel: 'निर्माता',
     dosageLabel: 'खुराक',
     sideEffectsLabel: 'दुष्प्रभाव',
-    barcodeLabel: 'बारकोड',
-    mrpLabel: 'एमआरपी',
-    uomLabel: 'माप की इकाई',
     loadingAi: 'एआई के साथ खोज को बढ़ाया जा रहा है...',
     loadingData: 'डेटाबेस में खोजा जा रहा है...',
     loadingAiDetails: 'एआई द्वारा विवरण तैयार किया जा रहा है...',
@@ -142,8 +149,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ एपीआई कुंजी या मॉडल समस्याओं के कारण अनुपलब्ध हैं।`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
-    barcodeNotAvailable: 'उपलब्ध नहीं है',
-    initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, बारकोड या संरचना दर्ज करें।',
+    initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें।',
     allRightsReserved: 'सभी अधिकार सुरक्षित।',
     infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
     errorAiNotConfiguredOrModelTitle: "एआई कुंजी/मॉडल समस्या",
@@ -162,7 +168,7 @@ export const translations: Record<Language, TranslationKeys> = {
   bn: {
     appName: 'ওয়েলমেডস',
     searchTitle: 'ওষুধ অনুসন্ধান করুন',
-    searchPlaceholder: 'ওষুধের নাম, বারকোড, বা গঠন লিখুন...',
+    searchPlaceholder: 'ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন...',
     searchButton: 'অনুসন্ধান',
     languageLabel: 'ভাষা',
     english: 'ইংরেজি',
@@ -171,15 +177,18 @@ export const translations: Record<Language, TranslationKeys> = {
     resultsTitle: 'অনুসন্ধানের ফলাফল',
     noResults: 'আপনার প্রশ্নের সাথে মেলে এমন কোন ওষুধ পাওয়া যায়নি।',
     noResultsTitle: 'কোন নির্দিষ্ট মিল পাওয়া যায়নি',
-    medicineNameLabel: 'নাম',
-    compositionLabel: 'গঠন',
+    drugNameLabel: 'ওষুধের নাম',
+    saltNameLabel: 'সল্টের নাম (গঠন)',
+    drugCodeLabel: 'ড্রাগ কোড',
+    drugCategoryLabel: 'বিভাগ',
+    drugGroupLabel: 'গ্রুপ',
+    drugTypeLabel: 'প্রকার',
+    hsnCodeLabel: 'এইচএসএন কোড',
+    searchKeyLabel: 'সার্চ কী',
     usageLabel: 'ব্যবহার',
     manufacturerLabel: 'প্রস্তুতকারক',
     dosageLabel: 'মাত্রা',
     sideEffectsLabel: 'পার্শ্ব প্রতিক্রিয়া',
-    barcodeLabel: 'বারকোড',
-    mrpLabel: 'এমআরপি',
-    uomLabel: 'পরিমাপের একক',
     loadingAi: 'এআই দিয়ে অনুসন্ধান উন্নত করা হচ্ছে...',
     loadingData: 'ডাটাবেস অনুসন্ধান করা হচ্ছে...',
     loadingAiDetails: 'এআই দ্বারা বিস্তারিত তৈরি করা হচ্ছে...',
@@ -194,8 +203,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি API কী বা মডেল সমস্যার কারণে অনুপলব্ধ।`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
-    barcodeNotAvailable: 'উপলব্ধ নয়',
-    initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, বারকোড বা রচনা লিখুন।',
+    initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন।',
     allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
     infoNotAvailable: "তথ্য উপলব্ধ নেই।",
     errorAiNotConfiguredOrModelTitle: "এআই কী/মডেল সমস্যা",
@@ -214,3 +222,4 @@ export const translations: Record<Language, TranslationKeys> = {
 };
 
 export const getTranslations = (lang: Language): TranslationKeys => translations[lang];
+

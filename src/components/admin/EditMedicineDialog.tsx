@@ -28,40 +28,38 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { ref, update } from "firebase/database";
+import { ref, update, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface MedicineDoc {
-  id: string;
-  name: string;
-  composition?: string;
-  barcode?: string;
-  mrp?: string; // Added MRP
-  uom?: string;  // Added UOM
+interface MedicineDocForEdit {
+  drugCode: string;
+  drugName: string;
+  saltName: string;
+  drugCategory?: string;
+  drugGroup?: string;
+  drugType?: string;
+  hsnCode?: string;
+  searchKey?: string;
 }
 
 interface EditMedicineDialogProps {
-  medicine: MedicineDoc;
+  medicine: MedicineDocForEdit;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 const formSchema = z.object({
-  medicineId: z.string(), // Will be read-only
-  composition: z.string().trim().min(5, {
-    message: "Composition must be at least 5 characters after trimming.",
-  }),
-  medicineName: z.string()
-    .trim()
-    .refine(val => val === '' || val.length >= 2, {
-      message: "Medicine Display Name, if provided, must be at least 2 characters after trimming.",
-    })
-    .optional(),
-  barcode: z.string().trim().optional(),
-  mrp: z.string().trim().optional(), // Added MRP
-  uom: z.string().trim().optional(), // Added UOM
+  drugCode: z.string(), // Read-only
+  drugName: z.string().trim().min(2, { message: "Drug Name must be at least 2 characters." }),
+  saltName: z.string().trim().min(5, { message: "Salt Name (Composition) must be at least 5 characters." }),
+  drugCategory: z.string().trim().optional(),
+  drugGroup: z.string().trim().optional(),
+  drugType: z.string().trim().optional(),
+  hsnCode: z.string().trim().optional(),
+  searchKey: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,24 +71,28 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      medicineId: medicine.id,
-      composition: medicine.composition || "",
-      medicineName: medicine.name || "",
-      barcode: medicine.barcode || "",
-      mrp: medicine.mrp || "", // Default MRP
-      uom: medicine.uom || "", // Default UOM
+      drugCode: medicine.drugCode,
+      drugName: medicine.drugName || "",
+      saltName: medicine.saltName || "",
+      drugCategory: medicine.drugCategory || "",
+      drugGroup: medicine.drugGroup || "",
+      drugType: medicine.drugType || "",
+      hsnCode: medicine.hsnCode || "",
+      searchKey: medicine.searchKey || "",
     },
     mode: "onChange",
   });
 
   useEffect(() => {
     form.reset({
-      medicineId: medicine.id,
-      composition: medicine.composition || "",
-      medicineName: medicine.name || "",
-      barcode: medicine.barcode || "",
-      mrp: medicine.mrp || "", // Reset MRP
-      uom: medicine.uom || "", // Reset UOM
+      drugCode: medicine.drugCode,
+      drugName: medicine.drugName || "",
+      saltName: medicine.saltName || "",
+      drugCategory: medicine.drugCategory || "",
+      drugGroup: medicine.drugGroup || "",
+      drugType: medicine.drugType || "",
+      hsnCode: medicine.hsnCode || "",
+      searchKey: medicine.searchKey || "",
     });
   }, [medicine, form]);
 
@@ -98,57 +100,59 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0
-                            ? data.medicineName.trim()
-                            : data.composition.trim();
-    const updatedComposition = data.composition.trim();
-    const updatedBarcode = data.barcode?.trim();
-    const updatedMrp = data.mrp?.trim(); // Get MRP
-    const updatedUom = data.uom?.trim(); // Get UOM
-
     try {
       if (!db) {
-        toast({
-          title: "Database Error",
-          description: "Firebase Realtime Database is not configured.",
-          variant: "destructive",
-        });
+        toast({ title: "Database Error", description: "Firebase Realtime Database is not configured.", variant: "destructive" });
         setIsSubmitting(false);
         return;
       }
+      
+      const currentSaltName = data.saltName.trim().toLowerCase();
+      const medicinesRef = ref(db, 'medicines');
+      const allMedicinesSnapshot = await get(medicinesRef);
+      if (allMedicinesSnapshot.exists()) {
+          const allMedicines = allMedicinesSnapshot.val();
+          for (const key in allMedicines) {
+              if (key !== medicine.drugCode && allMedicines[key].saltName && allMedicines[key].saltName.toLowerCase() === currentSaltName) {
+                   toast({
+                      title: "Potential Duplicate Salt Name",
+                      description: `Another medicine (Drug Code: ${key}) already has a similar Salt Name. Please verify to avoid duplicates.`,
+                      variant: "default",
+                      duration: 7000,
+                  });
+                  break; 
+              }
+          }
+      }
+
 
       const medicineDataToUpdate: any = {
-        name: finalMedicineName,
-        composition: updatedComposition,
-        barcode: (updatedBarcode && updatedBarcode.length > 0) ? updatedBarcode : null,
-        mrp: (updatedMrp && updatedMrp.length > 0) ? updatedMrp : null, // Update MRP
-        uom: (updatedUom && updatedUom.length > 0) ? updatedUom : null, // Update UOM
+        drugName: data.drugName.trim(),
+        saltName: data.saltName.trim(),
+        drugCategory: data.drugCategory?.trim() || null,
+        drugGroup: data.drugGroup?.trim() || null,
+        drugType: data.drugType?.trim() || null,
+        hsnCode: data.hsnCode?.trim() || null,
+        searchKey: data.searchKey?.trim() || data.saltName.trim(),
         lastUpdated: new Date().toISOString(),
       };
       
       Object.keys(medicineDataToUpdate).forEach(key => {
-        if (medicineDataToUpdate[key] === null) {
-          // For RTDB, setting a field to null deletes it.
-          // If you want to ensure fields are explicitly removed if empty, this is correct.
-          // If you want to keep empty strings, remove this deletion logic and ensure nulls are handled as empty strings before this.
+        if (medicineDataToUpdate[key] === null || medicineDataToUpdate[key] === "") {
+           delete medicineDataToUpdate[key];
         }
       });
+      medicineDataToUpdate.lastUpdated = new Date().toISOString();
 
-      const medicineRef = ref(db, `medicines/${medicine.id}`);
-      await update(medicineRef, medicineDataToUpdate);
 
-      toast({
-        title: "Update Successful",
-        description: `Medicine "${finalMedicineName}" (ID: ${medicine.id}) updated.`,
-      });
+      const medicineDbRef = ref(db, `medicines/${medicine.drugCode}`);
+      await update(medicineDbRef, medicineDataToUpdate);
+
+      toast({ title: "Update Successful", description: `Medicine "${medicineDataToUpdate.drugName}" (Code: ${medicine.drugCode}) updated.` });
       onSuccess(); 
     } catch (error: any) {
       console.error("[EditMedicineDialog] Realtime Database update FAILED. Error:", error.message || error, error);
-      toast({
-        title: "Update Failed",
-        description: `Failed to update medicine. ${error.message || "An unexpected error occurred."}`,
-        variant: "destructive",
-      });
+      toast({ title: "Update Failed", description: `Failed to update medicine. ${error.message || "An unexpected error occurred."}`, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -156,127 +160,47 @@ export default function EditMedicineDialog({ medicine, isOpen, onClose, onSucces
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md md:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Medicine: {medicine.name} ({medicine.id})</DialogTitle>
+          <DialogTitle>Edit Medicine: {medicine.drugName} ({medicine.drugCode})</DialogTitle>
           <DialogDescription>
             Make changes to the medicine details below. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="medicineId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Medicine ID (Read-only)</FormLabel>
-                  <FormControl>
-                    <Input {...field} readOnly disabled className="bg-muted/50" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="composition"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Composition</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="e.g., Paracetamol 500mg"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Active ingredients and strengths. Min 5 chars.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="medicineName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Medicine Display Name (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Defaults to composition if left blank" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    User-friendly name. Defaults to composition if blank. If provided, min 2 chars.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="barcode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Barcode (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 1234567890123" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The EAN or UPC barcode number.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="mrp"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>MRP (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 150.75" {...field} type="text"/>
-                  </FormControl>
-                  <FormDescription>
-                     Maximum Retail Price (INR).
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="uom"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit of Measure (UOM) (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Strip of 10 tablets" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The packaging unit.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-              </DialogClose>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <ScrollArea className="max-h-[60vh] pr-3">
+            <div className="space-y-4">
+            <FormField control={form.control} name="drugCode" render={({ field }) => (
+                <FormItem><FormLabel>Drug Code (Read-only)</FormLabel><FormControl><Input {...field} readOnly disabled className="bg-muted/50" /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="drugName" render={({ field }) => (
+                <FormItem><FormLabel>Drug Name</FormLabel><FormControl><Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} /></FormControl><FormDescription>The display name.</FormDescription><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="saltName" render={({ field }) => (
+                <FormItem><FormLabel>Salt Name (Composition)</FormLabel><FormControl><Textarea placeholder="e.g., Paracetamol 500mg" className="resize-none" {...field} /></FormControl><FormDescription>Active ingredients. Also default Search Key.</FormDescription><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="searchKey" render={({ field }) => (
+                <FormItem><FormLabel>Search Key (Optional)</FormLabel><FormControl><Input placeholder="e.g., paracetamol fever headache" {...field} /></FormControl><FormDescription>Keywords for searching.</FormDescription><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="drugCategory" render={({ field }) => (
+                <FormItem><FormLabel>Drug Category (Optional)</FormLabel><FormControl><Input placeholder="e.g., ACUTE, CHRONIC" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="drugGroup" render={({ field }) => (
+                <FormItem><FormLabel>Drug Group (Optional)</FormLabel><FormControl><Input placeholder="e.g., Analgesic/Antipyretic" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="drugType" render={({ field }) => (
+                <FormItem><FormLabel>Drug Type (Optional)</FormLabel><FormControl><Input placeholder="e.g., BPPI, OTC" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="hsnCode" render={({ field }) => (
+                <FormItem><FormLabel>HSN Code (Optional)</FormLabel><FormControl><Input placeholder="e.g., 300490" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
+              <DialogClose asChild><Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button></DialogClose>
               <Button type="submit" disabled={isSubmitting || !form.formState.isValid || !form.formState.isDirty}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

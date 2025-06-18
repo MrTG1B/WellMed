@@ -22,31 +22,20 @@ import { useState, useEffect } from "react";
 import { ref, set, get } from "firebase/database";
 import { db } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
-  medicineId: z.string()
+  drugCode: z.string()
     .trim()
-    .min(2, {
-      message: "Medicine ID must be at least 2 characters after trimming.",
-    }).max(50, {
-      message: "Medicine ID must be at most 50 characters after trimming."
-    }).regex(/^[a-zA-Z0-9-_]+$/, {
-      message: "Medicine ID can only contain alphanumeric characters, hyphens, and underscores (after trimming)."
-    }),
-  composition: z.string()
-    .trim()
-    .min(5, {
-    message: "Composition must be at least 5 characters after trimming.",
-  }),
-  medicineName: z.string()
-    .trim()
-    .refine(val => val === '' || val.length >= 2, {
-      message: "Medicine Display Name, if provided, must be at least 2 characters after trimming.",
-    })
-    .optional(),
-  barcode: z.string().trim().optional(),
-  mrp: z.string().trim().optional(), // Added MRP
-  uom: z.string().trim().optional(), // Added UOM
+    .min(1, { message: "Drug Code must be at least 1 character."})
+    .regex(/^[a-zA-Z0-9-_]+$/, { message: "Drug Code can only contain alphanumeric characters, hyphens, and underscores." }),
+  drugName: z.string().trim().min(2, { message: "Drug Name must be at least 2 characters." }),
+  saltName: z.string().trim().min(5, { message: "Salt Name (Composition) must be at least 5 characters." }),
+  drugCategory: z.string().trim().optional(),
+  drugGroup: z.string().trim().optional(),
+  drugType: z.string().trim().optional(),
+  hsnCode: z.string().trim().optional(),
+  searchKey: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,253 +47,216 @@ export default function AdminUploadForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      medicineId: "",
-      composition: "",
-      medicineName: "",
-      barcode: "",
-      mrp: "",
-      uom: "",
+      drugCode: "",
+      drugName: "",
+      saltName: "",
+      drugCategory: "",
+      drugGroup: "",
+      drugType: "",
+      hsnCode: "",
+      searchKey: "",
     },
     mode: "onChange",
   });
 
-  const { formState: { isValid }, watch, setValue, getValues, formState, trigger } = form;
+   const { watch, setValue, trigger } = form;
 
   useEffect(() => {
     const subscription = watch((value, { name }) => {
-      if (name === 'composition') {
-        setValue("medicineName", value.composition || "", { shouldValidate: true, shouldDirty: true });
+      if (name === 'saltName' && value.saltName) {
+         if (!form.getValues('drugName')) {
+            setValue("drugName", value.saltName, { shouldValidate: true, shouldDirty: true });
+         }
+         if (!form.getValues('searchKey')) {
+            setValue("searchKey", value.saltName, { shouldValidate: true, shouldDirty: true });
+         }
+      }
+      if (name === 'drugName' && value.drugName) {
+        if (!form.getValues('searchKey')) {
+            setValue("searchKey", value.drugName, { shouldValidate: true, shouldDirty: true });
+         }
       }
       trigger();
     });
     return () => subscription.unsubscribe();
-  }, [watch, setValue, trigger]);
+  }, [watch, setValue, trigger, form]);
 
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (isSubmitting) {
-      return;
-    }
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const newMedicineId = data.medicineId.trim();
-    const finalMedicineName = data.medicineName && data.medicineName.trim().length > 0
-                            ? data.medicineName.trim()
-                            : data.composition.trim();
-    const newComposition = data.composition.trim();
-    const newBarcode = data.barcode?.trim();
-    const newMrp = data.mrp?.trim(); // Get MRP
-    const newUom = data.uom?.trim(); // Get UOM
+    const newDrugCode = data.drugCode.trim();
 
     try {
       if (!db) {
-        console.error("[AdminUploadForm] Firebase Realtime Database db instance is NOT available.");
-        toast({
-          title: "Database Error",
-          description: "Firebase Realtime Database is not configured. Cannot save data.",
-          variant: "destructive",
-        });
+        toast({ title: "Database Error", description: "Firebase Realtime Database is not configured.", variant: "destructive" });
         setIsSubmitting(false);
         return;
       }
 
+      const medicineRef = ref(db, `medicines/${newDrugCode}`);
+      const existingSnapshot = await get(medicineRef);
+      if (existingSnapshot.exists()) {
+        toast({ title: "Conflict", description: `Drug Code "${newDrugCode}" already exists. Please use a unique Drug Code.`, variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Check for duplicate saltName (case-insensitive)
       const medicinesRef = ref(db, 'medicines');
-      const snapshot = await get(medicinesRef);
-      let idConflict = false;
-      let compositionConflict = false;
-      let barcodeConflict = false;
-
-      if (snapshot.exists()) {
-        const medicinesData = snapshot.val();
-        for (const existingKey in medicinesData) {
-          if (existingKey === newMedicineId) {
-            idConflict = true;
+      const allMedicinesSnapshot = await get(medicinesRef);
+      if (allMedicinesSnapshot.exists()) {
+          const allMedicines = allMedicinesSnapshot.val();
+          for (const key in allMedicines) {
+              if (allMedicines[key].saltName && allMedicines[key].saltName.toLowerCase() === data.saltName.trim().toLowerCase()) {
+                  toast({
+                      title: "Potential Duplicate",
+                      description: `A medicine with a similar Salt Name "${data.saltName.trim()}" (Drug Code: ${key}) already exists. Please verify.`,
+                      variant: "default", // Warning, not destructive
+                      duration: 7000,
+                  });
+                  // Not blocking submission for this, just warning.
+                  break; 
+              }
           }
-          const existingMedicine = medicinesData[existingKey];
-          if (existingMedicine.composition && existingMedicine.composition.toLowerCase() === newComposition.toLowerCase()) {
-            compositionConflict = true;
-          }
-          if (newBarcode && newBarcode.length > 0 && existingMedicine.barcode && existingMedicine.barcode === newBarcode) {
-            barcodeConflict = true;
-          }
-        }
       }
 
-      const warningMessages: string[] = [];
-      if (idConflict) {
-        warningMessages.push(`Medicine ID "${newMedicineId}" already exists.`);
-      }
-      if (compositionConflict) {
-        warningMessages.push(`A medicine with composition "${newComposition}" already exists.`);
-      }
-      if (barcodeConflict && newBarcode && newBarcode.length > 0) {
-        warningMessages.push(`A medicine with barcode "${newBarcode}" already exists.`);
-      }
-
-      if (warningMessages.length > 0) {
-        toast({
-          title: "Data Conflict",
-          description: warningMessages.join(" "),
-          variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
 
       const medicineDataToSave = {
-        name: finalMedicineName,
-        composition: newComposition,
-        barcode: (newBarcode && newBarcode.length > 0) ? newBarcode : null,
-        mrp: (newMrp && newMrp.length > 0) ? newMrp : null, // Save MRP
-        uom: (newUom && newUom.length > 0) ? newUom : null, // Save UOM
+        drugName: data.drugName.trim(),
+        saltName: data.saltName.trim(),
+        drugCategory: data.drugCategory?.trim() || null,
+        drugGroup: data.drugGroup?.trim() || null,
+        drugType: data.drugType?.trim() || null,
+        hsnCode: data.hsnCode?.trim() || null,
+        searchKey: data.searchKey?.trim() || data.saltName.trim(), // Default searchKey to saltName if empty
         lastUpdated: new Date().toISOString(),
       };
+      
+      // Remove null fields before saving
+      Object.keys(medicineDataToSave).forEach(key => {
+        if ((medicineDataToSave as any)[key] === null || (medicineDataToSave as any)[key] === "") {
+          delete (medicineDataToSave as any)[key];
+        }
+      });
+      medicineDataToSave.lastUpdated = new Date().toISOString(); // Ensure lastUpdated is always set
 
-      const medicineRef = ref(db, `medicines/${newMedicineId}`);
+
       await set(medicineRef, medicineDataToSave);
 
-      toast({
-        title: "Upload Successful",
-        description: `Medicine "${finalMedicineName}" (ID: ${newMedicineId}) data saved.`,
-      });
+      toast({ title: "Upload Successful", description: `Medicine "${medicineDataToSave.drugName}" (Code: ${newDrugCode}) data saved.` });
       form.reset();
 
     } catch (error: any) {
       console.error("[AdminUploadForm] Realtime Database write FAILED. Error:", error.message || error, error);
-      let userMessage = "Failed to upload medicine. ";
-      if (error.message?.toLowerCase().includes("permission_denied")) {
-        userMessage += "Database permission denied. Check security rules.";
-      } else if (error.message?.toLowerCase().includes("network error")) {
-        userMessage += "Network error. Check connection and Firebase setup.";
-      } else {
-        userMessage += "An unexpected error occurred. Check console.";
-      }
-      toast({
-        title: "Upload Failed",
-        description: userMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Upload Failed", description: `Failed to upload medicine. ${error.message || "An unexpected error occurred."}`, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // console.log("AdminUploadForm RENDER: isDirty =", form.formState.isDirty, "isValid =", isValid);
-  // console.log("AdminUploadForm RENDER: Form values:", getValues());
-  // console.log("AdminUploadForm RENDER: Form errors:", formState.errors);
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+        <ScrollArea className="h-[calc(100vh-280px)] sm:h-[calc(100vh-250px)] md:h-auto md:max-h-[calc(80vh-150px)] pr-3">
+        <div className="space-y-4">
         <FormField
           control={form.control}
-          name="medicineId"
+          name="drugCode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Medicine ID</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., paracetamol-500" {...field} />
-              </FormControl>
-              <FormDescription>
-                Unique ID for the medicine (alphanumeric, hyphens, underscores). Min 2 chars. Max 50 chars.
-              </FormDescription>
+              <FormLabel>Drug Code (Unique ID)</FormLabel>
+              <FormControl><Input placeholder="e.g., 1 or MED001" {...field} /></FormControl>
+              <FormDescription>Unique identifier for this medicine (Firebase key).</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
          <FormField
           control={form.control}
-          name="composition"
+          name="drugName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Composition</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="e.g., Paracetamol 500mg, Caffeine 30mg"
-                  className="resize-none"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Active ingredients and strengths. Used as default display name. Min 5 chars.
-              </FormDescription>
+              <FormLabel>Drug Name</FormLabel>
+              <FormControl><Input placeholder="e.g., Paracetamol 500mg Tablets" {...field} /></FormControl>
+              <FormDescription>The display name of the medicine.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="medicineName"
+          name="saltName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Medicine Display Name (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Defaults to composition if left blank" {...field} />
-              </FormControl>
-              <FormDescription>
-                User-friendly name. Defaults to composition if blank. If provided, min 2 chars.
-              </FormDescription>
+              <FormLabel>Salt Name (Composition)</FormLabel>
+              <FormControl><Textarea placeholder="e.g., Paracetamol 500mg" className="resize-none" {...field} /></FormControl>
+              <FormDescription>Active ingredients and strengths. Also used as default Search Key if not provided.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="barcode"
+          name="searchKey"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Barcode (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., 1234567890123" {...field} />
-              </FormControl>
-              <FormDescription>
-                The EAN or UPC barcode number.
-              </FormDescription>
+              <FormLabel>Search Key (Optional)</FormLabel>
+              <FormControl><Input placeholder="e.g., paracetamol fever headache" {...field} /></FormControl>
+              <FormDescription>Keywords for searching. Defaults to Salt Name or Drug Name if left blank.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="mrp"
+          name="drugCategory"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>MRP (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., 150.75" {...field} type="text" />
-              </FormControl>
-              <FormDescription>
-                Maximum Retail Price (INR).
-              </FormDescription>
+              <FormLabel>Drug Category (Optional)</FormLabel>
+              <FormControl><Input placeholder="e.g., ACUTE, CHRONIC" {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <FormField
           control={form.control}
-          name="uom"
+          name="drugGroup"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Unit of Measure (UOM) (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Strip of 10 tablets, 100ml bottle" {...field} />
-              </FormControl>
-              <FormDescription>
-                The packaging unit.
-              </FormDescription>
+              <FormLabel>Drug Group (Optional)</FormLabel>
+              <FormControl><Input placeholder="e.g., Analgesic/Antipyretic" {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting || !isValid } className="w-full">
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            "Upload Medicine"
+        <FormField
+          control={form.control}
+          name="drugType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Drug Type (Optional)</FormLabel>
+              <FormControl><Input placeholder="e.g., BPPI, OTC" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
           )}
+        />
+        <FormField
+          control={form.control}
+          name="hsnCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>HSN Code (Optional)</FormLabel>
+              <FormControl><Input placeholder="e.g., 300490" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        </div>
+        </ScrollArea>
+        <Button type="submit" disabled={isSubmitting || !form.formState.isValid} className="w-full mt-4">
+          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</> : "Upload Medicine"}
         </Button>
       </form>
     </Form>

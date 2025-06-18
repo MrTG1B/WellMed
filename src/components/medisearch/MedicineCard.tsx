@@ -11,7 +11,7 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
-import { Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, Hash, Tag, BookOpen, Type, PackageSearch, Fingerprint } from "lucide-react";
+import { Pill, Factory, AlertTriangle, ClipboardList, Stethoscope, Info, Hash, Tag, BookOpen, Type, PackageSearch, Fingerprint, IndianRupee, Box } from "lucide-react";
 
 interface MedicineCardProps {
   medicine: Medicine;
@@ -42,9 +42,11 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
       break;
     default:
       if (medicine.drugName && medicine.saltName && medicine.usage === t.infoNotAvailable) {
-        sourceMessage = t.sourceDbOnlyMessage;
+        sourceMessage = t.sourceDbOnlyMessage; // Fallback if source isn't explicitly set but seems like DB only
       }
   }
+  
+  const showDatabaseSpecificFields = medicine.source === 'database_ai_enhanced' || medicine.source === 'database_only';
 
   return (
     <Card className="w-full max-w-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl">
@@ -53,7 +55,8 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           <Pill className="mr-2 h-7 w-7 flex-shrink-0" />
           <span className="break-words">
             {medicine.drugName}
-            {!medicine.drugCode.startsWith('ai-') && (
+            {/* Only show drugCode if it's from the database (not AI generated) */}
+            {showDatabaseSpecificFields && medicine.drugCode && !medicine.drugCode.startsWith('ai-gen-') && (
               <span className="text-sm font-normal text-muted-foreground ml-2">({t.drugCodeLabel}: {medicine.drugCode})</span>
             )}
           </span>
@@ -67,10 +70,28 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           <h3 className={detailItemClass + " flex items-center"}>
              <ClipboardList className="mr-2 h-4 w-4 text-primary" /> {t.saltNameLabel}
           </h3>
-          <p className={detailValueClass}>{medicine.saltName}</p>
+          <p className={detailValueClass}>{medicine.saltName || t.infoNotAvailable}</p>
         </div>
+        
+        {showDatabaseSpecificFields && medicine.mrp && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <IndianRupee className="mr-2 h-4 w-4 text-primary" /> {t.mrpLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.mrp}</p>
+          </div>
+        )}
 
-        {medicine.drugCategory && (
+        {showDatabaseSpecificFields && medicine.uom && (
+          <div>
+            <h3 className={detailItemClass + " flex items-center"}>
+              <Box className="mr-2 h-4 w-4 text-primary" /> {t.uomLabel}
+            </h3>
+            <p className={detailValueClass}>{medicine.uom}</p>
+          </div>
+        )}
+
+        {showDatabaseSpecificFields && medicine.drugCategory && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
               <Tag className="mr-2 h-4 w-4 text-primary" /> {t.drugCategoryLabel}
@@ -79,7 +100,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </div>
         )}
 
-        {medicine.drugGroup && (
+        {showDatabaseSpecificFields && medicine.drugGroup && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
               <BookOpen className="mr-2 h-4 w-4 text-primary" /> {t.drugGroupLabel}
@@ -88,7 +109,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </div>
         )}
         
-        {medicine.drugType && (
+        {showDatabaseSpecificFields && medicine.drugType && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
               <Type className="mr-2 h-4 w-4 text-primary" /> {t.drugTypeLabel}
@@ -97,7 +118,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </div>
         )}
 
-        {medicine.hsnCode && (
+        {showDatabaseSpecificFields && medicine.hsnCode && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
               <Hash className="mr-2 h-4 w-4 text-primary" /> {t.hsnCodeLabel}
@@ -106,7 +127,7 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           </div>
         )}
         
-        {medicine.searchKey && (
+        {showDatabaseSpecificFields && medicine.searchKey && (
           <div>
             <h3 className={detailItemClass + " flex items-center"}>
               <PackageSearch className="mr-2 h-4 w-4 text-primary" /> {t.searchKeyLabel}
@@ -119,26 +140,26 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
           <h3 className={detailItemClass + " flex items-center"}>
             <Stethoscope className="mr-2 h-4 w-4 text-primary" /> {t.usageLabel}
           </h3>
-          <p className={multiLineDetailValueClass}>{medicine.usage}</p>
+          <p className={multiLineDetailValueClass}>{medicine.usage || t.infoNotAvailable}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
             <Factory className="mr-2 h-4 w-4 text-primary" /> {t.manufacturerLabel}
           </h3>
-          <p className={multiLineDetailValueClass}>{medicine.manufacturer}</p>
+          <p className={multiLineDetailValueClass}>{medicine.manufacturer || t.infoNotAvailable}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-syringe mr-2 text-primary"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 15 4-4"/><path d="m5 19-3 3"/><path d="m12 12 4.5 4.5"/></svg>
             {t.dosageLabel}
           </h3>
-          <p className={multiLineDetailValueClass}>{medicine.dosage}</p>
+          <p className={multiLineDetailValueClass}>{medicine.dosage || t.infoNotAvailable}</p>
         </div>
         <div>
           <h3 className={detailItemClass + " flex items-center"}>
             <AlertTriangle className="mr-2 h-4 w-4 text-primary" /> {t.sideEffectsLabel}
           </h3>
-          <p className={multiLineDetailValueClass}>{medicine.sideEffects}</p>
+          <p className={multiLineDetailValueClass}>{medicine.sideEffects || t.infoNotAvailable}</p>
         </div>
         
       </CardContent>
@@ -151,4 +172,3 @@ export function MedicineCard({ medicine, t }: MedicineCardProps) {
     </Card>
   );
 }
-

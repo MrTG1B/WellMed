@@ -692,6 +692,10 @@ body {
   margin-left: auto;
 }
 
+.mr-1 {
+  margin-right: .25rem;
+}
+
 .mr-2 {
   margin-right: .5rem;
 }
@@ -714,10 +718,6 @@ body {
 
 .mt-auto {
   margin-top: auto;
-}
-
-.mr-1 {
-  margin-right: .25rem;
 }
 
 .block {
@@ -821,6 +821,10 @@ body {
   height: 1px;
 }
 
+.h-\[calc\(100vh-280px\)\] {
+  height: calc(100vh - 280px);
+}
+
 .h-\[var\(--radix-select-trigger-height\)\] {
   height: var(--radix-select-trigger-height);
 }
@@ -841,10 +845,6 @@ body {
   height: 100svh;
 }
 
-.h-\[calc\(100vh-280px\)\] {
-  height: calc(100vh - 280px);
-}
-
 .max-h-60 {
   max-height: 15rem;
 }
@@ -853,20 +853,16 @@ body {
   max-height: 24rem;
 }
 
-.max-h-\[960px\] {
-  max-height: 960px;
-}
-
-.max-h-screen {
-  max-height: 100vh;
-}
-
 .max-h-\[60vh\] {
   max-height: 60vh;
 }
 
 .max-h-\[760px\] {
   max-height: 760px;
+}
+
+.max-h-screen {
+  max-height: 100vh;
 }
 
 .min-h-0 {
@@ -1207,6 +1203,12 @@ body {
   margin-bottom: calc(.5rem * var(--tw-space-y-reverse));
 }
 
+.space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(.75rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(.75rem * var(--tw-space-y-reverse));
+}
+
 .space-y-4 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
@@ -1217,12 +1219,6 @@ body {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
-}
-
-.space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(.75rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(.75rem * var(--tw-space-y-reverse));
 }
 
 .self-center {
@@ -1560,6 +1556,10 @@ body {
   padding-right: .5rem;
 }
 
+.pr-3 {
+  padding-right: .75rem;
+}
+
 .pr-8 {
   padding-right: 2rem;
 }
@@ -1590,10 +1590,6 @@ body {
 
 .pt-8 {
   padding-top: 2rem;
-}
-
-.pr-3 {
-  padding-right: .75rem;
 }
 
 .text-left {
@@ -2776,16 +2772,12 @@ body {
     height: calc(100vh - 250px);
   }
 
-  .sm\:max-w-\[425px\] {
-    max-width: 425px;
+  .sm\:max-w-md {
+    max-width: 28rem;
   }
 
   .sm\:max-w-sm {
     max-width: 24rem;
-  }
-
-  .sm\:max-w-md {
-    max-width: 28rem;
   }
 
   .sm\:flex-row {

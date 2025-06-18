@@ -13,7 +13,7 @@ const translations = {
     en: {
         appName: 'WellMeds',
         searchTitle: 'Search for Medicines',
-        searchPlaceholder: 'Enter drug name, salt name, or search key...',
+        searchPlaceholder: 'Enter drug name, salt, drug code, HSN code...',
         searchButton: 'Search',
         languageLabel: 'Language',
         english: 'English',
@@ -30,6 +30,8 @@ const translations = {
         drugTypeLabel: 'Type',
         hsnCodeLabel: 'HSN Code',
         searchKeyLabel: 'Search Key',
+        mrpLabel: 'MRP',
+        uomLabel: 'UOM',
         usageLabel: 'Usage',
         manufacturerLabel: 'Manufacturer',
         dosageLabel: 'Dosage',
@@ -48,7 +50,7 @@ const translations = {
         sourceDbOnlyMessage: 'Details from database.',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`AI features for enhancing "${medicineName}" details are unavailable due to API key or model issues.`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`AI enhancement failed for "${medicineName}" details.`,
-        initialHelperText: 'Enter a drug name, salt name, or search key to begin your search.',
+        initialHelperText: 'Enter a drug name, salt name, drug code, HSN code, or search key to begin.',
         allRightsReserved: 'All rights reserved.',
         infoNotAvailable: "Information not available.",
         errorAiNotConfiguredOrModelTitle: "AI Key/Model Issue",
@@ -67,7 +69,7 @@ const translations = {
     hi: {
         appName: 'वेलमेड्स',
         searchTitle: 'दवाएं खोजें',
-        searchPlaceholder: 'दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें...',
+        searchPlaceholder: 'दवा का नाम, सॉल्ट, ड्रग कोड, HSN कोड दर्ज करें...',
         searchButton: 'खोजें',
         languageLabel: 'भाषा',
         english: 'अंग्रेज़ी',
@@ -84,6 +86,8 @@ const translations = {
         drugTypeLabel: 'प्रकार',
         hsnCodeLabel: 'एचएसएन कोड',
         searchKeyLabel: 'खोज कुंजी',
+        mrpLabel: 'एमआरपी',
+        uomLabel: 'यूओएम',
         usageLabel: 'उपयोग',
         manufacturerLabel: 'निर्माता',
         dosageLabel: 'खुराक',
@@ -102,7 +106,7 @@ const translations = {
         sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ एपीआई कुंजी या मॉडल समस्याओं के कारण अनुपलब्ध हैं।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
-        initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें।',
+        initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट नाम, ड्रग कोड, HSN कोड, या खोज कुंजी दर्ज करें।',
         allRightsReserved: 'सभी अधिकार सुरक्षित।',
         infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
         errorAiNotConfiguredOrModelTitle: "एआई कुंजी/मॉडल समस्या",
@@ -121,7 +125,7 @@ const translations = {
     bn: {
         appName: 'ওয়েলমেডস',
         searchTitle: 'ওষুধ অনুসন্ধান করুন',
-        searchPlaceholder: 'ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন...',
+        searchPlaceholder: 'ওষুধের নাম, সল্ট, ড্রাগ কোড, HSN কোড লিখুন...',
         searchButton: 'অনুসন্ধান',
         languageLabel: 'ভাষা',
         english: 'ইংরেজি',
@@ -138,6 +142,8 @@ const translations = {
         drugTypeLabel: 'প্রকার',
         hsnCodeLabel: 'এইচএসএন কোড',
         searchKeyLabel: 'সার্চ কী',
+        mrpLabel: 'এমআরপি',
+        uomLabel: 'ইউওএম',
         usageLabel: 'ব্যবহার',
         manufacturerLabel: 'প্রস্তুতকারক',
         dosageLabel: 'মাত্রা',
@@ -156,7 +162,7 @@ const translations = {
         sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি API কী বা মডেল সমস্যার কারণে অনুপলব্ধ।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
-        initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন।',
+        initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, ড্রাগ কোড, HSN কোড, বা সার্চ কী লিখুন।',
         allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
         infoNotAvailable: "তথ্য উপলব্ধ নেই।",
         errorAiNotConfiguredOrModelTitle: "এআই কী/মডেল সমস্যা",
@@ -378,31 +384,32 @@ const fetchMedicineByName = async (searchTerm)=>{
         return [];
     }
     const normalizedSearchTerm = searchTerm.toLowerCase().trim();
-    const medicinesRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ref"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["db"], 'medicines');
+    const searchTermOriginalCase = searchTerm.trim(); // For exact HSN/Drug Code matching
     const allMatches = [];
     const foundDrugCodes = new Set();
-    // 1. Attempt to fetch by direct drugCode (if searchTerm is numeric, as Firebase keys are numeric strings)
-    if (/^\d+$/.test(normalizedSearchTerm)) {
-        try {
-            const directIdSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["get"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["child"])(medicinesRef, normalizedSearchTerm));
-            if (directIdSnapshot.exists()) {
-                const data = directIdSnapshot.val();
-                if (data && data.drugName && data.saltName && !foundDrugCodes.has(normalizedSearchTerm)) {
-                    allMatches.push({
-                        drugCode: directIdSnapshot.key,
-                        ...data,
-                        foundInDb: true
-                    });
-                    foundDrugCodes.add(normalizedSearchTerm);
-                    // If found by direct code, assume it's the most specific match
-                    return allMatches;
-                }
+    // 1. Attempt to fetch by direct drugCode (Firebase key)
+    // Firebase keys are strings, but often numeric. Users might type "01" or "1".
+    // We'll try the original input as a key first.
+    try {
+        const directIdSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["get"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["child"])(medicinesRef, searchTermOriginalCase));
+        if (directIdSnapshot.exists()) {
+            const data = directIdSnapshot.val();
+            if (data && data.drugName && data.saltName && !foundDrugCodes.has(searchTermOriginalCase)) {
+                allMatches.push({
+                    drugCode: directIdSnapshot.key,
+                    ...data,
+                    foundInDb: true
+                });
+                foundDrugCodes.add(searchTermOriginalCase);
+                // If found by direct code, it's likely the most specific match, return immediately.
+                return allMatches;
             }
-        } catch (e) {
-            console.error(`[mockApi] Error fetching medicine by direct drugCode '${normalizedSearchTerm}':`, e.message);
         }
+    } catch (e) {
+        console.error(`[mockApi] Error fetching medicine by direct drugCode '${searchTermOriginalCase}':`, e.message);
     }
-    // 2. Full scan and match against drugName, saltName, searchKey (case-insensitive)
+    // 2. Full scan for HSN Code, Drug Name, Salt Name, Search Key
+    const medicinesRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ref"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$firebase$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["db"], 'medicines');
     try {
         const allMedicinesSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$database$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["get"])(medicinesRef);
         if (allMedicinesSnapshot.exists()) {
@@ -417,8 +424,14 @@ const fetchMedicineByName = async (searchTerm)=>{
                 const drugNameLower = medicine.drugName.toLowerCase();
                 const saltNameLower = medicine.saltName.toLowerCase();
                 const searchKeyLower = medicine.searchKey?.toLowerCase() || "";
+                const hsnCodeOriginal = medicine.hsnCode || ""; // Match HSN code case-sensitively or as stored
                 let match = false;
-                if (drugNameLower.includes(normalizedSearchTerm) || saltNameLower.includes(normalizedSearchTerm) || searchKeyLower.includes(normalizedSearchTerm)) {
+                // Exact HSN Code match
+                if (hsnCodeOriginal && hsnCodeOriginal === searchTermOriginalCase) {
+                    match = true;
+                } else if (drugCodeKey.toLowerCase() === normalizedSearchTerm) {
+                    match = true;
+                } else if (drugNameLower.includes(normalizedSearchTerm) || saltNameLower.includes(normalizedSearchTerm) || searchKeyLower.includes(normalizedSearchTerm)) {
                     match = true;
                 } else if (searchTermsParts.length > 0) {
                     const nameMatches = searchTermsParts.every((part)=>drugNameLower.includes(part));
@@ -439,7 +452,7 @@ const fetchMedicineByName = async (searchTerm)=>{
             }
         }
     } catch (e) {
-        console.error(`[mockApi] Error during full scan for name/salt/key query (normalized term: '${normalizedSearchTerm}'):`, e.message);
+        console.error(`[mockApi] Error during full scan for query (normalized term: '${normalizedSearchTerm}'):`, e.message);
     }
     // Sort results for consistency, perhaps by drugName
     allMatches.sort((a, b)=>a.drugName.localeCompare(b.drugName));
@@ -461,22 +474,36 @@ const fetchSuggestions = async (query)=>{
                 if (suggestions.length >= 7) break;
                 const medicine = medicinesData[drugCodeKey];
                 if (medicine) {
-                    if (medicine.drugName && medicine.drugName.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(medicine.drugName)) {
+                    // Suggest Drug Name
+                    if (medicine.drugName && medicine.drugName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.drugName)) {
                         suggestions.push(medicine.drugName);
                         addedSuggestions.add(medicine.drugName);
                     }
                     if (suggestions.length >= 7) break;
-                    if (medicine.saltName && medicine.saltName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.saltName) && suggestions.length < 7) {
+                    // Suggest Salt Name
+                    if (medicine.saltName && medicine.saltName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.saltName)) {
                         suggestions.push(medicine.saltName);
                         addedSuggestions.add(medicine.saltName);
                     }
                     if (suggestions.length >= 7) break;
-                    if (medicine.searchKey && medicine.searchKey.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.searchKey) && suggestions.length < 7) {
-                        // Only add searchKey if it's different from drugName or saltName already added
+                    // Suggest Search Key
+                    if (medicine.searchKey && medicine.searchKey.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.searchKey)) {
                         if (!addedSuggestions.has(medicine.drugName) && !addedSuggestions.has(medicine.saltName)) {
                             suggestions.push(medicine.searchKey);
                             addedSuggestions.add(medicine.searchKey);
                         }
+                    }
+                    if (suggestions.length >= 7) break;
+                    // Suggest Drug Code (if query is numeric or starts with it)
+                    if (drugCodeKey.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(drugCodeKey)) {
+                        suggestions.push(drugCodeKey);
+                        addedSuggestions.add(drugCodeKey);
+                    }
+                    if (suggestions.length >= 7) break;
+                    // Suggest HSN Code (if query matches start of HSN)
+                    if (medicine.hsnCode && medicine.hsnCode.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(medicine.hsnCode)) {
+                        suggestions.push(medicine.hsnCode);
+                        addedSuggestions.add(medicine.hsnCode);
                     }
                 }
             }

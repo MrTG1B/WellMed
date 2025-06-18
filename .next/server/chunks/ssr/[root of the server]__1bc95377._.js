@@ -291,10 +291,10 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 ;
 ;
 const EnhanceMedicineSearchInputSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].object({
-    query: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The user input query, which may contain misspellings, be incomplete, a barcode, or composition keywords, potentially including dosages.')
+    query: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The user input query, which may contain misspellings, be incomplete, a Drug Code, an HSN Code, or composition keywords, potentially including dosages.')
 });
 const EnhanceMedicineSearchOutputSchema = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].object({
-    correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
+    correctedMedicineName: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].string().describe('The corrected/completed medicine name, Drug Code, HSN Code, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
     source: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$genkit$2f$lib$2f$common$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["z"].enum([
         'ai_enhanced',
         'ai_unavailable',
@@ -353,15 +353,17 @@ const enhanceMedicineSearchPrompt = __TURBOPACK__imported__module__$5b$project$5
     output: {
         schema: EnhanceMedicineSearchOutputSchema
     },
-    prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
-The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its barcode, or keywords from its composition.
-Based on the input, determine the most likely *medicine name* or the *original query if it seems to be a direct identifier like a barcode or a specific product formulation that doesn't map to a more general common name*.
+    prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine or code the user is looking for.
+The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its Drug Code (often numeric), an HSN Code (alphanumeric, e.g., 300490), or keywords from its salt composition.
+Based on the input, determine the most likely *medicine name*, *Drug Code*, *HSN Code*, or the *original query if it seems to be a direct identifier like a Drug Code, HSN Code, or a specific product formulation*.
 Return this as \`correctedMedicineName\`.
 Set the 'source' field to 'ai_enhanced'.
 
-The subsequent search will use this \`correctedMedicineName\` to look up medicines by name, barcode, or composition.
+The subsequent search will use this \`correctedMedicineName\` to look up medicines by name, Drug Code, HSN Code, or composition.
 If the query includes dosage or strength (e.g., "Paracetamol 500mg", "Dolo 650"), and this appears to be part of a specific product name or common way of referring to it, RETAIN these details in \`correctedMedicineName\`.
 If the query is a general description (e.g., "medicine for headache"), extract the key medicinal component.
+If the query is a numeric string that looks like a Drug Code (e.g., "01", "23", "100"), return it as is.
+If the query is an alphanumeric string that strongly resembles an HSN Code (e.g., "300490", "30031010"), return it as is.
 
 Examples:
 - Query: "panadol", correctedMedicineName: "Panadol", source: "ai_enhanced"
@@ -369,12 +371,14 @@ Examples:
 - Query: "dolo 650", correctedMedicineName: "Dolo 650", source: "ai_enhanced"
 - Query: "Paracetamol 500mg Tablet", correctedMedicineName: "Paracetamol 500mg Tablet", source: "ai_enhanced"
 - Query: "Aceclofenac 100 mg Paracetamol 325 mg", correctedMedicineName: "Aceclofenac 100 mg Paracetamol 325 mg", source: "ai_enhanced"
-- Query: "Barcode 1234567890123 for Paracetamol", correctedMedicineName: "Paracetamol", source: "ai_enhanced"
-- Query: "1234567890123" (assume this is a barcode), correctedMedicineName: "1234567890123", source: "ai_enhanced"
+- Query: "Drug Code 23 for Paracetamol", correctedMedicineName: "Paracetamol", source: "ai_enhanced"
+- Query: "23" (assume this is a Drug Code), correctedMedicineName: "23", source: "ai_enhanced"
+- Query: "300490" (assume this is an HSN Code), correctedMedicineName: "300490", source: "ai_enhanced"
+- Query: "HSN 300310 for Aspirin", correctedMedicineName: "Aspirin", source: "ai_enhanced"
 - Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol", source: "ai_enhanced"
 - Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen", source: "ai_enhanced"
 
-If the input is a barcode, and you cannot confidently map it to a common medicine name, return the barcode itself.
+If the input is a Drug Code or HSN Code, and you cannot confidently map it to a common medicine name, return the code itself.
 If the input is a composition keyword (e.g. "Paracetamol"), return it or a slightly refined version.
 The key is to provide a search term that will be effective for the backend, preserving specificity when it seems intentional.
 Always set 'source' to 'ai_enhanced' in your direct response. Do not return empty strings for correctedMedicineName; if unsure, return the original query.
@@ -466,7 +470,7 @@ const translations = {
     en: {
         appName: 'WellMeds',
         searchTitle: 'Search for Medicines',
-        searchPlaceholder: 'Enter drug name, salt name, or search key...',
+        searchPlaceholder: 'Enter drug name, salt, drug code, HSN code...',
         searchButton: 'Search',
         languageLabel: 'Language',
         english: 'English',
@@ -483,6 +487,8 @@ const translations = {
         drugTypeLabel: 'Type',
         hsnCodeLabel: 'HSN Code',
         searchKeyLabel: 'Search Key',
+        mrpLabel: 'MRP',
+        uomLabel: 'UOM',
         usageLabel: 'Usage',
         manufacturerLabel: 'Manufacturer',
         dosageLabel: 'Dosage',
@@ -501,7 +507,7 @@ const translations = {
         sourceDbOnlyMessage: 'Details from database.',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`AI features for enhancing "${medicineName}" details are unavailable due to API key or model issues.`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`AI enhancement failed for "${medicineName}" details.`,
-        initialHelperText: 'Enter a drug name, salt name, or search key to begin your search.',
+        initialHelperText: 'Enter a drug name, salt name, drug code, HSN code, or search key to begin.',
         allRightsReserved: 'All rights reserved.',
         infoNotAvailable: "Information not available.",
         errorAiNotConfiguredOrModelTitle: "AI Key/Model Issue",
@@ -520,7 +526,7 @@ const translations = {
     hi: {
         appName: 'वेलमेड्स',
         searchTitle: 'दवाएं खोजें',
-        searchPlaceholder: 'दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें...',
+        searchPlaceholder: 'दवा का नाम, सॉल्ट, ड्रग कोड, HSN कोड दर्ज करें...',
         searchButton: 'खोजें',
         languageLabel: 'भाषा',
         english: 'अंग्रेज़ी',
@@ -537,6 +543,8 @@ const translations = {
         drugTypeLabel: 'प्रकार',
         hsnCodeLabel: 'एचएसएन कोड',
         searchKeyLabel: 'खोज कुंजी',
+        mrpLabel: 'एमआरपी',
+        uomLabel: 'यूओएम',
         usageLabel: 'उपयोग',
         manufacturerLabel: 'निर्माता',
         dosageLabel: 'खुराक',
@@ -555,7 +563,7 @@ const translations = {
         sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ एपीआई कुंजी या मॉडल समस्याओं के कारण अनुपलब्ध हैं।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
-        initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें।',
+        initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट नाम, ड्रग कोड, HSN कोड, या खोज कुंजी दर्ज करें।',
         allRightsReserved: 'सभी अधिकार सुरक्षित।',
         infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
         errorAiNotConfiguredOrModelTitle: "एआई कुंजी/मॉडल समस्या",
@@ -574,7 +582,7 @@ const translations = {
     bn: {
         appName: 'ওয়েলমেডস',
         searchTitle: 'ওষুধ অনুসন্ধান করুন',
-        searchPlaceholder: 'ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন...',
+        searchPlaceholder: 'ওষুধের নাম, সল্ট, ড্রাগ কোড, HSN কোড লিখুন...',
         searchButton: 'অনুসন্ধান',
         languageLabel: 'ভাষা',
         english: 'ইংরেজি',
@@ -591,6 +599,8 @@ const translations = {
         drugTypeLabel: 'প্রকার',
         hsnCodeLabel: 'এইচএসএন কোড',
         searchKeyLabel: 'সার্চ কী',
+        mrpLabel: 'এমআরপি',
+        uomLabel: 'ইউওএম',
         usageLabel: 'ব্যবহার',
         manufacturerLabel: 'প্রস্তুতকারক',
         dosageLabel: 'মাত্রা',
@@ -609,7 +619,7 @@ const translations = {
         sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
         sourceAiUnavailableForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি API কী বা মডেল সমস্যার কারণে অনুপলব্ধ।`,
         sourceAiFailedForDetailsMessage: (medicineName)=>`"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
-        initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন।',
+        initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, ড্রাগ কোড, HSN কোড, বা সার্চ কী লিখুন।',
         allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
         infoNotAvailable: "তথ্য উপলব্ধ নেই।",
         errorAiNotConfiguredOrModelTitle: "এআই কী/মডেল সমস্যা",

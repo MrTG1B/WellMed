@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Enhances medicine search functionality by extracting the intended medicine name from potentially misspelled, partial queries, barcodes, or composition keywords.
@@ -11,14 +12,14 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const EnhanceMedicineSearchInputSchema = z.object({
-  query: z.string().describe('The user input query, which may contain misspellings, be incomplete, a barcode, or composition keywords, potentially including dosages.'),
+  query: z.string().describe('The user input query, which may contain misspellings, be incomplete, a Drug Code, an HSN Code, or composition keywords, potentially including dosages.'),
 });
 export type EnhanceMedicineSearchInput = z.infer<typeof EnhanceMedicineSearchInputSchema>;
 
 const EnhanceMedicineSearchOutputSchema = z.object({
   correctedMedicineName: z
     .string()
-    .describe('The corrected/completed medicine name, barcode, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
+    .describe('The corrected/completed medicine name, Drug Code, HSN Code, or composition keyword extracted from the query, suitable for backend search. Should retain specific details like dosages if they appear to be part of a product name.'),
   source: z.enum(['ai_enhanced', 'ai_unavailable', 'ai_failed', 'original_query_used']).optional().describe("Indicates the source or status of the correctedMedicineName. 'ai_enhanced' if AI successfully processed. 'ai_unavailable' if AI couldn't be used (e.g. no API key / model issue). 'ai_failed' if AI processing failed. 'original_query_used' if AI was skipped or failed and original query is returned."),
 });
 export type EnhanceMedicineSearchOutput = z.infer<typeof EnhanceMedicineSearchOutputSchema>;
@@ -67,15 +68,17 @@ const enhanceMedicineSearchPrompt = ai.definePrompt({
   model: 'googleai/gemini-1.5-flash-latest', // Updated model
   input: {schema: EnhanceMedicineSearchInputSchema},
   output: {schema: EnhanceMedicineSearchOutputSchema},
-  prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine the user is looking for.
-The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its barcode, or keywords from its composition.
-Based on the input, determine the most likely *medicine name* or the *original query if it seems to be a direct identifier like a barcode or a specific product formulation that doesn't map to a more general common name*.
+  prompt: `You are an AI assistant for a medicine search application. Your primary goal is to help identify the medicine or code the user is looking for.
+The user query can be a medicine name (possibly misspelled or partial, and may include dosages like "500mg"), its Drug Code (often numeric), an HSN Code (alphanumeric, e.g., 300490), or keywords from its salt composition.
+Based on the input, determine the most likely *medicine name*, *Drug Code*, *HSN Code*, or the *original query if it seems to be a direct identifier like a Drug Code, HSN Code, or a specific product formulation*.
 Return this as \`correctedMedicineName\`.
 Set the 'source' field to 'ai_enhanced'.
 
-The subsequent search will use this \`correctedMedicineName\` to look up medicines by name, barcode, or composition.
+The subsequent search will use this \`correctedMedicineName\` to look up medicines by name, Drug Code, HSN Code, or composition.
 If the query includes dosage or strength (e.g., "Paracetamol 500mg", "Dolo 650"), and this appears to be part of a specific product name or common way of referring to it, RETAIN these details in \`correctedMedicineName\`.
 If the query is a general description (e.g., "medicine for headache"), extract the key medicinal component.
+If the query is a numeric string that looks like a Drug Code (e.g., "01", "23", "100"), return it as is.
+If the query is an alphanumeric string that strongly resembles an HSN Code (e.g., "300490", "30031010"), return it as is.
 
 Examples:
 - Query: "panadol", correctedMedicineName: "Panadol", source: "ai_enhanced"
@@ -83,12 +86,14 @@ Examples:
 - Query: "dolo 650", correctedMedicineName: "Dolo 650", source: "ai_enhanced"
 - Query: "Paracetamol 500mg Tablet", correctedMedicineName: "Paracetamol 500mg Tablet", source: "ai_enhanced"
 - Query: "Aceclofenac 100 mg Paracetamol 325 mg", correctedMedicineName: "Aceclofenac 100 mg Paracetamol 325 mg", source: "ai_enhanced"
-- Query: "Barcode 1234567890123 for Paracetamol", correctedMedicineName: "Paracetamol", source: "ai_enhanced"
-- Query: "1234567890123" (assume this is a barcode), correctedMedicineName: "1234567890123", source: "ai_enhanced"
+- Query: "Drug Code 23 for Paracetamol", correctedMedicineName: "Paracetamol", source: "ai_enhanced"
+- Query: "23" (assume this is a Drug Code), correctedMedicineName: "23", source: "ai_enhanced"
+- Query: "300490" (assume this is an HSN Code), correctedMedicineName: "300490", source: "ai_enhanced"
+- Query: "HSN 300310 for Aspirin", correctedMedicineName: "Aspirin", source: "ai_enhanced"
 - Query: "syrup with paracetamol 500mg" (descriptive), correctedMedicineName: "Paracetamol", source: "ai_enhanced"
 - Query: "medicine for headache with ibuprofen", correctedMedicineName: "Ibuprofen", source: "ai_enhanced"
 
-If the input is a barcode, and you cannot confidently map it to a common medicine name, return the barcode itself.
+If the input is a Drug Code or HSN Code, and you cannot confidently map it to a common medicine name, return the code itself.
 If the input is a composition keyword (e.g. "Paracetamol"), return it or a slightly refined version.
 The key is to provide a search term that will be effective for the backend, preserving specificity when it seems intentional.
 Always set 'source' to 'ai_enhanced' in your direct response. Do not return empty strings for correctedMedicineName; if unsure, return the original query.
@@ -161,3 +166,4 @@ const enhanceMedicineSearchFlow = ai.defineFlow(
   }
 );
 
+    

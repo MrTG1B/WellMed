@@ -11,6 +11,8 @@ interface DbMedicineData {
   drugType?: string;
   hsnCode?: string;
   searchKey?: string;
+  mrp?: string;
+  uom?: string;
   // lastUpdated is not explicitly part of Medicine type but exists in DB
 }
 
@@ -32,33 +34,35 @@ export const fetchMedicineByName = async (
   }
 
   const normalizedSearchTerm = searchTerm.toLowerCase().trim();
-  const medicinesRef = ref(db, 'medicines');
+  const searchTermOriginalCase = searchTerm.trim(); // For exact HSN/Drug Code matching
   const allMatches: DbMedicineResult[] = [];
   const foundDrugCodes = new Set<string>();
 
-  // 1. Attempt to fetch by direct drugCode (if searchTerm is numeric, as Firebase keys are numeric strings)
-  if (/^\d+$/.test(normalizedSearchTerm)) {
-    try {
-      const directIdSnapshot = await get(child(medicinesRef, normalizedSearchTerm));
-      if (directIdSnapshot.exists()) {
-        const data = directIdSnapshot.val() as DbMedicineData;
-        if (data && data.drugName && data.saltName && !foundDrugCodes.has(normalizedSearchTerm)) {
-          allMatches.push({
-            drugCode: directIdSnapshot.key!,
-            ...data,
-            foundInDb: true,
-          });
-          foundDrugCodes.add(normalizedSearchTerm);
-          // If found by direct code, assume it's the most specific match
-          return allMatches;
-        }
+  // 1. Attempt to fetch by direct drugCode (Firebase key)
+  // Firebase keys are strings, but often numeric. Users might type "01" or "1".
+  // We'll try the original input as a key first.
+  try {
+    const directIdSnapshot = await get(child(medicinesRef, searchTermOriginalCase));
+    if (directIdSnapshot.exists()) {
+      const data = directIdSnapshot.val() as DbMedicineData;
+      if (data && data.drugName && data.saltName && !foundDrugCodes.has(searchTermOriginalCase)) {
+        allMatches.push({
+          drugCode: directIdSnapshot.key!,
+          ...data,
+          foundInDb: true,
+        });
+        foundDrugCodes.add(searchTermOriginalCase);
+        // If found by direct code, it's likely the most specific match, return immediately.
+        return allMatches;
       }
-    } catch (e: any) {
-      console.error(`[mockApi] Error fetching medicine by direct drugCode '${normalizedSearchTerm}':`, e.message);
     }
+  } catch (e: any) {
+    console.error(`[mockApi] Error fetching medicine by direct drugCode '${searchTermOriginalCase}':`, e.message);
   }
 
-  // 2. Full scan and match against drugName, saltName, searchKey (case-insensitive)
+
+  // 2. Full scan for HSN Code, Drug Name, Salt Name, Search Key
+  const medicinesRef = ref(db, 'medicines');
   try {
     const allMedicinesSnapshot = await get(medicinesRef);
     if (allMedicinesSnapshot.exists()) {
@@ -76,11 +80,24 @@ export const fetchMedicineByName = async (
         const drugNameLower = medicine.drugName.toLowerCase();
         const saltNameLower = medicine.saltName.toLowerCase();
         const searchKeyLower = medicine.searchKey?.toLowerCase() || "";
+        const hsnCodeOriginal = medicine.hsnCode || ""; // Match HSN code case-sensitively or as stored
 
         let match = false;
-        if (drugNameLower.includes(normalizedSearchTerm) || saltNameLower.includes(normalizedSearchTerm) || searchKeyLower.includes(normalizedSearchTerm)) {
+
+        // Exact HSN Code match
+        if (hsnCodeOriginal && hsnCodeOriginal === searchTermOriginalCase) {
           match = true;
-        } else if (searchTermsParts.length > 0) {
+        }
+        // Exact Drug Code match (if not caught by key lookup, e.g., if key has non-numeric parts but user searches for it)
+        else if (drugCodeKey.toLowerCase() === normalizedSearchTerm) {
+            match = true;
+        }
+        // Substring matches for name, salt, searchKey
+        else if (drugNameLower.includes(normalizedSearchTerm) || saltNameLower.includes(normalizedSearchTerm) || searchKeyLower.includes(normalizedSearchTerm)) {
+          match = true;
+        }
+        // Multi-part search term match
+        else if (searchTermsParts.length > 0) {
             const nameMatches = searchTermsParts.every(part => drugNameLower.includes(part));
             const saltMatches = searchTermsParts.every(part => saltNameLower.includes(part));
             const searchKeyMatches = searchTermsParts.every(part => searchKeyLower.includes(part));
@@ -100,7 +117,7 @@ export const fetchMedicineByName = async (
       }
     }
   } catch (e: any) {
-      console.error(`[mockApi] Error during full scan for name/salt/key query (normalized term: '${normalizedSearchTerm}'):`, e.message);
+      console.error(`[mockApi] Error during full scan for query (normalized term: '${normalizedSearchTerm}'):`, e.message);
   }
   
   // Sort results for consistency, perhaps by drugName
@@ -128,24 +145,40 @@ export const fetchSuggestions = async (query: string): Promise<string[]> => {
 
         const medicine = medicinesData[drugCodeKey] as DbMedicineData;
         if (medicine) {
-          if (medicine.drugName && medicine.drugName.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(medicine.drugName)) {
+          // Suggest Drug Name
+          if (medicine.drugName && medicine.drugName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.drugName)) {
             suggestions.push(medicine.drugName);
             addedSuggestions.add(medicine.drugName);
           }
           if (suggestions.length >= 7) break;
           
-          if (medicine.saltName && medicine.saltName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.saltName) && suggestions.length < 7) {
+          // Suggest Salt Name
+          if (medicine.saltName && medicine.saltName.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.saltName)) {
             suggestions.push(medicine.saltName);
             addedSuggestions.add(medicine.saltName);
           }
-           if (suggestions.length >= 7) break;
+          if (suggestions.length >= 7) break;
 
-          if (medicine.searchKey && medicine.searchKey.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.searchKey) && suggestions.length < 7) {
-             // Only add searchKey if it's different from drugName or saltName already added
-             if (!addedSuggestions.has(medicine.drugName) && !addedSuggestions.has(medicine.saltName)) {
+          // Suggest Search Key
+          if (medicine.searchKey && medicine.searchKey.toLowerCase().includes(normalizedQuery) && !addedSuggestions.has(medicine.searchKey)) {
+             if (!addedSuggestions.has(medicine.drugName) && !addedSuggestions.has(medicine.saltName)) { // Avoid redundant suggestions if searchKey is same as name/salt
                 suggestions.push(medicine.searchKey);
                 addedSuggestions.add(medicine.searchKey);
              }
+          }
+           if (suggestions.length >= 7) break;
+
+          // Suggest Drug Code (if query is numeric or starts with it)
+          if (drugCodeKey.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(drugCodeKey)) {
+            suggestions.push(drugCodeKey);
+            addedSuggestions.add(drugCodeKey);
+          }
+          if (suggestions.length >= 7) break;
+
+          // Suggest HSN Code (if query matches start of HSN)
+          if (medicine.hsnCode && medicine.hsnCode.toLowerCase().startsWith(normalizedQuery) && !addedSuggestions.has(medicine.hsnCode)) {
+            suggestions.push(medicine.hsnCode);
+            addedSuggestions.add(medicine.hsnCode);
           }
         }
       }
@@ -157,3 +190,4 @@ export const fetchSuggestions = async (query: string): Promise<string[]> => {
   return Array.from(new Set(suggestions)).slice(0, 7);
 };
 
+    

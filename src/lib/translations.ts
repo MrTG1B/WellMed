@@ -13,14 +13,16 @@ export type TranslationKeys = {
   resultsTitle: string;
   noResults: string;
   noResultsTitle: string;
-  drugNameLabel: string; // Was medicineNameLabel
-  saltNameLabel: string; // Was compositionLabel
+  drugNameLabel: string;
+  saltNameLabel: string;
   drugCodeLabel: string;
   drugCategoryLabel: string;
   drugGroupLabel: string;
   drugTypeLabel: string;
   hsnCodeLabel: string;
   searchKeyLabel: string;
+  mrpLabel: string;
+  uomLabel: string;
   usageLabel: string;
   manufacturerLabel: string;
   dosageLabel: string;
@@ -60,7 +62,7 @@ export const translations: Record<Language, TranslationKeys> = {
   en: {
     appName: 'WellMeds',
     searchTitle: 'Search for Medicines',
-    searchPlaceholder: 'Enter drug name, salt name, or search key...',
+    searchPlaceholder: 'Enter drug name, salt, drug code, HSN code...',
     searchButton: 'Search',
     languageLabel: 'Language',
     english: 'English',
@@ -77,6 +79,8 @@ export const translations: Record<Language, TranslationKeys> = {
     drugTypeLabel: 'Type',
     hsnCodeLabel: 'HSN Code',
     searchKeyLabel: 'Search Key',
+    mrpLabel: 'MRP',
+    uomLabel: 'UOM',
     usageLabel: 'Usage',
     manufacturerLabel: 'Manufacturer',
     dosageLabel: 'Dosage',
@@ -95,7 +99,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'Details from database.',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `AI features for enhancing "${medicineName}" details are unavailable due to API key or model issues.`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `AI enhancement failed for "${medicineName}" details.`,
-    initialHelperText: 'Enter a drug name, salt name, or search key to begin your search.',
+    initialHelperText: 'Enter a drug name, salt name, drug code, HSN code, or search key to begin.',
     allRightsReserved: 'All rights reserved.',
     infoNotAvailable: "Information not available.",
     errorAiNotConfiguredOrModelTitle: "AI Key/Model Issue",
@@ -114,7 +118,7 @@ export const translations: Record<Language, TranslationKeys> = {
   hi: {
     appName: 'वेलमेड्स',
     searchTitle: 'दवाएं खोजें',
-    searchPlaceholder: 'दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें...',
+    searchPlaceholder: 'दवा का नाम, सॉल्ट, ड्रग कोड, HSN कोड दर्ज करें...',
     searchButton: 'खोजें',
     languageLabel: 'भाषा',
     english: 'अंग्रेज़ी',
@@ -131,6 +135,8 @@ export const translations: Record<Language, TranslationKeys> = {
     drugTypeLabel: 'प्रकार',
     hsnCodeLabel: 'एचएसएन कोड',
     searchKeyLabel: 'खोज कुंजी',
+    mrpLabel: 'एमआरपी',
+    uomLabel: 'यूओएम',
     usageLabel: 'उपयोग',
     manufacturerLabel: 'निर्माता',
     dosageLabel: 'खुराक',
@@ -149,7 +155,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'डेटाबेस से विवरण।',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों को बढ़ाने के लिए एआई सुविधाएँ एपीआई कुंजी या मॉडल समस्याओं के कारण अनुपलब्ध हैं।`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" विवरणों के लिए एआई वृद्धि विफल रही।`,
-    initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट का नाम, या खोज कुंजी दर्ज करें।',
+    initialHelperText: 'अपनी खोज शुरू करने के लिए दवा का नाम, सॉल्ट नाम, ड्रग कोड, HSN कोड, या खोज कुंजी दर्ज करें।',
     allRightsReserved: 'सभी अधिकार सुरक्षित।',
     infoNotAvailable: "जानकारी उपलब्ध नहीं है।",
     errorAiNotConfiguredOrModelTitle: "एआई कुंजी/मॉडल समस्या",
@@ -168,7 +174,7 @@ export const translations: Record<Language, TranslationKeys> = {
   bn: {
     appName: 'ওয়েলমেডস',
     searchTitle: 'ওষুধ অনুসন্ধান করুন',
-    searchPlaceholder: 'ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন...',
+    searchPlaceholder: 'ওষুধের নাম, সল্ট, ড্রাগ কোড, HSN কোড লিখুন...',
     searchButton: 'অনুসন্ধান',
     languageLabel: 'ভাষা',
     english: 'ইংরেজি',
@@ -185,6 +191,8 @@ export const translations: Record<Language, TranslationKeys> = {
     drugTypeLabel: 'প্রকার',
     hsnCodeLabel: 'এইচএসএন কোড',
     searchKeyLabel: 'সার্চ কী',
+    mrpLabel: 'এমআরপি',
+    uomLabel: 'ইউওএম',
     usageLabel: 'ব্যবহার',
     manufacturerLabel: 'প্রস্তুতকারক',
     dosageLabel: 'মাত্রা',
@@ -203,7 +211,7 @@ export const translations: Record<Language, TranslationKeys> = {
     sourceDbOnlyMessage: 'ডাটাবেস থেকে বিস্তারিত।',
     sourceAiUnavailableForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণ উন্নত করার জন্য এআই বৈশিষ্ট্যগুলি API কী বা মডেল সমস্যার কারণে অনুপলব্ধ।`,
     sourceAiFailedForDetailsMessage: (medicineName: string) => `"${medicineName}" বিবরণের জন্য এআই উন্নতি ব্যর্থ হয়েছে।`,
-    initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, বা সার্চ কী লিখুন।',
+    initialHelperText: 'আপনার অনুসন্ধান শুরু করতে একটি ওষুধের নাম, সল্ট নাম, ড্রাগ কোড, HSN কোড, বা সার্চ কী লিখুন।',
     allRightsReserved: 'সর্বস্বত্ব সংরক্ষিত।',
     infoNotAvailable: "তথ্য উপলব্ধ নেই।",
     errorAiNotConfiguredOrModelTitle: "এআই কী/মডেল সমস্যা",
@@ -223,3 +231,4 @@ export const translations: Record<Language, TranslationKeys> = {
 
 export const getTranslations = (lang: Language): TranslationKeys => translations[lang];
 
+    
